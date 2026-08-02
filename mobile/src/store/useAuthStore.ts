@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
+import { setItemAsync, getItemAsync, deleteItemAsync } from '../utils/storage';
 
 interface User {
   id: number;
@@ -7,7 +7,7 @@ interface User {
   fullName: string;
   loyaltyTier: string;
   walletBalance: number;
-  stars: number;
+  points: number;
 }
 
 interface AuthState {
@@ -33,18 +33,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   login: async (token: string, user: User) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await setItemAsync(TOKEN_KEY, token);
     set({ token, user, isAuthenticated: true });
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await deleteItemAsync(TOKEN_KEY);
     set({ token: null, user: null, isAuthenticated: false });
   },
 
   restoreToken: async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await getItemAsync(TOKEN_KEY);
       if (token) {
         // Here we would typically validate the token or fetch the user profile from the backend
         // For now, we simulate success if the token exists locally

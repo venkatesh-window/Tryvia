@@ -1,0 +1,11 @@
+{
+  "name": "tryvia-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "cd mobile && npx expo start",
+    "web": "cd mobile && npx expo start --web",
+    "android": "cd mobile && npx expo start --android",
+    "ios": "cd mobile && npx expo start --ios"
+  }
+}

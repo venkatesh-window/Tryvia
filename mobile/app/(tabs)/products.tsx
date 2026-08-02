@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, TextInput } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
@@ -11,7 +11,9 @@ import { useCartStore } from '../../src/store/useCartStore';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
-import { CreditCard, ShoppingBag } from 'lucide-react-native';
+import { CreditCard, ShoppingBag, Search } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -39,46 +41,36 @@ export default function ProductsScreen() {
     <ScreenContainer showOrbs={true}>
       
       {/* Floating Glass Header */}
-      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
+      <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={styles.headerTopRow}>
-           <Typography variant="h1" style={styles.logo}>SHOP</Typography>
+           <Typography variant="h2" weight="medium" style={styles.logo}>COLLECTION</Typography>
+           
            <View style={styles.headerIcons}>
-             <View style={styles.walletCapsule}>
-                <CreditCard size={14} color={theme.colors.primary.main} />
-                <Typography variant="caption" weight="bold" color="primary" style={{ marginLeft: 6 }}>
+             <BlurView  intensity={30} tint="light" style={styles.walletCapsule}>
+                <CreditCard size={14} color={theme.colors.text.primary} />
+                <Typography variant="h3" weight="bold" color="primary" style={{ marginLeft: 6, fontSize: 14 }}>
                   ₹{walletBalance}
                 </Typography>
-             </View>
+             </BlurView>
+             
              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)}>
-               <ShoppingBag size={24} color={theme.colors.text.primary} />
-               {totalItems > 0 && (
-                 <View style={styles.badge}>
-                   <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
-                 </View>
-               )}
+               <BlurView  intensity={30} tint="light" style={styles.cartBtnBlur}>
+                 <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+                 {totalItems > 0 && (
+                   <View style={styles.badge}>
+                     <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
+                   </View>
+                 )}
+               </BlurView>
              </TouchableOpacity>
            </View>
         </View>
 
-        {/* Glass Search Bar */}
-        <View style={styles.searchContainer}>
-           <View style={styles.searchBox}>
-              <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
-              <View style={styles.glassBorder} />
-              <Typography variant="body" color="secondary" style={styles.searchIcon}>⚲</Typography>
-              <TextInput 
-                placeholder="Search products..." 
-                style={styles.searchInput}
-                placeholderTextColor={theme.colors.text.secondary}
-              />
-           </View>
-        </View>
-      </View>
-
+      </Animated.View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Visual Categories - Glass Rings */}
-        <View style={styles.section}>
+        {/* Luxury Circular Categories */}
+        <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {CATEGORIES.map((cat) => (
               <TouchableOpacity 
@@ -87,43 +79,42 @@ export default function ProductsScreen() {
                 onPress={() => setActiveCategory(activeCategory === cat.name ? null : cat.name)}
               >
                 <View style={[styles.categoryCircle, activeCategory === cat.name && styles.categoryActiveCircle]}>
-                  <Image source={{ uri: cat.img }} style={StyleSheet.absoluteFill as any} />
+                  <BlurView  intensity={20} tint="light" style={StyleSheet.absoluteFill as any} />
+                  <Image source={{ uri: cat.img }} style={styles.categoryImg} contentFit="cover" />
+                  <View style={styles.circleBorder} />
                 </View>
-                <Typography variant="caption" weight={activeCategory === cat.name ? 'bold' : 'medium'} style={{ marginTop: 12 }}>
-                  {cat.name}
+                <Typography variant="caption" weight={activeCategory === cat.name ? 'bold' : 'medium'} style={{ marginTop: 16, letterSpacing: 2 }}>
+                  {cat.name.toUpperCase()}
                 </Typography>
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        </Animated.View>
 
-        {/* All Products Grid */}
-        <View style={styles.section}>
-          <Typography variant="h3" style={styles.sectionTitle}>Curated For You</Typography>
+        {/* Apple-style Staggered Grid Feed */}
+        <Animated.View entering={FadeInUp.duration(1000).delay(600)} style={styles.section}>
+          <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Full Size Collection</Typography>
           <View style={styles.feedGrid}>
-             {allProducts?.map((item) => (
-                <View key={item.id} style={styles.gridCard}>
-                  <View style={styles.glassCardWrapper}>
-                    <BlurView intensity={30} tint="light" style={styles.glassBackground} />
-                    <ProductCard 
-                      product={{
-                        id: item.id,
-                        name: item.name,
-                        brand: item.brand?.name || 'Unknown',
-                        fullPrice: item.full_price,
-                        testerPrice: item.tester_price,
-                        imageUrl: item.image_url || 'https://via.placeholder.com/300'
-                      }}
-                      onPress={() => router.push(`/product/${item.id}` as any)}
-                    />
-                    <View style={styles.glassBorder} />
-                  </View>
+             {allProducts?.map((item, index) => (
+                <View key={item.id} style={[styles.gridCard, { marginTop: index % 2 !== 0 ? 40 : 0 }]}>
+                  <ProductCard 
+                    product={{
+                      id: item.id,
+                      name: item.name,
+                      brand: item.brand?.name || 'DIOR',
+                      fullPrice: item.full_price,
+                      testerPrice: item.tester_price,
+                      imageUrl: item.image_url || 'https://via.placeholder.com/300'
+                    }}
+                    onPress={() => router.push(`/product/${item.id}` as any)}
+                    style={{ width: '100%', marginRight: 0 }}
+                  />
                 </View>
              ))}
           </View>
-        </View>
+        </Animated.View>
         
-        <View style={{ height: 160 }} />
+        <View style={{ height: 180 }} />
       </ScrollView>
     </ScreenContainer>
   );
@@ -143,7 +134,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   logo: {
-    letterSpacing: 2,
+    letterSpacing: 4,
     color: theme.colors.text.primary,
   },
   headerIcons: {
@@ -151,122 +142,135 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  iconBtn: {
-    position: 'relative',
-    padding: 4,
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: theme.colors.text.primary,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   walletCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(165, 150, 180, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border.glass,
+  },
+  iconBtn: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  cartBtnBlur: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border.glass,
+    borderRadius: 20,
+  },
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: theme.colors.text.primary,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
     paddingHorizontal: 24,
-    marginTop: 8,
+    marginTop: 16,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: theme.radius.xl,
-    height: 48,
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.background.paper,
+    borderRadius: 24,
+    height: 56,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
     shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 16,
+    elevation: 5,
   },
   glassBorder: {
-    ...StyleSheet.absoluteFill as any,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border.glass,
+    ...(StyleSheet.absoluteFill as any),
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
     pointerEvents: 'none',
   },
   searchIcon: {
-    marginRight: 12,
-    fontSize: 20,
+    marginRight: 16,
     zIndex: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
     zIndex: 2,
+    letterSpacing: 1,
   },
   scrollContent: {
-    paddingTop: 16,
+    paddingTop: 8,
   },
   section: {
-    marginBottom: 40,
+    marginBottom: 48,
   },
   sectionTitle: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 32,
     color: theme.colors.text.primary,
+    letterSpacing: 1,
   },
   categoryScroll: {
     paddingHorizontal: 24,
-    gap: 24,
+    gap: 32,
   },
   categoryCircleWrapper: {
     alignItems: 'center',
-    width: 80,
+    width: 88,
     opacity: 0.8,
   },
   categoryActive: {
     opacity: 1,
   },
   categoryCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     overflow: 'hidden',
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    shadowColor: theme.colors.shadow.glass,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 5,
+  },
+  categoryImg: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.9,
+  },
+  circleBorder: {
+    ...(StyleSheet.absoluteFill as any),
+    borderRadius: 44,
+    borderWidth: 1.5,
     borderColor: theme.colors.border.glass,
+    pointerEvents: 'none',
   },
   categoryActiveCircle: {
     borderWidth: 3,
-    borderColor: theme.colors.primary.main, // Blush pink outline
+    borderColor: theme.colors.primary.dark,
   },
   feedGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 24,
     justifyContent: 'space-between',
-    rowGap: 24,
+    rowGap: 32,
   },
   gridCard: {
-    width: '47%',
-  },
-  glassCardWrapper: {
-    borderRadius: theme.radius.xl,
-    overflow: 'hidden',
-    backgroundColor: theme.colors.background.surface,
-    shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  glassBackground: {
-    ...StyleSheet.absoluteFill as any,
+    width: '46%',
   },
 });

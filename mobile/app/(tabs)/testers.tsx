@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, TextInput } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
@@ -11,7 +11,9 @@ import { useCartStore } from '../../src/store/useCartStore';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
-import { CreditCard, ShoppingBag } from 'lucide-react-native';
+import { CreditCard, ShoppingBag, Search } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -31,100 +33,80 @@ export default function TestersScreen() {
     <ScreenContainer showOrbs={true}>
       
       {/* Floating Glass Header */}
-      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
+      <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={styles.headerTopRow}>
-           <Typography variant="h1" style={styles.logo}>TRIAL</Typography>
+           <Typography variant="h2" weight="medium" style={styles.logo}>TESTERS</Typography>
+           
            <View style={styles.headerIcons}>
-             <View style={styles.walletCapsule}>
-                <CreditCard size={14} color={theme.colors.primary.main} />
-                <Typography variant="caption" weight="bold" color="primary" style={{ marginLeft: 6 }}>
+             <BlurView  intensity={30} tint="light" style={styles.walletCapsule}>
+                <CreditCard size={14} color={theme.colors.text.primary} />
+                <Typography variant="h3" weight="bold" color="primary" style={{ marginLeft: 6, fontSize: 14 }}>
                   ₹{walletBalance}
                 </Typography>
-             </View>
+             </BlurView>
+             
              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)}>
-               <ShoppingBag size={24} color={theme.colors.text.primary} />
-               {totalItems > 0 && (
-                 <View style={styles.badge}>
-                   <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
-                 </View>
-               )}
+               <BlurView  intensity={30} tint="light" style={styles.cartBtnBlur}>
+                 <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+                 {totalItems > 0 && (
+                   <View style={styles.badge}>
+                     <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
+                   </View>
+                 )}
+               </BlurView>
              </TouchableOpacity>
-           </View>
-        </View>
-
-        {/* Glass Search Bar */}
-        <View style={styles.searchContainer}>
-           <View style={styles.searchBox}>
-              <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
-              <View style={styles.glassBorder} />
-              <Typography variant="body" color="secondary" style={styles.searchIcon}>⚲</Typography>
-              <TextInput 
-                placeholder="Search premium minis..." 
-                style={styles.searchInput}
-                placeholderTextColor={theme.colors.text.secondary}
-              />
-           </View>
-        </View>
-      </View>
+            </View>
+         </View>
+      </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Glass Hero Banner */}
-        <View style={styles.bannerWrapper}>
+        <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.bannerWrapper}>
            <View style={styles.heroCard}>
-             <Image source={{ uri: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=1200&auto=format&fit=crop' }} style={styles.heroImg} resizeMode="cover" />
-             <BlurView intensity={20} tint="dark" style={styles.heroOverlay} />
+             <Image source={{ uri: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=1200&auto=format&fit=crop' }} style={styles.heroImg} contentFit="cover" />
+             <BlurView  intensity={20} tint="dark" style={styles.heroOverlay} />
              <View style={styles.glassBorder} />
              
              <View style={styles.heroContent}>
-               <Typography variant="h1" style={{ color: '#fff', fontSize: 28, marginBottom: 8, letterSpacing: 1 }}>
+               <Typography variant="h1" weight="medium" style={{ color: '#ffffff', fontSize: 32, marginBottom: 8, letterSpacing: 2 }}>
                  TRY BEFORE{'\n'}YOU BUY
                </Typography>
-               <Typography variant="body" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                  Earn 50★ on every mini.
-               </Typography>
+
              </View>
            </View>
-        </View>
+        </Animated.View>
 
-        {/* All Testers Glass Grid */}
-        <View style={styles.section}>
-          <Typography variant="h3" style={styles.sectionTitle}>Trending Testers</Typography>
+        {/* Apple-style Staggered Grid Feed */}
+        <Animated.View entering={FadeInUp.duration(1000).delay(600)} style={styles.section}>
+          <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Trending Testers</Typography>
           <View style={styles.feedGrid}>
              {isLoading ? (
                 <Typography variant="body" color="secondary" style={{ textAlign: 'center', width: '100%' }}>Loading...</Typography>
              ) : (
-               testers?.map((item) => (
-                  <View key={item.id} style={styles.gridCard}>
-                    <View style={styles.glassCardWrapper}>
-                      <BlurView intensity={30} tint="light" style={styles.glassBackground} />
-                      <ProductCard 
-                        product={{
-                          id: item.id,
-                          name: item.name,
-                          brand: item.brand?.name || 'Unknown',
-                          fullPrice: item.full_price,
-                          testerPrice: item.tester_price,
-                          imageUrl: item.image_url || 'https://via.placeholder.com/300'
-                        }}
-                        onPress={() => router.push(`/tester/${item.id}` as any)}
-                      />
-                      <View style={styles.glassBorder} />
-                      
-                      {/* Floating Glass Cashback Badge */}
-                      <View style={styles.cashbackBadge}>
-                         <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
-                         <View style={[styles.glassBorder, { borderRadius: 16 }]} />
-                         <Typography variant="caption" weight="bold" style={{ color: theme.colors.primary.dark, fontSize: 10 }}>EARN 50★</Typography>
-                      </View>
-                    </View>
+               testers?.map((item, index) => (
+                  <View key={item.id} style={[styles.gridCard, { marginTop: index % 2 !== 0 ? 40 : 0 }]}>
+                    <ProductCard 
+                      product={{
+                        id: item.id,
+                        name: item.name,
+                        brand: item.brand?.name || 'CHANEL',
+                        fullPrice: item.full_price,
+                        testerPrice: item.tester_price,
+                        imageUrl: item.image_url || 'https://via.placeholder.com/300'
+                      }}
+                      onPress={() => router.push(`/tester/${item.id}` as any)}
+                      style={{ width: '100%', marginRight: 0 }}
+                    />
+                    
+
                   </View>
                ))
              )}
           </View>
-        </View>
+        </Animated.View>
         
-        <View style={{ height: 160 }} />
+        <View style={{ height: 180 }} />
       </ScrollView>
     </ScreenContainer>
   );
@@ -144,7 +126,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   logo: {
-    letterSpacing: 2,
+    letterSpacing: 4,
     color: theme.colors.text.primary,
   },
   headerIcons: {
@@ -152,83 +134,92 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  iconBtn: {
-    position: 'relative',
-    padding: 4,
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: theme.colors.text.primary,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   walletCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(165, 150, 180, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border.glass,
+  },
+  iconBtn: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  cartBtnBlur: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border.glass,
+    borderRadius: 20,
+  },
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: theme.colors.text.primary,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
     paddingHorizontal: 24,
-    marginTop: 8,
+    marginTop: 16,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: theme.radius.xl,
-    height: 48,
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.background.paper,
+    borderRadius: 24,
+    height: 56,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
     shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 16,
+    elevation: 5,
   },
   glassBorder: {
-    ...StyleSheet.absoluteFill as any,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border.glass,
+    ...(StyleSheet.absoluteFill as any),
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
     pointerEvents: 'none',
   },
   searchIcon: {
-    marginRight: 12,
-    fontSize: 20,
+    marginRight: 16,
     zIndex: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
     zIndex: 2,
+    letterSpacing: 1,
   },
   scrollContent: {
     paddingTop: 16,
   },
   bannerWrapper: {
     paddingHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 48,
   },
   heroCard: {
     width: '100%',
-    aspectRatio: 1, // Nice square glass card for the hero
-    borderRadius: theme.radius.xl,
+    aspectRatio: 1, 
+    borderRadius: 40,
     overflow: 'hidden',
     shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 10,
     position: 'relative',
   },
   heroImg: {
@@ -239,51 +230,44 @@ const styles = StyleSheet.create({
   },
   heroContent: {
     position: 'absolute',
-    bottom: 32,
-    left: 24,
-    right: 24,
+    bottom: 40,
+    left: 32,
+    right: 32,
     zIndex: 2,
   },
   section: {
-    marginBottom: 40,
+    marginBottom: 48,
   },
   sectionTitle: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 32,
     color: theme.colors.text.primary,
+    letterSpacing: 1,
   },
   feedGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 24,
     justifyContent: 'space-between',
-    rowGap: 24,
+    rowGap: 32,
   },
   gridCard: {
-    width: '47%',
-  },
-  glassCardWrapper: {
-    borderRadius: theme.radius.xl,
-    overflow: 'hidden',
-    backgroundColor: theme.colors.background.surface,
-    shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
+    width: '46%',
     position: 'relative',
-  },
-  glassBackground: {
-    ...StyleSheet.absoluteFill as any,
   },
   cashbackBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: -12,
+    right: -12,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: theme.colors.background.paper,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    shadowColor: theme.colors.shadow.glass,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   }
 });

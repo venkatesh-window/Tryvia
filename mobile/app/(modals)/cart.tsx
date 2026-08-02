@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Platform, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
@@ -42,7 +42,7 @@ export default function CartModal() {
                 <Typography variant="caption" color="secondary">{item.product.brand?.name?.toUpperCase() || 'UNKNOWN BRAND'}</Typography>
                 <Typography variant="body" weight="medium">{item.product.name}</Typography>
                 <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>{item.type === 'tester' ? 'Mini/Tester' : 'Full Size'} x{item.quantity}</Typography>
-                <Typography variant="body" weight="bold" style={styles.itemPrice}>₹{item.price}</Typography>
+                <Typography variant="h3" weight="bold" style={styles.itemPrice}>₹{item.price}</Typography>
               </View>
               <Pressable onPress={() => removeItem(item.id)} style={styles.removeBtn}>
                 <Typography variant="caption" color="secondary">Remove</Typography>
@@ -56,21 +56,21 @@ export default function CartModal() {
         <View style={styles.progressContainer}>
            <Typography variant="caption" color={isMinimumMet ? 'primary' : 'secondary'}>
              {isMinimumMet 
-               ? `✓ Minimum order value (₹${minOrderValue}) met!` 
-               : `Add ₹${minOrderValue - total} more to checkout.`
+               ? <Text>✓ Minimum order value (<Text style={{fontFamily: 'CormorantGaramond_700Bold'}}>₹{minOrderValue}</Text>) met!</Text>
+               : <Text>Add <Text style={{fontFamily: 'CormorantGaramond_700Bold'}}>₹{minOrderValue - total}</Text> more to checkout.</Text>
              }
            </Typography>
         </View>
 
         <View style={styles.totalRow}>
-          <Typography variant="body" color="secondary">Subtotal</Typography>
-          <Typography variant="body" weight="medium">₹{subtotal}</Typography>
+          <Typography variant="h3" color="secondary">Subtotal</Typography>
+          <Typography variant="h3" weight="medium">₹{subtotal}</Typography>
         </View>
         
         {walletDeduction > 0 && (
           <View style={styles.totalRow}>
-            <Typography variant="body" color="secondary">Wallet Applied</Typography>
-            <Typography variant="body" color="primary" weight="bold">-₹{walletDeduction}</Typography>
+            <Typography variant="h3" color="secondary">Wallet Applied</Typography>
+            <Typography variant="h3" color="primary" weight="bold">-₹{walletDeduction}</Typography>
           </View>
         )}
 

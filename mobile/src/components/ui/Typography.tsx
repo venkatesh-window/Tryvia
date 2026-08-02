@@ -32,12 +32,13 @@ export function Typography({
 
   const getFontFamily = () => {
     // Luxury Serifs for Headers
-    if (variant === 'h1' || variant === 'h2') {
-       return weight === 'bold' ? 'PlayfairDisplay_700Bold' : 'PlayfairDisplay_400Regular';
+    if (variant === 'h1' || variant === 'h2' || variant === 'h3') {
+       return weight === 'bold' ? 'CormorantGaramond_700Bold' : 'CormorantGaramond_400Regular';
     }
-    // Clean Sans-Serif for body/caption/h3
-    if (weight === 'bold' || weight === 'medium') return 'Outfit_600SemiBold';
-    return 'Outfit_400Regular';
+    // Clean Sans-Serif for body/caption
+    if (weight === 'bold') return 'Inter_600SemiBold';
+    if (weight === 'medium') return 'Inter_500Medium';
+    return 'Inter_400Regular';
   };
 
   const getFontSize = () => {

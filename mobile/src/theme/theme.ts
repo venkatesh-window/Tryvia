@@ -1,33 +1,36 @@
+import { Platform } from 'react-native';
+
 export const theme = {
   colors: {
     primary: {
-      main: '#F2D3D8', // Pastel Blush Pink
-      light: '#F8E9EB',
-      dark: '#D8A7AF',
+      main: '#FADADD', // Blush Pink
+      light: '#FCE7EF', // Pastel Pink
+      dark: '#F8D8E4', // Soft Rose
     },
     secondary: {
-      main: '#E1D3F2', // Soft Lavender
-      light: '#EFE7F8',
+      main: '#EEE9FF', // Light Lavender
+      light: '#EEF1FF', // Soft Periwinkle
     },
     tertiary: {
-      main: '#D3E1F2', // Soft Periwinkle
+      main: '#FFFDFD', // Pearl White
     },
     background: {
-      default: '#FCFAF8', // Warm Cream
-      paper: 'rgba(255, 255, 255, 0.45)', // Translucent White Glass (35-50% opacity constraint)
-      surface: 'rgba(255, 255, 255, 0.2)',
+      default: '#FFF7F2', // Warm Cream
+      paper: 'rgba(255, 255, 255, 0.25)', // Translucent White Glass for heavy blur
+      surface: 'rgba(255, 255, 255, 0.4)',
     },
     text: {
-      primary: '#2C2C2C', // Dark Charcoal text
-      secondary: '#8C8C94', // Muted Grey secondary text
-      disabled: '#C4C4C4',
+      primary: '#2C2C2C', // Rich Charcoal
+      secondary: '#8C8C94', // Muted Grey
+      accent: '#B59B91', // Soft Brown / Rose Gold hue
     },
     border: {
-      glass: 'rgba(255, 255, 255, 0.6)', // Thin semi-transparent white borders
-      light: 'rgba(0,0,0,0.05)',
+      glass: 'rgba(255, 255, 255, 0.7)', // Distinct premium glass border
+      light: 'rgba(0,0,0,0.03)',
     },
     shadow: {
-      glass: 'rgba(165, 150, 180, 0.15)', // Soft lavender-grey shadows
+      glass: 'rgba(165, 150, 180, 0.12)', // Soft lavender-grey shadows
+      glow: 'rgba(255, 255, 255, 0.8)', // White glow
     },
     state: {
       error: '#E59B9B',
@@ -35,8 +38,14 @@ export const theme = {
       warning: '#F2D194',
     },
   },
+  typography: {
+    fontFamily: {
+      brand: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
+      body: Platform.OS === 'ios' ? 'Avenir Next' : 'sans-serif',
+    }
+  },
   spacing: {
-    xs: 8, // Generous whitespace
+    xs: 8,
     sm: 16,
     md: 24,
     lg: 32,
@@ -44,10 +53,10 @@ export const theme = {
     xxl: 64,
   },
   radius: {
-    sm: 12,
-    md: 20,
-    lg: 24,
-    xl: 32, // Large rounded corners between 20-32px constraint
+    sm: 16,
+    md: 24,
+    lg: 32,
+    xl: 40, 
     full: 9999,
   },
 };

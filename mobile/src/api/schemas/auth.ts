@@ -10,7 +10,7 @@ export const UserSchema = z.object({
   is_superuser: z.boolean(),
   wallet_balance: z.number().default(0),
   loyalty_tier: z.string().default('BRONZE'),
-  stars: z.number().default(0),
+  points: z.number().default(0),
 });
 
 export type User = z.infer<typeof UserSchema>;
