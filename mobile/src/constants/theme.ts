@@ -26,30 +26,16 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const Fonts = {
+  sans: 'Inter_400Regular',
+  sansMedium: 'Inter_500Medium',
+  sansBold: 'Inter_700Bold',
+  serif: 'CormorantGaramond_400Regular',
+  serifBold: 'CormorantGaramond_700Bold',
+  display: 'CormorantGaramond_700Bold',
+  mono: 'Inter_400Regular',
+  rounded: 'Inter_400Regular',
+};
 
 export const Spacing = {
   half: 2,

@@ -45,7 +45,14 @@ export const PremiumInput: React.FC<PremiumInputProps> = ({
             scale: isFloating ? 0.85 : 1,
           }}
           transition={{ type: 'timing', duration: 250 }}
-          style={[styles.label, { left: 16, color: isFocused ? theme.colors.tertiary.main : theme.colors.text.secondary }]}
+          style={[
+            styles.label, 
+            { 
+              left: 16, 
+              color: isFocused ? theme.colors.tertiary.main : theme.colors.text.secondary,
+              fontFamily: 'Inter_500Medium',
+            }
+          ]}
         >
           {label}
         </MotiText>
@@ -53,7 +60,11 @@ export const PremiumInput: React.FC<PremiumInputProps> = ({
         <TextInput
           style={[
             styles.input,
-            { color: theme.colors.text.primary, fontSize: 16 },
+            { 
+              color: theme.colors.text.primary, 
+              fontSize: 16,
+              fontFamily: 'Inter_400Regular',
+            },
           ]}
           onFocus={handleFocus}
           onBlur={() => setIsFocused(false)}

@@ -8,6 +8,7 @@ export function useVideoPreload(source: VideoSource) {
   const player = useVideoPlayer(source, (player) => {
     player.loop = false;
     player.muted = true;
+    player.pause();
   });
 
   useEffect(() => {

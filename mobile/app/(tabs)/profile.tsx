@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
@@ -13,20 +13,38 @@ import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 
+import { OrdersModal } from '../../src/components/profile/OrdersModal';
+import { WishlistModal } from '../../src/components/profile/WishlistModal';
+import { PaymentMethodsModal } from '../../src/components/profile/PaymentMethodsModal';
+import { AccountSettingsModal } from '../../src/components/profile/AccountSettingsModal';
+import * as Haptics from 'expo-haptics';
+import { TouchableOpacity, Platform } from 'react-native';
+
 const MENU_ITEMS = [
-  { icon: Package, label: 'My Orders' },
-  { icon: Heart, label: 'Wishlist' },
-  { icon: CreditCard, label: 'Payment Methods' },
-  { icon: Settings, label: 'Account Settings' },
-];
+  { key: 'orders', icon: Package, label: 'My Orders' },
+  { key: 'wishlist', icon: Heart, label: 'Wishlist' },
+  { key: 'payments', icon: CreditCard, label: 'Payment Methods' },
+  { key: 'settings', icon: Settings, label: 'Account Settings' },
+] as const;
+
+type ProfileModalKey = typeof MENU_ITEMS[number]['key'];
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const [activeModal, setActiveModal] = useState<ProfileModalKey | null>(null);
+
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleMenuPress = (key: ProfileModalKey) => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setActiveModal(key);
   };
 
   return (
@@ -96,17 +114,23 @@ export default function ProfileScreen() {
         {/* Menu Items */}
         <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.menuContainer}>
           {MENU_ITEMS.map((item, index) => (
-            <GlassCard key={index} intensity={25} style={styles.menuItemCard}>
-              <View style={styles.menuItemRow}>
-                <View style={styles.menuIconWrapper}>
-                  <item.icon size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+            <TouchableOpacity
+              key={item.key}
+              activeOpacity={0.7}
+              onPress={() => handleMenuPress(item.key)}
+            >
+              <GlassCard intensity={25} style={styles.menuItemCard}>
+                <View style={styles.menuItemRow}>
+                  <View style={styles.menuIconWrapper}>
+                    <item.icon size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+                  </View>
+                  <Typography variant="body" weight="medium" style={styles.menuLabel}>
+                    {item.label}
+                  </Typography>
+                  <ChevronRight size={20} color={theme.colors.text.secondary} />
                 </View>
-                <Typography variant="body" weight="medium" style={styles.menuLabel}>
-                  {item.label}
-                </Typography>
-                <ChevronRight size={20} color={theme.colors.text.secondary} />
-              </View>
-            </GlassCard>
+              </GlassCard>
+            </TouchableOpacity>
           ))}
         </Animated.View>
 
@@ -121,6 +145,27 @@ export default function ProfileScreen() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* 4 Interactive Modals */}
+      <OrdersModal
+        visible={activeModal === 'orders'}
+        onClose={() => setActiveModal(null)}
+      />
+
+      <WishlistModal
+        visible={activeModal === 'wishlist'}
+        onClose={() => setActiveModal(null)}
+      />
+
+      <PaymentMethodsModal
+        visible={activeModal === 'payments'}
+        onClose={() => setActiveModal(null)}
+      />
+
+      <AccountSettingsModal
+        visible={activeModal === 'settings'}
+        onClose={() => setActiveModal(null)}
+      />
     </ScreenContainer>
   );
 }

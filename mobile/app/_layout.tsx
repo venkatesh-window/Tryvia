@@ -5,9 +5,24 @@ import { useAuthStore } from '../src/store/useAuthStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { View, StyleSheet, LogBox } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
-import { useFonts, CormorantGaramond_400Regular, CormorantGaramond_700Bold } from '@expo-google-fonts/cormorant-garamond';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import { DancingScript_400Regular, DancingScript_700Bold } from '@expo-google-fonts/dancing-script';
+import { 
+  useFonts, 
+  CormorantGaramond_300Light,
+  CormorantGaramond_400Regular, 
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+  CormorantGaramond_700Bold,
+  CormorantGaramond_400Regular_Italic,
+  CormorantGaramond_700Bold_Italic
+} from '@expo-google-fonts/cormorant-garamond';
+import { 
+  Inter_300Light,
+  Inter_400Regular, 
+  Inter_500Medium, 
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold
+} from '@expo-google-fonts/inter';
 
 SplashScreen.preventAutoHideAsync();
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
@@ -20,13 +35,19 @@ function RootLayoutNav() {
   const navigationState = useRootNavigationState();
 
   let [fontsLoaded] = useFonts({
+    CormorantGaramond_300Light,
     CormorantGaramond_400Regular,
+    CormorantGaramond_500Medium,
+    CormorantGaramond_600SemiBold,
     CormorantGaramond_700Bold,
+    CormorantGaramond_400Regular_Italic,
+    CormorantGaramond_700Bold_Italic,
+    Inter_300Light,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
-    DancingScript_400Regular,
-    DancingScript_700Bold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
   });
 
   useEffect(() => {
@@ -37,7 +58,13 @@ function RootLayoutNav() {
     if (isLoading || !fontsLoaded) return;
     if (!navigationState?.key) return;
 
-    SplashScreen.hideAsync();
+    // Safety fallback timer: LandingVideo will hide the splash screen immediately when the video is readyToPlay,
+    // but in case the user navigates elsewhere or video takes too long, hide after 3 seconds.
+    const timer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, [isLoading, fontsLoaded, navigationState?.key]);
 
   if (isLoading || !fontsLoaded) {

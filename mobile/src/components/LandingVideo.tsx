@@ -16,6 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 // Fallback logo if video fails
 import { Text } from 'react-native';
 
+import * as SplashScreen from 'expo-splash-screen';
+
 interface LandingVideoProps {
   onFinished: () => void;
 }
@@ -24,30 +26,48 @@ export function LandingVideo({ onFinished }: LandingVideoProps) {
   // Use require for local asset
   const videoSource = require('../assets/intro.mp4');
   const { player, isReady, hasError } = useVideoPreload(videoSource);
-  
-  const opacity = useSharedValue(0);
   const [isVideoFinished, setIsVideoFinished] = useState(false);
   const hasTriggeredFinish = useRef(false);
+  const hasStarted = useRef(false);
 
-  // Play video when ready
+  // Play video immediately from start when ready
   useEffect(() => {
-    if (isReady && player && !isVideoFinished) {
+    if (isReady && player && !hasStarted.current && !isVideoFinished) {
+      hasStarted.current = true;
+      player.currentTime = 0;
       player.play();
-      // Fade in video
-      opacity.value = withTiming(1, { duration: 700 });
+      // Instantly dismiss splash screen so video is visible from frame 0
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isReady, player, opacity, isVideoFinished]);
+  }, [isReady, player, isVideoFinished]);
+
+  // Safety fallback if video fails or takes too long to load (e.g. 2.5s)
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      if (!hasStarted.current && !hasTriggeredFinish.current) {
+        SplashScreen.hideAsync().catch(() => {});
+        if (player && player.status === 'readyToPlay') {
+          player.currentTime = 0;
+          player.play();
+        } else {
+          onFinished();
+        }
+      }
+    }, 2500);
+
+    return () => clearTimeout(safetyTimer);
+  }, [player, onFinished]);
 
   // Handle fallback if video fails to load
   useEffect(() => {
     if (hasError && !hasTriggeredFinish.current) {
       hasTriggeredFinish.current = true;
-      opacity.value = withTiming(1, { duration: 700 });
+      SplashScreen.hideAsync().catch(() => {});
       setTimeout(() => {
         onFinished();
-      }, 1000); // show logo for 1 second then finish
+      }, 1000);
     }
-  }, [hasError, opacity, onFinished]);
+  }, [hasError, onFinished]);
 
   // Listen to the playback status
   useEffect(() => {
@@ -57,51 +77,43 @@ export function LandingVideo({ onFinished }: LandingVideoProps) {
       hasTriggeredFinish.current = true;
       setIsVideoFinished(true);
       
-      // Freeze for 400ms then finish to let router handle the crossfade
+      // Finish and transition smoothly to tabs
       setTimeout(() => {
         onFinished();
-      }, 400);
+      }, 300);
     });
 
     return () => {
       subscription.remove();
     };
-  }, [player, onFinished, opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-    };
-  });
+  }, [player, onFinished]);
 
   return (
     <View style={styles.container}>
       <StatusBar hidden />
-      <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
-        {hasError ? (
-          <View style={styles.fallbackContainer}>
-            <Text style={styles.fallbackText}>TRYVIA</Text>
-          </View>
-        ) : (
-          <View style={StyleSheet.absoluteFill}>
-            <VideoView
-              style={StyleSheet.absoluteFill}
-              player={player}
-              allowsFullscreen={false}
-              allowsPictureInPicture={false}
-              showsTimecodes={false}
-              nativeControls={false}
-              contentFit="cover" // Expo video uses contentFit
-            />
-            {/* Optional subtle dark vignette / gradient at bottom */}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.15)']}
-              style={styles.gradient}
-              pointerEvents="none"
-            />
-          </View>
-        )}
-      </Animated.View>
+      {hasError ? (
+        <View style={styles.fallbackContainer}>
+          <Text style={styles.fallbackText}>TRYVIA</Text>
+        </View>
+      ) : (
+        <View style={StyleSheet.absoluteFill}>
+          <VideoView
+            style={StyleSheet.absoluteFill}
+            player={player}
+            allowsFullscreen={false}
+            allowsPictureInPicture={false}
+            showsTimecodes={false}
+            nativeControls={false}
+            contentFit="cover"
+          />
+          {/* Optional subtle dark vignette / gradient at bottom */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.15)']}
+            style={styles.gradient}
+            pointerEvents="none"
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -127,7 +139,7 @@ const styles = StyleSheet.create({
   fallbackText: {
     color: '#fff',
     fontSize: 32,
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: 'CormorantGaramond_700Bold',
     letterSpacing: 4,
   },
 });

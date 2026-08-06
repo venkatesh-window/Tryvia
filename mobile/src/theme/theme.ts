@@ -40,8 +40,16 @@ export const theme = {
   },
   typography: {
     fontFamily: {
-      brand: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
-      body: Platform.OS === 'ios' ? 'Avenir Next' : 'sans-serif',
+      brand: 'CormorantGaramond_700Bold',
+      serif: 'CormorantGaramond_400Regular',
+      serifMedium: 'CormorantGaramond_500Medium',
+      serifSemiBold: 'CormorantGaramond_600SemiBold',
+      serifBold: 'CormorantGaramond_700Bold',
+      body: 'Inter_400Regular',
+      bodyLight: 'Inter_300Light',
+      bodyMedium: 'Inter_500Medium',
+      bodySemiBold: 'Inter_600SemiBold',
+      bodyBold: 'Inter_700Bold',
     }
   },
   spacing: {

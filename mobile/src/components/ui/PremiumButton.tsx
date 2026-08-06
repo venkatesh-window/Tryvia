@@ -10,6 +10,7 @@ interface PremiumButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'glass';
+  disabled?: boolean;
   style?: ViewStyle;
 }
 
@@ -17,11 +18,13 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
   title,
   onPress,
   variant = 'primary',
+  disabled = false,
   style,
 }) => {
   const theme = useTheme();
 
   const getBackgroundColor = () => {
+    if (disabled) return 'rgba(255,255,255,0.2)';
     switch (variant) {
       case 'primary': return theme.colors.text.primary;
       case 'secondary': return theme.colors.background.paper;
@@ -60,9 +63,10 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
 
   return (
     <Pressable 
-      onPress={onPress} 
-      onPressIn={handlePressIn}
-      android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false }}
+      disabled={disabled}
+      onPress={disabled ? undefined : onPress} 
+      onPressIn={disabled ? undefined : handlePressIn}
+      android_ripple={disabled ? undefined : { color: 'rgba(255,255,255,0.2)', borderless: false }}
     >
       {({ pressed }) => (
         <MotiView

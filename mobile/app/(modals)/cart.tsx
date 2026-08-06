@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Platform, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
@@ -8,15 +8,39 @@ import { useCartStore } from '../../src/store/useCartStore';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Image } from 'expo-image';
 import { GlassCard } from '../../src/components/ui/GlassCard';
-import { Alert } from 'react-native';
+import { MockPaymentGatewayModal } from '../../src/components/payment/MockPaymentGatewayModal';
+import { OrderSuccessModal } from '../../src/components/payment/OrderSuccessModal';
+import { Order } from '../../src/store/useOrderStore';
 
 export default function CartModal() {
   const router = useRouter();
   const theme = useTheme();
-  const { items, total, subtotal, walletDeduction, removeItem, checkout } = useCartStore();
+  const { items, total, subtotal, walletDeduction, removeItem } = useCartStore();
+
+  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
   const isMinimumMet = total >= 400; // Mock minimum order value
   const minOrderValue = 400;
+
+  const handleCheckout = () => {
+    setIsPaymentModalVisible(true);
+  };
+
+  const handlePaymentSuccess = (order: Order) => {
+    setIsPaymentModalVisible(false);
+    setCompletedOrder(order);
+  };
+
+  const handleViewOrders = () => {
+    setCompletedOrder(null);
+    router.replace('/(tabs)/profile' as any);
+  };
+
+  const handleContinueShopping = () => {
+    setCompletedOrder(null);
+    router.back();
+  };
 
   return (
     <ScreenContainer showOrbs={false}>
@@ -56,8 +80,8 @@ export default function CartModal() {
         <View style={styles.progressContainer}>
            <Typography variant="caption" color={isMinimumMet ? 'primary' : 'secondary'}>
              {isMinimumMet 
-               ? <Text>✓ Minimum order value (<Text style={{fontFamily: 'CormorantGaramond_700Bold'}}>₹{minOrderValue}</Text>) met!</Text>
-               : <Text>Add <Text style={{fontFamily: 'CormorantGaramond_700Bold'}}>₹{minOrderValue - total}</Text> more to checkout.</Text>
+               ? `✓ Minimum order value (₹${minOrderValue}) met!`
+               : `Add ₹${minOrderValue - total} more to checkout.`
              }
            </Typography>
         </View>
@@ -81,15 +105,26 @@ export default function CartModal() {
         
         <PremiumButton 
           title="Proceed to Checkout" 
-          onPress={() => {
-            checkout();
-            Alert.alert("Success!", "Your order was placed successfully. Cashback has been added to your wallet!", [
-              { text: "OK", onPress: () => router.back() }
-            ]);
-          }}
+          onPress={handleCheckout}
+          disabled={!isMinimumMet || items.length === 0}
           variant={isMinimumMet && items.length > 0 ? 'primary' : 'secondary'}
         />
       </View>
+
+      {/* Mock Payment Gateway Modal */}
+      <MockPaymentGatewayModal
+        visible={isPaymentModalVisible}
+        onClose={() => setIsPaymentModalVisible(false)}
+        onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Order Placed Success Modal */}
+      <OrderSuccessModal
+        visible={!!completedOrder}
+        order={completedOrder}
+        onViewOrders={handleViewOrders}
+        onContinueShopping={handleContinueShopping}
+      />
     </ScreenContainer>
   );
 }

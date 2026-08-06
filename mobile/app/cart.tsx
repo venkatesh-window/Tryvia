@@ -13,38 +13,36 @@ import { ChevronLeft, Trash2, Plus, Minus, CheckCircle } from 'lucide-react-nati
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { theme } from '../src/theme/theme';
 
+import { MockPaymentGatewayModal } from '../src/components/payment/MockPaymentGatewayModal';
+import { OrderSuccessModal } from '../src/components/payment/OrderSuccessModal';
+import { Order } from '../src/store/useOrderStore';
+
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, subtotal, walletDeduction, total, addItem, removeItem, clearCart, totalItems } = useCartStore();
 
-  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
   const handleCheckout = () => {
-    setOrderPlaced(true);
-    setTimeout(() => {
-      clearCart();
-      router.push('/(tabs)' as any);
-    }, 2500);
+    setIsPaymentModalVisible(true);
   };
 
-  if (orderPlaced) {
-    return (
-      <ScreenContainer showOrbs={false}>
-        <Animated.View entering={FadeIn.duration(1000)} style={styles.successScreen}>
-           <GlassCard intensity={20} style={styles.successCard}>
-             <CheckCircle size={64} color={theme.colors.primary.main} style={{ marginBottom: 24 }} strokeWidth={1} />
-             <Typography variant="h1" weight="medium" style={{ textAlign: 'center', marginBottom: 12 }}>
-               Order Confirmed
-             </Typography>
-             <Typography variant="body" color="secondary" style={{ textAlign: 'center', letterSpacing: 1 }}>
-               Welcome to the next level of luxury. Your items are being meticulously prepared.
-             </Typography>
-           </GlassCard>
-        </Animated.View>
-      </ScreenContainer>
-    );
-  }
+  const handlePaymentSuccess = (order: Order) => {
+    setIsPaymentModalVisible(false);
+    setCompletedOrder(order);
+  };
+
+  const handleViewOrders = () => {
+    setCompletedOrder(null);
+    router.replace('/(tabs)/profile' as any);
+  };
+
+  const handleContinueShopping = () => {
+    setCompletedOrder(null);
+    router.replace('/(tabs)' as any);
+  };
 
   return (
     <ScreenContainer showOrbs={false}>
@@ -176,6 +174,21 @@ export default function CartScreen() {
         
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Mock Payment Gateway Modal */}
+      <MockPaymentGatewayModal
+        visible={isPaymentModalVisible}
+        onClose={() => setIsPaymentModalVisible(false)}
+        onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Order Placed Success Modal */}
+      <OrderSuccessModal
+        visible={!!completedOrder}
+        order={completedOrder}
+        onViewOrders={handleViewOrders}
+        onContinueShopping={handleContinueShopping}
+      />
     </ScreenContainer>
   );
 }

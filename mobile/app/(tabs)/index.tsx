@@ -42,39 +42,39 @@ export default function HomeScreen() {
   return (
     <Animated.View entering={customEntering} style={{ flex: 1 }}>
       <ScreenContainer showOrbs={true}>
-        
+
         {/* Floating Glass Header */}
         <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
           <View style={styles.headerTopRow}>
-           <Typography style={styles.logo}>tryvia</Typography>
-           
-           <View style={styles.headerIcons}>
-             <BlurView  intensity={30} tint="light" style={styles.walletCapsule}>
+            <Typography style={styles.logo}>tryvia</Typography>
+
+            <View style={styles.headerIcons}>
+              <BlurView intensity={30} tint="light" style={styles.walletCapsule}>
                 <CreditCard size={14} color={theme.colors.text.primary} />
                 <Typography variant="h3" weight="bold" color="primary" style={{ marginLeft: 6, fontSize: 14 }}>
                   ₹{walletBalance}
                 </Typography>
-             </BlurView>
-             
-             <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)}>
-               <BlurView  intensity={30} tint="light" style={styles.cartBtnBlur}>
-                 <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
-                 {totalItems > 0 && (
-                   <View style={styles.badge}>
-                     <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
-                   </View>
-                 )}
-               </BlurView>
-             </TouchableOpacity>
-           </View>
-        </View>
-      </Animated.View>
+              </BlurView>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Luxury Hero Banner Carousel */}
-        <Animated.View entering={FadeInUp.duration(1000).delay(200)} style={styles.bannerWrapper}>
-           <FlatList 
+              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)}>
+                <BlurView intensity={30} tint="light" style={styles.cartBtnBlur}>
+                  <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+                  {totalItems > 0 && (
+                    <View style={styles.badge}>
+                      <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
+                    </View>
+                  )}
+                </BlurView>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+          {/* Luxury Hero Banner Carousel */}
+          <Animated.View entering={FadeInUp.duration(1000).delay(200)} style={styles.bannerWrapper}>
+            <FlatList
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
@@ -82,73 +82,73 @@ export default function HomeScreen() {
               keyExtractor={item => item.id}
               snapToInterval={width}
               decelerationRate="fast"
-              renderItem={({item}) => (
+              renderItem={({ item }) => (
                 <View style={styles.bannerCardContainer}>
                   <View style={styles.bannerCard}>
                     <Image source={{ uri: item.img }} style={styles.bannerImg} contentFit="cover" />
-                    
+
                     {/* Glass Text Overlay */}
                     <View style={styles.bannerTextOverlay}>
-                      <BlurView  intensity={40} tint="light" style={styles.bannerTextBlur}>
+                      <BlurView intensity={40} tint="light" style={styles.bannerTextBlur}>
                         <Typography variant="caption" style={styles.bannerSubtitle}>{item.subtitle}</Typography>
                         <Typography variant="h2" weight="medium" style={styles.bannerTitle}>{item.title}</Typography>
                       </BlurView>
                     </View>
-                    
+
                     <View style={styles.glassBorder} />
                   </View>
                 </View>
               )}
-           />
-        </Animated.View>
+            />
+          </Animated.View>
 
-        {/* Floating Circular Categories */}
-        <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.categoriesRow}>
-           <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(tabs)/products' as any)}>
+          {/* Floating Circular Categories */}
+          <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.categoriesRow}>
+            <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(tabs)/products' as any)}>
               <View style={styles.categoryCircle}>
                 <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
                 <Image source={{ uri: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=200&auto=format&fit=crop' }} style={styles.categoryImg} />
                 <View style={styles.circleBorder} />
               </View>
               <Typography variant="caption" weight="medium" style={styles.categoryLabel}>FULL SIZE</Typography>
-           </TouchableOpacity>
-           
-           <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(tabs)/testers' as any)}>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(tabs)/testers' as any)}>
               <View style={styles.categoryCircle}>
                 <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
                 <Image source={{ uri: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=200&auto=format&fit=crop' }} style={styles.categoryImg} />
                 <View style={styles.circleBorder} />
               </View>
               <Typography variant="caption" weight="medium" style={styles.categoryLabel}>TESTERS</Typography>
-           </TouchableOpacity>
-           
+            </TouchableOpacity>
 
-        </Animated.View>
 
-        {/* Suggested Horizontal Feed */}
-        <Animated.View entering={FadeInUp.duration(1000).delay(600)} style={styles.section}>
-          <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Curated For You</Typography>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {trendingProducts?.slice(0, 4).map((item) => (
-              <ProductCard 
-                key={item.id}
-                product={{
-                  id: item.id,
-                  name: item.name,
-                  brand: item.brand?.name || 'CHANEL',
-                  fullPrice: item.full_price,
-                  testerPrice: item.tester_price,
-                  imageUrl: item.image_url || 'https://via.placeholder.com/300'
-                }}
-                onPress={() => router.push(`/product/${item.id}` as any)}
-              />
-            ))}
-          </ScrollView>
-        </Animated.View>
+          </Animated.View>
 
-        <View style={{ height: 180 }} />
-      </ScrollView>
-    </ScreenContainer>
+          {/* Suggested Horizontal Feed */}
+          <Animated.View entering={FadeInUp.duration(1000).delay(600)} style={styles.section}>
+            <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Curated For You</Typography>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+              {trendingProducts?.slice(0, 4).map((item) => (
+                <ProductCard
+                  key={item.id}
+                  product={{
+                    id: item.id,
+                    name: item.name,
+                    brand: item.brand?.name || 'CHANEL',
+                    fullPrice: item.full_price,
+                    testerPrice: item.tester_price,
+                    imageUrl: item.image_url || 'https://via.placeholder.com/300'
+                  }}
+                  onPress={() => router.push(`/product/${item.id}` as any)}
+                />
+              ))}
+            </ScrollView>
+          </Animated.View>
+
+          <View style={{ height: 180 }} />
+        </ScrollView>
+      </ScreenContainer>
     </Animated.View>
   );
 }
@@ -167,8 +167,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   logo: {
-    fontFamily: 'DancingScript_700Bold',
-    fontSize: 42,
+    fontFamily: 'CormorantGaramond_700Bold',
+    fontSize: 36,
+    letterSpacing: 3,
     color: theme.colors.text.primary,
   },
   headerIcons: {

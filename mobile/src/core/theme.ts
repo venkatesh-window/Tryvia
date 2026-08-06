@@ -25,9 +25,12 @@ export const Theme = {
   },
   typography: {
     fontFamily: {
-      regular: 'Inter-Regular', // Placeholder for actual font loading
-      medium: 'Inter-Medium',
-      bold: 'Inter-Bold',
+      regular: 'Inter_400Regular',
+      medium: 'Inter_500Medium',
+      semiBold: 'Inter_600SemiBold',
+      bold: 'Inter_700Bold',
+      serif: 'CormorantGaramond_400Regular',
+      serifBold: 'CormorantGaramond_700Bold',
     },
     sizes: {
       xs: 12,

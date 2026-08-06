@@ -14,6 +14,10 @@ import { BlurView } from 'expo-blur';
 import { ShoppingBag, ChevronLeft, Heart } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInUp, useAnimatedScrollHandler, useSharedValue, useAnimatedStyle, interpolate } from 'react-native-reanimated';
 
+import { useWishlistStore } from '../../src/store/useWishlistStore';
+import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
+
 const { width, height } = Dimensions.get('window');
 
 export default function ProductDetailsScreen() {
@@ -21,12 +25,23 @@ export default function ProductDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addItem, totalItems } = useCartStore();
+  const { toggleWishlist, isInWishlist } = useWishlistStore();
   const scrollY = useSharedValue(0);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: () => productService.getProductById(Number(id)),
   });
+
+  const isFavorited = product ? isInWishlist(product.id) : false;
+
+  const handleToggleWishlist = () => {
+    if (!product) return;
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    toggleWishlist(product);
+  };
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -80,9 +95,17 @@ export default function ProductDetailsScreen() {
         <View style={{ flex: 1 }} />
         
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={[styles.iconCircleBtn, { marginRight: 12 }]}>
+          <TouchableOpacity
+            style={[styles.iconCircleBtn, { marginRight: 12 }]}
+            onPress={handleToggleWishlist}
+          >
              <BlurView  intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
-             <Heart size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+             <Heart
+               size={20}
+               color={isFavorited ? '#E11D48' : theme.colors.text.primary}
+               fill={isFavorited ? '#E11D48' : 'none'}
+               strokeWidth={1.5}
+             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconCircleBtn} onPress={() => router.push('/cart' as any)}>
             <BlurView  intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
