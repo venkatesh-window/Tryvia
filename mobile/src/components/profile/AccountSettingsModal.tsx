@@ -11,18 +11,14 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Typography } from '../ui/Typography';
-import { GlassCard } from '../ui/GlassCard';
 import { PremiumButton } from '../ui/PremiumButton';
 import { useAuthStore } from '../../store/useAuthStore';
 import {
   X,
-  User,
-  MapPin,
-  Bell,
   CheckCircle2,
-  Lock,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { theme } from '../../theme/theme';
 
 interface AccountSettingsModalProps {
   visible: boolean;
@@ -86,32 +82,38 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        >
+          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
+        </TouchableOpacity>
 
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Typography variant="caption" style={styles.subHeader}>
+              <Typography variant="caption" weight="bold" style={styles.subHeader}>
                 PREFERENCES & IDENTITY
               </Typography>
-              <Typography variant="h2" weight="medium" style={{ color: '#fff', marginTop: 2 }}>
+              <Typography variant="h2" weight="medium" style={styles.title}>
                 Account Settings
               </Typography>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#fff" />
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+              <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
             {/* Personal Details */}
-            <Typography variant="caption" style={styles.sectionTitle}>
+            <Typography variant="caption" color="secondary" style={styles.sectionTitle}>
               PERSONAL INFORMATION
             </Typography>
 
-            <GlassCard intensity={25} style={styles.card}>
+            <View style={styles.card}>
               <View style={styles.inputGroup}>
                 <Typography variant="caption" color="secondary" style={styles.inputLabel}>
                   FULL NAME
@@ -121,7 +123,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder="Your Full Name"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
                 />
               </View>
 
@@ -136,7 +138,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   value={email}
                   onChangeText={setEmail}
                   placeholder="Your Email"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -153,18 +155,18 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="Your Phone Number"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
                   keyboardType="phone-pad"
                 />
               </View>
-            </GlassCard>
+            </View>
 
             {/* Shipping Address */}
-            <Typography variant="caption" style={[styles.sectionTitle, { marginTop: 24 }]}>
+            <Typography variant="caption" color="secondary" style={[styles.sectionTitle, { marginTop: 24 }]}>
               DEFAULT SHIPPING ADDRESS
             </Typography>
 
-            <GlassCard intensity={25} style={styles.card}>
+            <View style={styles.card}>
               <View style={styles.inputGroup}>
                 <Typography variant="caption" color="secondary" style={styles.inputLabel}>
                   STREET / APARTMENT / SUITE
@@ -174,7 +176,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   value={street}
                   onChangeText={setStreet}
                   placeholder="Street Address"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
                 />
               </View>
 
@@ -190,11 +192,11 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     value={city}
                     onChangeText={setCity}
                     placeholder="City"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor="rgba(0,0,0,0.35)"
                   />
                 </View>
 
-                <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                <View style={{ width: 1, backgroundColor: 'rgba(0,0,0,0.06)' }} />
 
                 <View style={[styles.inputGroup, { flex: 1, paddingLeft: 16 }]}>
                   <Typography variant="caption" color="secondary" style={styles.inputLabel}>
@@ -205,7 +207,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     value={pincode}
                     onChangeText={setPincode}
                     placeholder="PIN Code"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor="rgba(0,0,0,0.35)"
                     keyboardType="numeric"
                     maxLength={6}
                   />
@@ -223,20 +225,20 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   value={state}
                   onChangeText={setState}
                   placeholder="State"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
                 />
               </View>
-            </GlassCard>
+            </View>
 
             {/* Preferences */}
-            <Typography variant="caption" style={[styles.sectionTitle, { marginTop: 24 }]}>
+            <Typography variant="caption" color="secondary" style={[styles.sectionTitle, { marginTop: 24 }]}>
               PRIVILEGES & NOTIFICATIONS
             </Typography>
 
-            <GlassCard intensity={25} style={styles.card}>
+            <View style={styles.card}>
               <View style={styles.preferenceRow}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <Typography variant="body" weight="medium" style={{ color: '#fff' }}>
+                  <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>
                     WhatsApp Dispatch Updates
                   </Typography>
                   <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>
@@ -246,8 +248,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 <Switch
                   value={whatsappUpdates}
                   onValueChange={setWhatsappUpdates}
-                  trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#D4AF37' }}
-                  thumbColor="#fff"
+                  trackColor={{ false: 'rgba(0,0,0,0.1)', true: '#121212' }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
 
@@ -255,7 +257,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
               <View style={styles.preferenceRow}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <Typography variant="body" weight="medium" style={{ color: '#fff' }}>
+                  <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>
                     VIP Pre-Launch Access
                   </Typography>
                   <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>
@@ -265,8 +267,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 <Switch
                   value={exclusiveInvites}
                   onValueChange={setExclusiveInvites}
-                  trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#D4AF37' }}
-                  thumbColor="#fff"
+                  trackColor={{ false: 'rgba(0,0,0,0.1)', true: '#121212' }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
 
@@ -274,7 +276,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
               <View style={styles.preferenceRow}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <Typography variant="body" weight="medium" style={{ color: '#fff' }}>
+                  <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>
                     Biometric Sign-in
                   </Typography>
                   <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>
@@ -284,18 +286,18 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 <Switch
                   value={biometrics}
                   onValueChange={setBiometrics}
-                  trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#D4AF37' }}
-                  thumbColor="#fff"
+                  trackColor={{ false: 'rgba(0,0,0,0.1)', true: '#121212' }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
-            </GlassCard>
+            </View>
 
             {/* Save Button */}
             <View style={{ marginTop: 28, marginBottom: 20 }}>
               {savedSuccess ? (
                 <View style={styles.successPill}>
-                  <CheckCircle2 size={18} color="#4ADE80" />
-                  <Typography variant="body" weight="bold" style={{ color: '#4ADE80', marginLeft: 8 }}>
+                  <CheckCircle2 size={18} color="#16A34A" />
+                  <Typography variant="body" weight="bold" style={{ color: '#16A34A', marginLeft: 8 }}>
                     Settings Saved Successfully
                   </Typography>
                 </View>
@@ -320,15 +322,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   content: {
-    backgroundColor: '#0F0F11',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     maxHeight: '90%',
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 20,
   },
   header: {
     flexDirection: 'row',
@@ -338,53 +344,61 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
   },
   subHeader: {
-    color: '#D4AF37',
-    fontSize: 11,
+    color: '#B8860B',
+    fontSize: 10,
     letterSpacing: 2,
-    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 2,
+  },
+  title: {
+    color: theme.colors.text.primary,
+    marginTop: 2,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   scrollBody: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 16,
   },
   sectionTitle: {
-    color: 'rgba(255,255,255,0.6)',
     letterSpacing: 1.5,
-    fontSize: 11,
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
     marginBottom: 10,
   },
   card: {
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 20,
+    backgroundColor: '#FAFAF8',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   inputGroup: {
     paddingVertical: 4,
   },
   inputLabel: {
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1,
+    fontFamily: 'Inter_600SemiBold',
     marginBottom: 4,
   },
   textInput: {
-    color: '#fff',
+    color: theme.colors.text.primary,
     fontFamily: 'Inter_500Medium',
-    fontSize: 15,
+    fontSize: 14,
     paddingVertical: Platform.OS === 'ios' ? 4 : 2,
   },
   inputDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
     marginVertical: 10,
   },
   preferenceRow: {
@@ -397,10 +411,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    backgroundColor: 'rgba(22, 163, 74, 0.1)',
     borderRadius: 14,
     paddingVertical: 16,
     borderWidth: 1,
-    borderColor: 'rgba(74, 222, 128, 0.3)',
+    borderColor: 'rgba(22, 163, 74, 0.25)',
   },
 });

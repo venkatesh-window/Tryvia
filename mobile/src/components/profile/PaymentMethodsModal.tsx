@@ -10,20 +10,16 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Typography } from '../ui/Typography';
-import { GlassCard } from '../ui/GlassCard';
-import { PremiumButton } from '../ui/PremiumButton';
 import { usePaymentMethodsStore, SavedCard, SavedUpi } from '../../store/usePaymentMethodsStore';
 import {
   X,
   CreditCard,
   Plus,
   Trash2,
-  CheckCircle,
   Smartphone,
-  Shield,
-  Star,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { theme } from '../../theme/theme';
 
 interface PaymentMethodsModalProps {
   visible: boolean;
@@ -88,29 +84,35 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        >
+          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
+        </TouchableOpacity>
 
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Typography variant="caption" style={styles.subHeader}>
+              <Typography variant="caption" weight="bold" style={styles.subHeader}>
                 SECURE WALLET
               </Typography>
-              <Typography variant="h2" weight="medium" style={{ color: '#fff', marginTop: 2 }}>
+              <Typography variant="h2" weight="medium" style={styles.title}>
                 Payment Methods
               </Typography>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#fff" />
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+              <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
             {/* Cards Section */}
             <View style={styles.sectionHeaderRow}>
-              <Typography variant="caption" style={styles.sectionTitle}>
+              <Typography variant="caption" color="secondary" style={styles.sectionTitle}>
                 SAVED CARDS ({cards.length})
               </Typography>
               {!isAddingCard && (
@@ -120,9 +122,10 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                     setIsAddingCard(true);
                     setIsAddingUpi(false);
                   }}
+                  activeOpacity={0.7}
                 >
-                  <Plus size={14} color="#D4AF37" />
-                  <Typography variant="caption" style={{ color: '#D4AF37', marginLeft: 4, fontFamily: 'Inter_600SemiBold' }}>
+                  <Plus size={13} color="#B8860B" />
+                  <Typography variant="caption" weight="bold" style={{ color: '#B8860B', marginLeft: 4 }}>
                     Add Card
                   </Typography>
                 </TouchableOpacity>
@@ -131,8 +134,8 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
 
             {/* Add Card Form */}
             {isAddingCard && (
-              <GlassCard intensity={35} style={styles.addFormCard}>
-                <Typography variant="h3" style={{ color: '#fff', marginBottom: 12 }}>
+              <View style={styles.addFormCard}>
+                <Typography variant="h3" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 12 }}>
                   Add Luxury Card
                 </Typography>
 
@@ -143,12 +146,13 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                       key={brand}
                       style={[styles.brandChip, newCardBrand === brand && styles.selectedBrandChip]}
                       onPress={() => setNewCardBrand(brand)}
+                      activeOpacity={0.7}
                     >
                       <Typography
                         variant="caption"
                         style={[
-                          { color: 'rgba(255,255,255,0.7)' },
-                          newCardBrand === brand && { color: '#000', fontFamily: 'Inter_600SemiBold' },
+                          { color: '#666666' },
+                          newCardBrand === brand && { color: '#FFFFFF', fontFamily: 'Inter_600SemiBold' },
                         ]}
                       >
                         {brand.toUpperCase()}
@@ -161,7 +165,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                   <TextInput
                     style={styles.textInput}
                     placeholder="Card Number"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor="rgba(0,0,0,0.35)"
                     keyboardType="numeric"
                     value={newCardNumber}
                     onChangeText={setNewCardNumber}
@@ -174,7 +178,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                     <TextInput
                       style={styles.textInput}
                       placeholder="MM / YY"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="rgba(0,0,0,0.35)"
                       value={newCardExpiry}
                       onChangeText={setNewCardExpiry}
                       maxLength={5}
@@ -184,7 +188,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                     <TextInput
                       style={styles.textInput}
                       placeholder="Name on Card"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="rgba(0,0,0,0.35)"
                       value={newCardName}
                       onChangeText={setNewCardName}
                     />
@@ -193,41 +197,43 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
 
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
                   <TouchableOpacity
-                    style={[styles.formBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                    style={[styles.formBtn, { backgroundColor: 'rgba(0,0,0,0.04)' }]}
                     onPress={() => setIsAddingCard(false)}
+                    activeOpacity={0.7}
                   >
-                    <Typography variant="body" style={{ color: '#fff' }}>Cancel</Typography>
+                    <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>Cancel</Typography>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.formBtn, { backgroundColor: '#fff', flex: 2 }]}
+                    style={[styles.formBtn, { backgroundColor: '#121212', flex: 2 }]}
                     onPress={handleSaveCard}
+                    activeOpacity={0.8}
                   >
-                    <Typography variant="body" weight="bold" style={{ color: '#000' }}>Save Card</Typography>
+                    <Typography variant="body" weight="bold" style={{ color: '#FFFFFF' }}>Save Card</Typography>
                   </TouchableOpacity>
                 </View>
-              </GlassCard>
+              </View>
             )}
 
             {/* List of Cards */}
             {cards.map((card) => (
-              <GlassCard key={card.id} intensity={25} style={styles.methodCard}>
+              <View key={card.id} style={styles.methodCard}>
                 <View style={styles.cardTopRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <CreditCard size={22} color="#D4AF37" strokeWidth={1.5} />
-                    <Typography variant="h3" style={{ color: '#fff', marginLeft: 12, fontSize: 18 }}>
+                    <CreditCard size={20} color="#B8860B" strokeWidth={1.5} />
+                    <Typography variant="body" weight="semibold" style={{ color: theme.colors.text.primary, marginLeft: 10, fontSize: 15 }}>
                       {card.cardBrand.toUpperCase()} {card.cardNumberMasked}
                     </Typography>
                   </View>
 
                   {card.isDefault ? (
                     <View style={styles.defaultBadge}>
-                      <Typography variant="caption" style={{ color: '#D4AF37', fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>
+                      <Typography variant="caption" weight="bold" style={{ color: '#B8860B', fontSize: 10 }}>
                         DEFAULT
                       </Typography>
                     </View>
                   ) : (
-                    <TouchableOpacity onPress={() => setDefaultMethod(card.id)}>
-                      <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    <TouchableOpacity onPress={() => setDefaultMethod(card.id)} activeOpacity={0.7}>
+                      <Typography variant="caption" color="secondary" style={{ textDecorationLine: 'underline' }}>
                         Make Default
                       </Typography>
                     </TouchableOpacity>
@@ -239,16 +245,16 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                     {card.cardholderName} • Expires {card.expiry}
                   </Typography>
 
-                  <TouchableOpacity onPress={() => removeMethod(card.id)} style={{ padding: 4 }}>
-                    <Trash2 size={16} color="rgba(255,255,255,0.4)" />
+                  <TouchableOpacity onPress={() => removeMethod(card.id)} style={{ padding: 4 }} activeOpacity={0.7}>
+                    <Trash2 size={15} color={theme.colors.text.secondary} />
                   </TouchableOpacity>
                 </View>
-              </GlassCard>
+              </View>
             ))}
 
             {/* UPI Section */}
             <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-              <Typography variant="caption" style={styles.sectionTitle}>
+              <Typography variant="caption" color="secondary" style={styles.sectionTitle}>
                 SAVED UPI IDS ({upis.length})
               </Typography>
               {!isAddingUpi && (
@@ -258,9 +264,10 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                     setIsAddingUpi(true);
                     setIsAddingCard(false);
                   }}
+                  activeOpacity={0.7}
                 >
-                  <Plus size={14} color="#D4AF37" />
-                  <Typography variant="caption" style={{ color: '#D4AF37', marginLeft: 4, fontFamily: 'Inter_600SemiBold' }}>
+                  <Plus size={13} color="#B8860B" />
+                  <Typography variant="caption" weight="bold" style={{ color: '#B8860B', marginLeft: 4 }}>
                     Add UPI
                   </Typography>
                 </TouchableOpacity>
@@ -269,8 +276,8 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
 
             {/* Add UPI Form */}
             {isAddingUpi && (
-              <GlassCard intensity={35} style={styles.addFormCard}>
-                <Typography variant="h3" style={{ color: '#fff', marginBottom: 12 }}>
+              <View style={styles.addFormCard}>
+                <Typography variant="h3" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 12 }}>
                   Add UPI Handle
                 </Typography>
 
@@ -278,7 +285,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
                   <TextInput
                     style={styles.textInput}
                     placeholder="e.g. yourname@okhdfcbank"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholderTextColor="rgba(0,0,0,0.35)"
                     value={newUpiId}
                     onChangeText={setNewUpiId}
                     autoCapitalize="none"
@@ -287,37 +294,39 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
 
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
                   <TouchableOpacity
-                    style={[styles.formBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                    style={[styles.formBtn, { backgroundColor: 'rgba(0,0,0,0.04)' }]}
                     onPress={() => setIsAddingUpi(false)}
+                    activeOpacity={0.7}
                   >
-                    <Typography variant="body" style={{ color: '#fff' }}>Cancel</Typography>
+                    <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>Cancel</Typography>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.formBtn, { backgroundColor: '#fff', flex: 2 }]}
+                    style={[styles.formBtn, { backgroundColor: '#121212', flex: 2 }]}
                     onPress={handleSaveUpi}
+                    activeOpacity={0.8}
                   >
-                    <Typography variant="body" weight="bold" style={{ color: '#000' }}>Save UPI</Typography>
+                    <Typography variant="body" weight="bold" style={{ color: '#FFFFFF' }}>Save UPI</Typography>
                   </TouchableOpacity>
                 </View>
-              </GlassCard>
+              </View>
             )}
 
             {/* List of UPIs */}
             {upis.map((upi) => (
-              <GlassCard key={upi.id} intensity={25} style={styles.methodCard}>
+              <View key={upi.id} style={styles.methodCard}>
                 <View style={styles.cardTopRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Smartphone size={20} color="#D4AF37" />
-                    <Typography variant="body" weight="medium" style={{ color: '#fff', marginLeft: 12 }}>
+                    <Smartphone size={18} color="#B8860B" />
+                    <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary, marginLeft: 10 }}>
                       {upi.upiId}
                     </Typography>
                   </View>
 
-                  <TouchableOpacity onPress={() => removeMethod(upi.id)} style={{ padding: 4 }}>
-                    <Trash2 size={16} color="rgba(255,255,255,0.4)" />
+                  <TouchableOpacity onPress={() => removeMethod(upi.id)} style={{ padding: 4 }} activeOpacity={0.7}>
+                    <Trash2 size={15} color={theme.colors.text.secondary} />
                   </TouchableOpacity>
                 </View>
-              </GlassCard>
+              </View>
             ))}
 
             <View style={{ height: 40 }} />
@@ -332,15 +341,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   content: {
-    backgroundColor: '#0F0F11',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     maxHeight: '90%',
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 20,
   },
   header: {
     flexDirection: 'row',
@@ -350,25 +363,29 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
   },
   subHeader: {
-    color: '#D4AF37',
-    fontSize: 11,
+    color: '#B8860B',
+    fontSize: 10,
     letterSpacing: 2,
-    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 2,
+  },
+  title: {
+    color: theme.colors.text.primary,
+    marginTop: 2,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   scrollBody: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 16,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -377,9 +394,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: 'rgba(255,255,255,0.6)',
     letterSpacing: 1.5,
-    fontSize: 11,
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
   },
   addSmallBtn: {
     flexDirection: 'row',
@@ -390,13 +407,16 @@ const styles = StyleSheet.create({
   methodCard: {
     padding: 16,
     borderRadius: 18,
-    marginBottom: 12,
+    backgroundColor: '#FAFAF8',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    marginBottom: 10,
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   cardBottomRow: {
     flexDirection: 'row',
@@ -407,16 +427,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    backgroundColor: 'rgba(212, 175, 55, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderColor: 'rgba(212, 175, 55, 0.25)',
   },
   addFormCard: {
-    padding: 18,
+    padding: 16,
     borderRadius: 20,
-    marginBottom: 16,
+    backgroundColor: '#FAFAF8',
     borderWidth: 1,
     borderColor: 'rgba(212, 175, 55, 0.3)',
+    marginBottom: 16,
   },
   brandRow: {
     flexDirection: 'row',
@@ -427,21 +448,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
   },
   selectedBrandChip: {
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   inputBox: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 12 : 8,
   },
   textInput: {
-    color: '#fff',
+    color: theme.colors.text.primary,
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
   },

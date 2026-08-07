@@ -3,7 +3,7 @@ import { Text, TextProps, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 interface TypographyProps extends TextProps {
-  variant?: 'h1' | 'h2' | 'h3' | 'serif' | 'body' | 'caption';
+  variant?: 'h1' | 'h2' | 'h3' | 'serif' | 'body' | 'caption' | 'price' | 'number';
   color?: 'primary' | 'secondary' | 'error' | 'inverse';
   weight?: 'light' | 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold';
   italic?: boolean;
@@ -51,7 +51,7 @@ export function Typography({
       }
     }
 
-    // Clean Sans-Serif for Body, Captions, Numbers, and standard text -> Inter
+    // Clean Sans-Serif for Body, Captions, Numbers, Prices, and standard text -> Inter
     switch (weight) {
       case 'light': return 'Inter_300Light';
       case 'medium': return 'Inter_500Medium';
@@ -59,7 +59,7 @@ export function Typography({
       case 'bold': return 'Inter_700Bold';
       case 'extrabold': return 'Inter_800ExtraBold';
       case 'regular':
-      default: return 'Inter_400Regular';
+      default: return (variant === 'price' || variant === 'number') ? 'Inter_700Bold' : 'Inter_400Regular';
     }
   };
 
@@ -68,6 +68,8 @@ export function Typography({
       case 'h1': return 32;
       case 'h2': return 24;
       case 'h3': return 18;
+      case 'price': return 18;
+      case 'number': return 16;
       case 'serif': return 16;
       case 'caption': return 12;
       case 'body':

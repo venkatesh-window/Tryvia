@@ -4,30 +4,30 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  ScrollView,
   TextInput,
+  ScrollView,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Typography } from '../ui/Typography';
-import { GlassCard } from '../ui/GlassCard';
-import { PremiumButton } from '../ui/PremiumButton';
-import { useCartStore } from '../../store/useCartStore';
-import { useAuthStore } from '../../store/useAuthStore';
-import { usePaymentMethodsStore } from '../../store/usePaymentMethodsStore';
-import { useOrderStore, Order } from '../../store/useOrderStore';
 import {
-  X,
   CreditCard,
-  QrCode,
   Building2,
   Banknote,
   CheckCircle2,
+  X,
   ShieldCheck,
   Smartphone,
+  QrCode,
 } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { Typography } from '../ui/Typography';
+import { PremiumButton } from '../ui/PremiumButton';
+import { useCartStore } from '../../store/useCartStore';
+import { useOrderStore, Order } from '../../store/useOrderStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { usePaymentMethodsStore, SavedCard, SavedUpi } from '../../store/usePaymentMethodsStore';
+import { theme } from '../../theme/theme';
 
 interface MockPaymentGatewayModalProps {
   visible: boolean;
@@ -35,146 +35,132 @@ interface MockPaymentGatewayModalProps {
   onSuccess: (order: Order) => void;
 }
 
-type PaymentTab = 'upi' | 'card' | 'netbanking' | 'cod';
-
 export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = ({
   visible,
   onClose,
   onSuccess,
 }) => {
-  const { items, subtotal, walletDeduction, total, clearCart } = useCartStore();
-  const { user, addWalletBalance, deductWalletBalance } = useAuthStore();
-  const { methods } = usePaymentMethodsStore();
+  const { items, total, subtotal, walletDeduction, clearCart, appliedWalletCredit } = useCartStore();
   const { placeOrder } = useOrderStore();
+  const { user, deductWalletBalance } = useAuthStore();
+  const { methods } = usePaymentMethodsStore();
 
-  const [activeTab, setActiveTab] = useState<PaymentTab>('upi');
-  const [selectedUpiApp, setSelectedUpiApp] = useState('Google Pay');
+  const [activeTab, setActiveTab] = useState<'upi' | 'card' | 'netbanking' | 'cod'>('upi');
+  const [selectedUpiApp, setSelectedUpiApp] = useState<string>('Google Pay');
   const [customUpiId, setCustomUpiId] = useState('');
-  
-  // Card form state
-  const [selectedSavedCard, setSelectedSavedCard] = useState<string | null>(
-    methods.find(m => m.type === 'card')?.id || null
-  );
+  const [selectedSavedCard, setSelectedSavedCard] = useState<string | null>(null);
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
-  const [cardName, setCardName] = useState(user?.fullName || '');
-
-  // Netbanking state
+  const [cardName, setCardName] = useState('');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
-
-  // Processing steps
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
 
-  const savedCards = methods.filter(m => m.type === 'card');
-  const savedUpis = methods.filter(m => m.type === 'upi');
+  // Default saved methods from payment methods store
+  const savedCards = methods.filter((m): m is SavedCard => m.type === 'card');
+  const savedUpis = methods.filter((m): m is SavedUpi => m.type === 'upi');
 
-  const handlePay = () => {
-    if (Platform.OS === 'ios') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+  const handlePay = async () => {
     setIsProcessing(true);
-    setProcessingStep('Initiating 256-bit Secure Gateway...');
+    setProcessingStep('Authenticating 256-bit encryption...');
 
-    setTimeout(() => {
-      setProcessingStep('Verifying Transaction with Bank...');
-    }, 800);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setProcessingStep('Connecting with banking gateway...');
 
-    setTimeout(() => {
-      setProcessingStep('Payment Authorized & Confirmed!');
-    }, 1600);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setProcessingStep('Authorizing payment...');
 
-    setTimeout(() => {
-      // 1. Determine payment method display label
-      let paymentLabel = 'UPI (Instant)';
-      if (activeTab === 'card') {
-        paymentLabel = selectedSavedCard
-          ? `Saved Card (${savedCards.find(c => c.id === selectedSavedCard)?.cardNumberMasked || '•••• 4242'})`
-          : `Credit Card (•••• ${cardNumber.slice(-4) || '8800'})`;
-      } else if (activeTab === 'netbanking') {
-        paymentLabel = `Net Banking (${selectedBank})`;
-      } else if (activeTab === 'cod') {
-        paymentLabel = 'Cash on Delivery (Pay upon Arrival)';
-      } else {
-        paymentLabel = `UPI (${selectedUpiApp})`;
-      }
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
-      // 2. Default shipping address
-      const shippingAddress = user?.address || {
-        fullName: user?.fullName || 'Luxury Member',
-        street: '42 Altamount Road, Penthouse B',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400026',
-      };
+    // Deduct wallet balance if applied
+    if (walletDeduction > 0) {
+      deductWalletBalance(walletDeduction);
+    }
 
-      // 3. Place order in order store
-      const order = placeOrder({
-        items,
-        subtotal,
-        walletDeduction,
-        total,
-        paymentMethod: paymentLabel,
-        shippingAddress,
-      });
+    // Determine payment method label
+    let methodLabel = 'UPI - ' + selectedUpiApp;
+    if (activeTab === 'card') {
+      methodLabel = selectedSavedCard ? 'Saved Card' : 'Card ending ' + (cardNumber.slice(-4) || '1234');
+    } else if (activeTab === 'netbanking') {
+      methodLabel = 'Netbanking - ' + selectedBank;
+    } else if (activeTab === 'cod') {
+      methodLabel = 'Cash on Delivery';
+    }
 
-      // 4. Update auth store wallet balances
-      const testers = items.filter(i => i.type === 'tester');
-      const testerCashbackEarned = testers.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-      if (testerCashbackEarned > 0) {
-        addWalletBalance(testerCashbackEarned);
-      }
-      if (walletDeduction > 0) {
-        deductWalletBalance(walletDeduction);
-      }
-
-      // 5. Clear cart
-      clearCart();
-
-      // 6. Complete
+    // Create completed order
+    const newOrder = await placeOrder({
+      items: [...items],
+      paymentMethod: methodLabel,
+      apply_wallet_credit_id: appliedWalletCredit?.id || null
+    });
+    
+    if (!newOrder) {
       setIsProcessing(false);
-      onSuccess(order);
-    }, 2200);
+      Alert.alert('Payment Error', 'Failed to process order. Please verify your selected credit is still valid and try again.');
+      return;
+    }
+
+    clearCart();
+    setIsProcessing(false);
+    onSuccess(newOrder);
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
-        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+          disabled={isProcessing}
+        >
+          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
+        </TouchableOpacity>
 
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
             <View>
-              <Typography variant="caption" style={styles.secureBadge}>
-                <ShieldCheck size={14} color="#D4AF37" /> 256-BIT ENCRYPTED
-              </Typography>
-              <Typography variant="h2" weight="medium" style={{ color: '#fff', marginTop: 2 }}>
+              <View style={styles.secureBadgeRow}>
+                <ShieldCheck size={13} color="#B8860B" />
+                <Typography variant="caption" weight="bold" style={styles.secureBadge}>
+                  256-BIT ENCRYPTED
+                </Typography>
+              </View>
+              <Typography variant="h2" weight="medium" style={styles.title}>
                 Checkout & Pay
               </Typography>
             </View>
 
-            <TouchableOpacity onPress={onClose} disabled={isProcessing} style={styles.closeBtn}>
-              <X size={20} color="#fff" />
+            <TouchableOpacity onPress={onClose} disabled={isProcessing} style={styles.closeBtn} activeOpacity={0.7}>
+              <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Amount Due Bar */}
           <View style={styles.amountBar}>
             <View>
-              <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1 }}>
+              <Typography variant="caption" color="secondary" style={{ letterSpacing: 1.5, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>
                 TOTAL PAYABLE
               </Typography>
-              <Typography variant="h1" style={styles.amountText}>
+              <Typography variant="price" weight="bold" style={styles.amountText}>
                 ₹{total}
               </Typography>
             </View>
 
-            {walletDeduction > 0 && (
+            {appliedWalletCredit && (
               <View style={styles.walletSavedBadge}>
-                <Typography variant="caption" style={{ color: '#D4AF37', fontFamily: 'Inter_600SemiBold', fontSize: 11 }}>
-                  -₹{walletDeduction} Wallet Applied
+                <Typography variant="caption" weight="semibold" style={{ color: '#B8860B', fontSize: 11 }}>
+                  -₹{appliedWalletCredit.redeemable_amount.toFixed(2)} Wallet Discount
+                </Typography>
+                <Typography variant="caption" color="secondary" style={{ fontSize: 9, marginTop: 2, textAlign: 'right' }}>
+                  + ₹{appliedWalletCredit.platform_fee.toFixed(2)} Platform Fee
                 </Typography>
               </View>
             )}
@@ -182,11 +168,11 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
 
           {isProcessing ? (
             <View style={styles.processingContainer}>
-              <ActivityIndicator size="large" color="#D4AF37" style={{ marginBottom: 24 }} />
-              <Typography variant="h3" style={{ color: '#fff', textAlign: 'center', marginBottom: 8 }}>
-                Processing Luxury Payment
+              <ActivityIndicator size="large" color={theme.colors.text.primary} style={{ marginBottom: 20 }} />
+              <Typography variant="h2" weight="medium" style={{ color: theme.colors.text.primary, textAlign: 'center', marginBottom: 8 }}>
+                Processing Payment
               </Typography>
-              <Typography variant="body" color="secondary" style={{ textAlign: 'center', letterSpacing: 1 }}>
+              <Typography variant="body" color="secondary" style={{ textAlign: 'center', letterSpacing: 0.5 }}>
                 {processingStep}
               </Typography>
             </View>
@@ -197,10 +183,12 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 <TouchableOpacity
                   style={[styles.tabItem, activeTab === 'upi' && styles.activeTabItem]}
                   onPress={() => setActiveTab('upi')}
+                  activeOpacity={0.8}
                 >
-                  <QrCode size={18} color={activeTab === 'upi' ? '#000' : '#fff'} />
+                  <QrCode size={16} color={activeTab === 'upi' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
+                    weight="medium"
                     style={[styles.tabText, activeTab === 'upi' && styles.activeTabText]}
                   >
                     UPI
@@ -210,10 +198,12 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 <TouchableOpacity
                   style={[styles.tabItem, activeTab === 'card' && styles.activeTabItem]}
                   onPress={() => setActiveTab('card')}
+                  activeOpacity={0.8}
                 >
-                  <CreditCard size={18} color={activeTab === 'card' ? '#000' : '#fff'} />
+                  <CreditCard size={16} color={activeTab === 'card' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
+                    weight="medium"
                     style={[styles.tabText, activeTab === 'card' && styles.activeTabText]}
                   >
                     Card
@@ -223,23 +213,27 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 <TouchableOpacity
                   style={[styles.tabItem, activeTab === 'netbanking' && styles.activeTabItem]}
                   onPress={() => setActiveTab('netbanking')}
+                  activeOpacity={0.8}
                 >
-                  <Building2 size={18} color={activeTab === 'netbanking' ? '#000' : '#fff'} />
+                  <Building2 size={16} color={activeTab === 'netbanking' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
+                    weight="medium"
                     style={[styles.tabText, activeTab === 'netbanking' && styles.activeTabText]}
                   >
-                    Netbanking
+                    Banking
                   </Typography>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.tabItem, activeTab === 'cod' && styles.activeTabItem]}
                   onPress={() => setActiveTab('cod')}
+                  activeOpacity={0.8}
                 >
-                  <Banknote size={18} color={activeTab === 'cod' ? '#000' : '#fff'} />
+                  <Banknote size={16} color={activeTab === 'cod' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
+                    weight="medium"
                     style={[styles.tabText, activeTab === 'cod' && styles.activeTabText]}
                   >
                     COD
@@ -250,7 +244,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
               {/* Tab 1: UPI */}
               {activeTab === 'upi' && (
                 <View style={styles.tabSection}>
-                  <Typography variant="caption" style={styles.sectionLabel}>
+                  <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
                     POPULAR UPI APPS
                   </Typography>
 
@@ -263,16 +257,18 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                           selectedUpiApp === app && styles.selectedUpiCard,
                         ]}
                         onPress={() => setSelectedUpiApp(app)}
+                        activeOpacity={0.7}
                       >
-                        <Smartphone size={18} color={selectedUpiApp === app ? '#D4AF37' : '#fff'} />
+                        <Smartphone size={18} color={selectedUpiApp === app ? '#121212' : '#888888'} />
                         <Typography
                           variant="body"
-                          style={{ color: '#fff', fontSize: 13, marginLeft: 8 }}
+                          weight={selectedUpiApp === app ? 'semibold' : 'regular'}
+                          style={{ color: theme.colors.text.primary, fontSize: 13, marginLeft: 10 }}
                         >
                           {app}
                         </Typography>
                         {selectedUpiApp === app && (
-                          <CheckCircle2 size={16} color="#D4AF37" style={{ marginLeft: 'auto' }} />
+                          <CheckCircle2 size={16} color="#121212" style={{ marginLeft: 'auto' }} />
                         )}
                       </TouchableOpacity>
                     ))}
@@ -280,16 +276,17 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
 
                   {savedUpis.length > 0 && (
                     <View style={{ marginTop: 16 }}>
-                      <Typography variant="caption" style={styles.sectionLabel}>
+                      <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
                         SAVED UPI ID
                       </Typography>
-                      {savedUpis.map((upi) => (
+                      {savedUpis.map((upi: SavedUpi) => (
                         <TouchableOpacity
                           key={upi.id}
                           style={styles.savedMethodCard}
                           onPress={() => setSelectedUpiApp(upi.appLabel)}
+                          activeOpacity={0.7}
                         >
-                          <Typography variant="body" style={{ color: '#fff' }}>
+                          <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>
                             {upi.upiId}
                           </Typography>
                           <Typography variant="caption" color="secondary">
@@ -300,14 +297,14 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                     </View>
                   )}
 
-                  <Typography variant="caption" style={[styles.sectionLabel, { marginTop: 16 }]}>
+                  <Typography variant="caption" color="secondary" style={[styles.sectionLabel, { marginTop: 16 }]}>
                     OR ENTER UPI ID
                   </Typography>
                   <View style={styles.inputBox}>
                     <TextInput
                       style={styles.textInput}
                       placeholder="e.g. yourname@okhdfcbank"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="rgba(0,0,0,0.35)"
                       value={customUpiId}
                       onChangeText={setCustomUpiId}
                       autoCapitalize="none"
@@ -321,10 +318,10 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 <View style={styles.tabSection}>
                   {savedCards.length > 0 && (
                     <View style={{ marginBottom: 16 }}>
-                      <Typography variant="caption" style={styles.sectionLabel}>
+                      <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
                         SAVED LUXURY CARDS
                       </Typography>
-                      {savedCards.map((card) => (
+                      {savedCards.map((card: SavedCard) => (
                         <TouchableOpacity
                           key={card.id}
                           style={[
@@ -332,33 +329,34 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                             selectedSavedCard === card.id && styles.selectedMethodCard,
                           ]}
                           onPress={() => setSelectedSavedCard(card.id)}
+                          activeOpacity={0.7}
                         >
-                          <CreditCard size={20} color={selectedSavedCard === card.id ? '#D4AF37' : '#fff'} />
+                          <CreditCard size={20} color={selectedSavedCard === card.id ? '#121212' : '#888888'} />
                           <View style={{ marginLeft: 12, flex: 1 }}>
-                            <Typography variant="body" style={{ color: '#fff', fontFamily: 'Inter_600SemiBold' }}>
+                            <Typography variant="body" weight="semibold" style={{ color: theme.colors.text.primary }}>
                               {card.cardBrand.toUpperCase()} {card.cardNumberMasked}
                             </Typography>
-                            <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                            <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>
                               Expires {card.expiry} • {card.cardholderName}
                             </Typography>
                           </View>
                           {selectedSavedCard === card.id && (
-                            <CheckCircle2 size={18} color="#D4AF37" />
+                            <CheckCircle2 size={18} color="#121212" />
                           )}
                         </TouchableOpacity>
                       ))}
                     </View>
                   )}
 
-                  <Typography variant="caption" style={styles.sectionLabel}>
-                    OR ENTER NEW CARD DETAILS
+                  <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
+                    OR ENTER CARD DETAILS
                   </Typography>
 
                   <View style={styles.inputBox}>
                     <TextInput
                       style={styles.textInput}
                       placeholder="Card Number (XXXX XXXX XXXX XXXX)"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="rgba(0,0,0,0.35)"
                       keyboardType="numeric"
                       value={cardNumber}
                       onChangeText={(t) => {
@@ -374,7 +372,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                       <TextInput
                         style={styles.textInput}
                         placeholder="MM / YY"
-                        placeholderTextColor="rgba(255,255,255,0.4)"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
                         value={cardExpiry}
                         onChangeText={setCardExpiry}
                         maxLength={5}
@@ -384,7 +382,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                       <TextInput
                         style={styles.textInput}
                         placeholder="CVV"
-                        placeholderTextColor="rgba(255,255,255,0.4)"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
                         keyboardType="numeric"
                         secureTextEntry
                         value={cardCvv}
@@ -398,7 +396,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                     <TextInput
                       style={styles.textInput}
                       placeholder="Cardholder Name"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor="rgba(0,0,0,0.35)"
                       value={cardName}
                       onChangeText={setCardName}
                     />
@@ -409,7 +407,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
               {/* Tab 3: Net Banking */}
               {activeTab === 'netbanking' && (
                 <View style={styles.tabSection}>
-                  <Typography variant="caption" style={styles.sectionLabel}>
+                  <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
                     SELECT PREMIUM BANK
                   </Typography>
 
@@ -421,13 +419,14 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                         selectedBank === bank && styles.selectedBankCard,
                       ]}
                       onPress={() => setSelectedBank(bank)}
+                      activeOpacity={0.7}
                     >
-                      <Building2 size={18} color={selectedBank === bank ? '#D4AF37' : '#fff'} />
-                      <Typography variant="body" style={{ color: '#fff', marginLeft: 12 }}>
+                      <Building2 size={18} color={selectedBank === bank ? '#121212' : '#888888'} />
+                      <Typography variant="body" weight={selectedBank === bank ? 'semibold' : 'regular'} style={{ color: theme.colors.text.primary, marginLeft: 12 }}>
                         {bank}
                       </Typography>
                       {selectedBank === bank && (
-                        <CheckCircle2 size={18} color="#D4AF37" style={{ marginLeft: 'auto' }} />
+                        <CheckCircle2 size={18} color="#121212" style={{ marginLeft: 'auto' }} />
                       )}
                     </TouchableOpacity>
                   ))}
@@ -437,19 +436,19 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
               {/* Tab 4: Cash on Delivery */}
               {activeTab === 'cod' && (
                 <View style={styles.tabSection}>
-                  <GlassCard intensity={30} style={{ padding: 20 }}>
-                    <Typography variant="h3" style={{ color: '#fff', marginBottom: 8 }}>
+                  <View style={styles.codCard}>
+                    <Typography variant="h3" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 8 }}>
                       Cash on Delivery Available
                     </Typography>
                     <Typography variant="body" color="secondary" style={{ lineHeight: 20 }}>
-                      Pay ₹{total} seamlessly via cash or any UPI QR code presented by our Tryvia White-Glove Courier upon parcel arrival.
+                      Pay ₹{total} seamlessly via cash or any UPI QR code presented by our Tryvia courier upon parcel arrival.
                     </Typography>
-                  </GlassCard>
+                  </View>
                 </View>
               )}
 
               {/* Secure Checkout Button */}
-              <View style={{ marginTop: 28, marginBottom: 20 }}>
+              <View style={{ marginTop: 24, marginBottom: 12 }}>
                 <PremiumButton
                   title={`Pay ₹${total} Securely`}
                   onPress={handlePay}
@@ -468,15 +467,19 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalContent: {
-    backgroundColor: '#0F0F11',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     maxHeight: '85%',
     paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -486,19 +489,28 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  secureBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
   },
   secureBadge: {
-    color: '#D4AF37',
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    color: '#B8860B',
+    fontSize: 10,
     letterSpacing: 1.5,
+  },
+  title: {
+    color: theme.colors.text.primary,
+    marginTop: 2,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -507,35 +519,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    paddingVertical: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   amountText: {
-    color: '#fff',
-    fontSize: 32,
-    fontFamily: 'CormorantGaramond_700Bold',
+    color: theme.colors.text.primary,
+    fontSize: 28,
     marginTop: 2,
   },
   walletSavedBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    backgroundColor: 'rgba(212, 175, 55, 0.12)',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderColor: 'rgba(212, 175, 55, 0.25)',
   },
   scrollBody: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 16,
   },
   tabsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
     borderRadius: 14,
     padding: 4,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   tabItem: {
     flex: 1,
@@ -547,66 +558,69 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   activeTabItem: {
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: 'Inter_500Medium',
+    color: '#666666',
     fontSize: 12,
   },
   activeTabText: {
-    color: '#000',
-    fontFamily: 'Inter_600SemiBold',
+    color: '#FFFFFF',
   },
   tabSection: {
     marginTop: 4,
   },
   sectionLabel: {
-    color: 'rgba(255,255,255,0.6)',
     letterSpacing: 1.5,
-    fontSize: 11,
-    marginBottom: 12,
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 10,
   },
   upiGrid: {
-    gap: 10,
+    gap: 8,
   },
   upiAppCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#FAFAF8',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   selectedUpiCard: {
-    borderColor: '#D4AF37',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    borderColor: '#121212',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
   },
   savedMethodCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#FAFAF8',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: 10,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    marginBottom: 8,
   },
   selectedMethodCard: {
-    borderColor: '#D4AF37',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    borderColor: '#121212',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
   },
   inputBox: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 14 : 10,
   },
   textInput: {
-    color: '#fff',
+    color: theme.colors.text.primary,
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
   },
@@ -615,14 +629,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#FAFAF8',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0, 0, 0, 0.06)',
     marginBottom: 8,
   },
   selectedBankCard: {
-    borderColor: '#D4AF37',
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    borderColor: '#121212',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+  },
+  codCard: {
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#FAFAF8',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   processingContainer: {
     paddingVertical: 60,

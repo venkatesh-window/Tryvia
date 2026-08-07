@@ -66,7 +66,7 @@ export default function CartModal() {
                 <Typography variant="caption" color="secondary">{item.product.brand?.name?.toUpperCase() || 'UNKNOWN BRAND'}</Typography>
                 <Typography variant="body" weight="medium">{item.product.name}</Typography>
                 <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>{item.type === 'tester' ? 'Mini/Tester' : 'Full Size'} x{item.quantity}</Typography>
-                <Typography variant="h3" weight="bold" style={styles.itemPrice}>₹{item.price}</Typography>
+                <Typography variant="price" weight="bold" style={styles.itemPrice}>₹{item.price}</Typography>
               </View>
               <Pressable onPress={() => removeItem(item.id)} style={styles.removeBtn}>
                 <Typography variant="caption" color="secondary">Remove</Typography>
@@ -87,20 +87,20 @@ export default function CartModal() {
         </View>
 
         <View style={styles.totalRow}>
-          <Typography variant="h3" color="secondary">Subtotal</Typography>
-          <Typography variant="h3" weight="medium">₹{subtotal}</Typography>
+          <Typography variant="body" color="secondary">Subtotal</Typography>
+          <Typography variant="price" weight="medium">₹{subtotal}</Typography>
         </View>
         
         {walletDeduction > 0 && (
           <View style={styles.totalRow}>
-            <Typography variant="h3" color="secondary">Wallet Applied</Typography>
-            <Typography variant="h3" color="primary" weight="bold">-₹{walletDeduction}</Typography>
+            <Typography variant="body" color="secondary">Wallet Applied</Typography>
+            <Typography variant="price" color="primary" weight="bold">-₹{walletDeduction}</Typography>
           </View>
         )}
 
         <View style={[styles.totalRow, { marginTop: 8, borderTopWidth: 1, borderColor: 'rgba(0,0,0,0.05)', paddingTop: 16 }]}>
           <Typography variant="h3">Total</Typography>
-          <Typography variant="h2" weight="bold">₹{total}</Typography>
+          <Typography variant="price" weight="bold" style={{ fontSize: 24 }}>₹{total}</Typography>
         </View>
         
         <PremiumButton 

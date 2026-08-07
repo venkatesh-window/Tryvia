@@ -130,8 +130,8 @@ export default function TesterDetailsScreen() {
 
               <View style={styles.priceRow}>
                 <View>
-                  <Typography variant="caption" color="secondary" style={{ letterSpacing: 2, marginBottom: 4 }}>TRIAL SIZE</Typography>
-                  <Typography variant="h1" weight="medium">₹{product.tester_price}</Typography>
+                  <Typography variant="caption" color="secondary" style={{ letterSpacing: 2, marginBottom: 4, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>TRIAL SIZE</Typography>
+                  <Typography variant="price" weight="bold" style={{ fontSize: 32 }}>₹{product.tester_price}</Typography>
                 </View>
 
               </View>

@@ -17,6 +17,7 @@ import { OrdersModal } from '../../src/components/profile/OrdersModal';
 import { WishlistModal } from '../../src/components/profile/WishlistModal';
 import { PaymentMethodsModal } from '../../src/components/profile/PaymentMethodsModal';
 import { AccountSettingsModal } from '../../src/components/profile/AccountSettingsModal';
+import { WalletModal } from '../../src/components/profile/WalletModal';
 import * as Haptics from 'expo-haptics';
 import { TouchableOpacity, Platform } from 'react-native';
 
@@ -27,7 +28,7 @@ const MENU_ITEMS = [
   { key: 'settings', icon: Settings, label: 'Account Settings' },
 ] as const;
 
-type ProfileModalKey = typeof MENU_ITEMS[number]['key'];
+type ProfileModalKey = typeof MENU_ITEMS[number]['key'] | 'wallet';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -100,12 +101,12 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 
-                <View style={{ alignItems: 'flex-end' }}>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => handleMenuPress('wallet')} style={{ alignItems: 'flex-end' }}>
                   <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 }}>WALLET BALANCE</Typography>
                   <View style={{ height: 32, justifyContent: 'center' }}>
-                    <Typography variant="h3" style={{ color: '#fff', fontFamily: 'CormorantGaramond_700Bold', fontSize: 24, lineHeight: 28 }}>₹{user?.walletBalance || 0}</Typography>
+                    <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 24, lineHeight: 28 }}>₹{user?.walletBalance || 0}</Typography>
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -164,6 +165,11 @@ export default function ProfileScreen() {
 
       <AccountSettingsModal
         visible={activeModal === 'settings'}
+        onClose={() => setActiveModal(null)}
+      />
+
+      <WalletModal
+        visible={activeModal === 'wallet'}
         onClose={() => setActiveModal(null)}
       />
     </ScreenContainer>

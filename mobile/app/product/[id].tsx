@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +6,8 @@ import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
 import { PremiumButton } from '../../src/components/ui/PremiumButton';
 import { productService } from '../../src/api/services/productService';
+import { walletService, WalletCredit } from '../../src/api/services/walletService';
+import { UpgradeWalletCard } from '../../src/components/wallet/UpgradeWalletCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../src/store/useCartStore';
 import { theme } from '../../src/theme/theme';
@@ -32,6 +34,18 @@ export default function ProductDetailsScreen() {
     queryKey: ['product', id],
     queryFn: () => productService.getProductById(Number(id)),
   });
+
+  const [eligibleCredit, setEligibleCredit] = useState<WalletCredit | null>(null);
+
+  useEffect(() => {
+    if (product?.id) {
+      walletService.checkEligibility(product.id).then(res => {
+        if (res.eligible && res.credit) {
+          setEligibleCredit(res.credit);
+        }
+      }).catch(e => console.log('Error checking wallet:', e));
+    }
+  }, [product?.id]);
 
   const isFavorited = product ? isInWishlist(product.id) : false;
 
@@ -151,13 +165,19 @@ export default function ProductDetailsScreen() {
 
               <View style={styles.priceRow}>
                 <View>
-                  <Typography variant="caption" color="secondary" style={{ letterSpacing: 2, marginBottom: 4 }}>FULL SIZE</Typography>
-                  <Typography variant="h1" weight="medium">₹{product.full_price}</Typography>
+                  <Typography variant="caption" color="secondary" style={{ letterSpacing: 2, marginBottom: 4, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>FULL SIZE</Typography>
+                  <Typography variant="price" weight="bold" style={{ fontSize: 32 }}>₹{product.full_price}</Typography>
                 </View>
                 <View style={styles.primeTag}>
                    <Typography variant="caption" weight="medium" style={{ color: '#fff', letterSpacing: 1 }}>AUTHENTIC</Typography>
                 </View>
               </View>
+
+              {eligibleCredit && (
+                <View style={{ marginBottom: 24 }}>
+                  <UpgradeWalletCard credit={eligibleCredit} compact={true} />
+                </View>
+              )}
 
               {/* Core Actions */}
               <View style={styles.actionsBox}>

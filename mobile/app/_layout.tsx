@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments, ErrorBoundary, useRootNavigationState } from 'expo-router';
+import { Stack, useRootNavigationState, ErrorBoundary } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { View, StyleSheet, LogBox } from 'react-native';
-import { useTheme } from '../src/hooks/useTheme';
 import { 
   useFonts, 
   CormorantGaramond_300Light,
@@ -24,15 +23,20 @@ import {
   Inter_800ExtraBold
 } from '@expo-google-fonts/inter';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 1000 * 60 * 5,
+    },
+  },
+});
 
 function RootLayoutNav() {
   const { isLoading, restoreToken } = useAuthStore();
-  const theme = useTheme();
-  const navigationState = useRootNavigationState();
 
   let [fontsLoaded] = useFonts({
     CormorantGaramond_300Light,
@@ -54,37 +58,32 @@ function RootLayoutNav() {
     restoreToken();
   }, []);
 
+  // Instantly dismiss splash screen as soon as fonts are loaded so video/landing starts immediately
   useEffect(() => {
-    if (isLoading || !fontsLoaded) return;
-    if (!navigationState?.key) return;
-
-    // Safety fallback timer: LandingVideo will hide the splash screen immediately when the video is readyToPlay,
-    // but in case the user navigates elsewhere or video takes too long, hide after 3 seconds.
-    const timer = setTimeout(() => {
+    if (fontsLoaded && !isLoading) {
       SplashScreen.hideAsync().catch(() => {});
-    }, 3000);
+    }
+  }, [fontsLoaded, isLoading]);
 
-    return () => clearTimeout(timer);
-  }, [isLoading, fontsLoaded, navigationState?.key]);
-
-  if (isLoading || !fontsLoaded) {
-    return <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.default }]} />;
+  if (!fontsLoaded || isLoading) {
+    return <View style={styles.loadingContainer} />;
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" options={{ animation: 'fade' }} />
         <Stack.Screen name="landing" options={{ animation: 'fade' }} />
         <Stack.Screen 
           name="(tabs)" 
           options={{ 
             animation: 'fade', 
-            animationDuration: 700 
+            animationDuration: 500 
           }} 
         />
         <Stack.Screen name="product/[id]" />
         <Stack.Screen name="tester/[id]" />
-        <Stack.Screen name="(modals)/cart" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="cart" options={{ presentation: 'modal' }} />
       </Stack>
     </QueryClientProvider>
   );
@@ -96,5 +95,6 @@ export default RootLayoutNav;
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
+    backgroundColor: '#000000',
   },
 });

@@ -5,35 +5,54 @@ export function useVideoPreload(source: VideoSource) {
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const player = useVideoPlayer(source, (player) => {
-    player.loop = false;
-    player.muted = true;
-    player.pause();
-  });
-
-  useEffect(() => {
-    if (!player) return;
-
-    // Listen for status changes to determine if video is ready or failed
-    const subscription = player.addListener('statusChange', (payload) => {
-      if (payload.status === 'readyToPlay') {
-        setIsReady(true);
-      } else if (payload.status === 'error') {
-        setHasError(true);
+  let player: any = null;
+  try {
+    player = useVideoPlayer(source, (p) => {
+      try {
+        if (p) {
+          p.loop = false;
+          p.muted = true;
+          p.pause();
+        }
+      } catch (e) {
+        console.log('Video player setup error:', e);
       }
     });
+  } catch (err) {
+    console.log('useVideoPlayer init error:', err);
+  }
 
-    // Check initial status in case it loaded extremely fast
-    if (player.status === 'readyToPlay') {
-      setIsReady(true);
-    } else if (player.status === 'error') {
+  useEffect(() => {
+    if (!player) {
       setHasError(true);
+      return;
     }
 
-    return () => {
-      subscription.remove();
-    };
+    try {
+      const subscription = player.addListener?.('statusChange', (payload: any) => {
+        if (payload?.status === 'readyToPlay') {
+          setIsReady(true);
+        } else if (payload?.status === 'error') {
+          setHasError(true);
+        }
+      });
+
+      if (player.status === 'readyToPlay') {
+        setIsReady(true);
+      } else if (player.status === 'error') {
+        setHasError(true);
+      }
+
+      return () => {
+        try {
+          subscription?.remove?.();
+        } catch (e) {}
+      };
+    } catch (e) {
+      console.log('Error attaching video status listener:', e);
+      setHasError(true);
+    }
   }, [player]);
 
-  return { player, isReady, hasError };
+  return { player, isReady, hasError: hasError || !player };
 }

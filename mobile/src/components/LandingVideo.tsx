@@ -1,102 +1,98 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { VideoView } from 'expo-video';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import { useVideoPreload } from '../hooks/useVideoPreload';
 import { LinearGradient } from 'expo-linear-gradient';
-
-// Fallback logo if video fails
-import { Text } from 'react-native';
-
-import * as SplashScreen from 'expo-splash-screen';
 
 interface LandingVideoProps {
   onFinished: () => void;
 }
 
 export function LandingVideo({ onFinished }: LandingVideoProps) {
-  // Use require for local asset
   const videoSource = require('../assets/intro.mp4');
   const { player, isReady, hasError } = useVideoPreload(videoSource);
   const [isVideoFinished, setIsVideoFinished] = useState(false);
   const hasTriggeredFinish = useRef(false);
-  const hasStarted = useRef(false);
 
-  // Play video immediately from start when ready
+  // Play video immediately from start (frame 0) when ready
   useEffect(() => {
-    if (isReady && player && !hasStarted.current && !isVideoFinished) {
-      hasStarted.current = true;
-      player.currentTime = 0;
-      player.play();
-      // Instantly dismiss splash screen so video is visible from frame 0
-      SplashScreen.hideAsync().catch(() => {});
+    if (isReady && player && !hasTriggeredFinish.current) {
+      try {
+        player.currentTime = 0;
+        player.play();
+      } catch (e) {
+        console.log('Error playing video:', e);
+      }
     }
-  }, [isReady, player, isVideoFinished]);
+  }, [isReady, player]);
 
-  // Safety fallback if video fails or takes too long to load (e.g. 2.5s)
+  // Safety fallback if video takes too long or fails
   useEffect(() => {
     const safetyTimer = setTimeout(() => {
-      if (!hasStarted.current && !hasTriggeredFinish.current) {
-        SplashScreen.hideAsync().catch(() => {});
-        if (player && player.status === 'readyToPlay') {
-          player.currentTime = 0;
-          player.play();
-        } else {
-          onFinished();
-        }
+      if (!hasTriggeredFinish.current) {
+        hasTriggeredFinish.current = true;
+        onFinished();
       }
-    }, 2500);
+    }, 4000);
 
     return () => clearTimeout(safetyTimer);
-  }, [player, onFinished]);
+  }, [onFinished]);
 
   // Handle fallback if video fails to load
   useEffect(() => {
     if (hasError && !hasTriggeredFinish.current) {
       hasTriggeredFinish.current = true;
-      SplashScreen.hideAsync().catch(() => {});
       setTimeout(() => {
         onFinished();
-      }, 1000);
+      }, 1500);
     }
   }, [hasError, onFinished]);
 
   // Listen to the playback status
   useEffect(() => {
     if (!player) return;
-    const subscription = player.addListener('playToEnd', () => {
-      if (hasTriggeredFinish.current) return;
-      hasTriggeredFinish.current = true;
-      setIsVideoFinished(true);
-      
-      // Finish and transition smoothly to tabs
-      setTimeout(() => {
-        onFinished();
-      }, 300);
-    });
+    try {
+      const subscription = player.addListener?.('playToEnd', () => {
+        if (hasTriggeredFinish.current) return;
+        hasTriggeredFinish.current = true;
+        setIsVideoFinished(true);
+        setTimeout(() => {
+          onFinished();
+        }, 200);
+      });
 
-    return () => {
-      subscription.remove();
-    };
+      return () => {
+        try {
+          subscription?.remove?.();
+        } catch (e) {}
+      };
+    } catch (e) {
+      console.log('Error listening to playToEnd:', e);
+    }
   }, [player, onFinished]);
+
+  const handleSkip = () => {
+    if (!hasTriggeredFinish.current) {
+      hasTriggeredFinish.current = true;
+      try {
+        player?.pause?.();
+      } catch (e) {}
+      onFinished();
+    }
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar hidden />
-      {hasError ? (
-        <View style={styles.fallbackContainer}>
+      {hasError || !player ? (
+        <Animated.View entering={FadeIn.duration(400)} exiting={FadeOut.duration(400)} style={styles.fallbackContainer}>
           <Text style={styles.fallbackText}>TRYVIA</Text>
-        </View>
+          <Text style={styles.fallbackSubtext}>HAUTE PARFUMERIE & BEAUTÉ</Text>
+        </Animated.View>
       ) : (
-        <View style={StyleSheet.absoluteFill}>
+        <TouchableOpacity activeOpacity={1} onPress={handleSkip} style={StyleSheet.absoluteFill}>
           <VideoView
             style={StyleSheet.absoluteFill}
             player={player}
@@ -106,13 +102,12 @@ export function LandingVideo({ onFinished }: LandingVideoProps) {
             nativeControls={false}
             contentFit="cover"
           />
-          {/* Optional subtle dark vignette / gradient at bottom */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.15)']}
+            colors={['transparent', 'rgba(0,0,0,0.3)']}
             style={styles.gradient}
             pointerEvents="none"
           />
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -121,7 +116,7 @@ export function LandingVideo({ onFinished }: LandingVideoProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000', // Never show a blank white screen
+    backgroundColor: '#000000',
   },
   gradient: {
     position: 'absolute',
@@ -132,14 +127,21 @@ const styles = StyleSheet.create({
   },
   fallbackContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
   },
   fallbackText: {
-    color: '#fff',
-    fontSize: 32,
+    color: '#FFFFFF',
+    fontSize: 38,
     fontFamily: 'CormorantGaramond_700Bold',
-    letterSpacing: 4,
+    letterSpacing: 6,
+    marginBottom: 8,
+  },
+  fallbackSubtext: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    letterSpacing: 3,
   },
 });

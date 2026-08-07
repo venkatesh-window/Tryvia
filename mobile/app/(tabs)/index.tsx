@@ -13,12 +13,7 @@ import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
 import { CreditCard, ShoppingBag, Sparkles } from 'lucide-react-native';
 import { Image } from 'expo-image';
-import Animated, { FadeIn, FadeInUp, Keyframe, Easing } from 'react-native-reanimated';
-
-const customEntering = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: 18 }] },
-  100: { opacity: 1, transform: [{ translateY: 0 }], easing: Easing.inOut(Easing.cubic) }
-}).duration(700);
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -40,7 +35,7 @@ export default function HomeScreen() {
   });
 
   return (
-    <Animated.View entering={customEntering} style={{ flex: 1 }}>
+    <Animated.View entering={FadeIn.duration(600)} style={{ flex: 1 }}>
       <ScreenContainer showOrbs={true}>
 
         {/* Floating Glass Header */}
@@ -51,20 +46,20 @@ export default function HomeScreen() {
             <View style={styles.headerIcons}>
               <BlurView intensity={30} tint="light" style={styles.walletCapsule}>
                 <CreditCard size={14} color={theme.colors.text.primary} />
-                <Typography variant="h3" weight="bold" color="primary" style={{ marginLeft: 6, fontSize: 14 }}>
+                <Typography variant="price" weight="bold" color="primary" style={{ marginLeft: 6, fontSize: 14 }}>
                   ₹{walletBalance}
                 </Typography>
               </BlurView>
 
-              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)}>
-                <BlurView intensity={30} tint="light" style={styles.cartBtnBlur}>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)} activeOpacity={0.8}>
+                <BlurView intensity={40} tint="light" style={styles.cartBtnBlur}>
                   <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
-                  {totalItems > 0 && (
-                    <View style={styles.badge}>
-                      <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
-                    </View>
-                  )}
                 </BlurView>
+                {totalItems > 0 && (
+                  <View style={styles.badge}>
+                    <Typography variant="caption" weight="bold" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -189,25 +184,36 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     position: 'relative',
-    borderRadius: 20,
-    overflow: 'hidden',
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cartBtnBlur: {
-    padding: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.border.glass,
-    borderRadius: 20,
+    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   badge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: -2,
+    right: -2,
     backgroundColor: theme.colors.text.primary,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
   },
   scrollContent: {
     paddingTop: 8,

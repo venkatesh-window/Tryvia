@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Product } from '../api/schemas/product';
+import { walletService, WalletCredit } from '../api/services/walletService';
 
 export interface CartItem {
   id: string; // unique ID for cart row
@@ -16,13 +17,18 @@ interface CartState {
   totalItems: number;
   subtotal: number;
   walletDeduction: number;
+  platformFee: number;
   total: number;
+  
+  // Wallet
+  appliedWalletCredit: WalletCredit | null;
+  isCheckingEligibility: boolean;
   
   // Actions
   addItem: (product: Product, type: 'tester' | 'full') => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-  checkout: () => void;
+  checkWalletEligibility: () => Promise<void>;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -31,11 +37,14 @@ export const useCartStore = create<CartState>((set, get) => ({
   totalItems: 0,
   subtotal: 0,
   walletDeduction: 0,
+  platformFee: 0,
   total: 0,
+  
+  appliedWalletCredit: null,
+  isCheckingEligibility: false,
 
   addItem: (product, type) => {
     set((state) => {
-      // Allow only 1 quantity per type for now to match UI simplicity
       const existingItemIndex = state.items.findIndex(
         (i) => i.product.id === product.id && i.type === type
       );
@@ -55,15 +64,19 @@ export const useCartStore = create<CartState>((set, get) => ({
         newItems.push(newItem);
       }
       
-      return calculateTotals(newItems);
+      return calculateTotals(newItems, state.appliedWalletCredit);
     });
+    
+    // Check eligibility asynchronously after adding an item
+    get().checkWalletEligibility();
   },
 
   removeItem: (id) => {
     set((state) => {
       const newItems = state.items.filter(i => i.id !== id);
-      return calculateTotals(newItems);
+      return calculateTotals(newItems, state.appliedWalletCredit);
     });
+    get().checkWalletEligibility();
   },
 
   clearCart: () => {
@@ -72,57 +85,67 @@ export const useCartStore = create<CartState>((set, get) => ({
       totalItems: 0,
       subtotal: 0,
       walletDeduction: 0,
-      total: 0
+      platformFee: 0,
+      total: 0,
+      appliedWalletCredit: null,
+      isCheckingEligibility: false
     });
   },
 
-  checkout: () => {
+  checkWalletEligibility: async () => {
     const state = get();
-    const { useAuthStore } = require('./useAuthStore');
-    const authStore = useAuthStore.getState();
-
-    // 1. Calculate testers bought to add to wallet
-    const testersBought = state.items.filter(i => i.type === 'tester');
-    const testerCashbackEarned = testersBought.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-
-    // 2. Add cashback to wallet
-    if (testerCashbackEarned > 0) {
-      authStore.addWalletBalance(testerCashbackEarned);
+    // Only check if we have a full-size product
+    const fullSizeItems = state.items.filter(i => i.type === 'full');
+    
+    if (fullSizeItems.length === 0) {
+      set((s) => ({ ...calculateTotals(s.items, null), appliedWalletCredit: null }));
+      return;
     }
 
-    // 3. Deduct applied wallet credits from wallet
-    if (state.walletDeduction > 0) {
-      authStore.deductWalletBalance(state.walletDeduction);
+    // For simplicity, just check the first full size product
+    const targetProduct = fullSizeItems[0].product;
+    
+    set({ isCheckingEligibility: true });
+    try {
+      const eligibility = await walletService.checkEligibility(targetProduct.id);
+      
+      set((s) => {
+        const credit = eligibility.eligible ? eligibility.credit : null;
+        return {
+          ...calculateTotals(s.items, credit),
+          appliedWalletCredit: credit,
+          isCheckingEligibility: false
+        };
+      });
+    } catch (e) {
+      console.log('Error checking wallet eligibility:', e);
+      set({ isCheckingEligibility: false });
     }
-
-    // 4. Clear cart
-    state.clearCart();
   }
 }));
 
 // Helper to recalculate totals
-function calculateTotals(items: CartItem[]) {
-  const { useAuthStore } = require('./useAuthStore');
-  const userWallet = useAuthStore.getState().user?.walletBalance || 0;
-
+function calculateTotals(items: CartItem[], appliedCredit: WalletCredit | null) {
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   
-  // Wallet deduction logic: 
-  // You can only apply wallet balance to FULL size products. 
-  // Let's cap the deduction at 100% of the full size product price or the user's wallet balance, whichever is smaller.
-  const fullSizeCost = items
-    .filter(i => i.type === 'full')
-    .reduce((acc, item) => acc + (item.price * item.quantity), 0);
-
-  const walletDeduction = Math.min(fullSizeCost, userWallet);
-  const total = subtotal - walletDeduction;
+  let walletDeduction = 0;
+  let platformFee = 0;
+  
+  if (appliedCredit) {
+    walletDeduction = appliedCredit.redeemable_amount;
+    platformFee = appliedCredit.platform_fee;
+  }
+  
+  // Final total = Subtotal - Discount + Platform Fee
+  const total = subtotal - walletDeduction + platformFee;
 
   return {
     items,
     totalItems,
     subtotal,
     walletDeduction,
+    platformFee,
     total
   };
 }

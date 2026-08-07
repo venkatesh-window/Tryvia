@@ -1,26 +1,41 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { getItemAsync, deleteItemAsync } from '../utils/storage';
 
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
+
+  // Extract host IP from Expo Go / Metro bundler
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (Constants as any).manifest?.debuggerHost ||
+    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
+    (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+
+  if (hostUri && typeof hostUri === 'string') {
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:8000/api/v1`;
+    }
+  }
+
   if (Platform.OS === 'web') {
-    const hostname = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
+    const hostname = typeof window !== 'undefined' && window.location?.hostname ? window.location.hostname : 'localhost';
     return `http://${hostname}:8000/api/v1`;
   }
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000/api/v1';
-  }
-  return 'http://localhost:8000/api/v1';
+
+  // Default LAN machine IP for physical mobile devices running Expo Go
+  return 'http://192.168.29.16:8000/api/v1';
 };
 
 const BASE_URL = getBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -52,10 +67,8 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response && error.response.status === 401) {
       console.log('Unauthorized - clearing token');
-      // In a real app, you might trigger a Zustand action here to clear state and redirect to login.
       await deleteItemAsync(TOKEN_KEY);
     }
     return Promise.reject(error);
   }
 );
-

@@ -97,7 +97,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
 
               {/* Product Info */}
               <View style={styles.infoContainer}>
-                <Typography variant="caption" color="secondary" style={styles.brand}>
+                <Typography variant="caption" color="secondary" style={styles.brand} numberOfLines={1}>
                   {product.brand.toUpperCase()}
                 </Typography>
                 
@@ -108,13 +108,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
                 <View style={styles.priceDivider} />
                 
                 <View style={styles.priceRow}>
-                  <View>
-                    <Typography variant="caption" color="secondary" style={{ marginBottom: 2 }}>TESTER</Typography>
-                    <Typography variant="h3" weight="bold" color="primary">₹{product.testerPrice}</Typography>
+                  <View style={styles.priceColumn}>
+                    <Typography variant="caption" color="secondary" style={styles.priceSubLabel}>TESTER</Typography>
+                    <Typography variant="price" weight="bold" color="primary">₹{product.testerPrice}</Typography>
                   </View>
-                  <View style={styles.fullPriceContainer}>
-                    <Typography variant="caption" color="secondary" style={{ marginBottom: 2 }}>FULL SIZE</Typography>
-                    <Typography variant="h3" color="secondary" style={styles.fullPrice}>
+                  <View style={[styles.priceColumn, styles.fullPriceContainer]}>
+                    <Typography variant="caption" color="secondary" style={styles.priceSubLabel}>FULL SIZE</Typography>
+                    <Typography variant="number" weight="regular" color="secondary" style={styles.fullPrice}>
                       ₹{product.fullPrice}
                     </Typography>
                   </View>
@@ -202,28 +202,39 @@ const styles = StyleSheet.create({
   },
   brand: {
     letterSpacing: 2,
-    marginBottom: 8,
+    marginBottom: 6,
     fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
   },
   name: {
-    marginBottom: 16,
-    lineHeight: 22,
+    minHeight: 42,
+    lineHeight: 20,
+    marginBottom: 12,
   },
   priceDivider: {
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    marginBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 12,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
+  priceColumn: {
+    justifyContent: 'flex-end',
+  },
+  priceSubLabel: {
+    fontSize: 9,
+    letterSpacing: 1,
+    marginBottom: 2,
+    fontFamily: 'Inter_600SemiBold',
+  },
   fullPriceContainer: {
     alignItems: 'flex-end',
   },
   fullPrice: {
     textDecorationLine: 'line-through',
-    fontSize: 12, // Override h3 size to be smaller
+    fontSize: 13,
   },
 });

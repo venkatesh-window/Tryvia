@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import { ChevronLeft, Trash2, Plus, Minus, CheckCircle } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { theme } from '../src/theme/theme';
+import { UpgradeWalletCard } from '../src/components/wallet/UpgradeWalletCard';
 
 import { MockPaymentGatewayModal } from '../src/components/payment/MockPaymentGatewayModal';
 import { OrderSuccessModal } from '../src/components/payment/OrderSuccessModal';
@@ -81,11 +82,8 @@ export default function CartScreen() {
             <Animated.View entering={FadeInUp.duration(1000).delay(200)} style={styles.cartList}>
               {items.map((item, index) => (
                 <View key={item.id} style={styles.cartItemWrapper}>
-                  {/* Immersive Background Image */}
-                  <Image source={{ uri: item.product.image_url || 'https://via.placeholder.com/600' }} style={StyleSheet.absoluteFill as any} contentFit="cover" />
-                  
-                  {/* Heavy Glass Overlay */}
-                  <BlurView  intensity={85} tint="dark" style={StyleSheet.absoluteFill as any} />
+                  {/* Frosted Light Glass Background */}
+                  <BlurView  intensity={50} tint="light" style={StyleSheet.absoluteFill as any} />
                   
                   {/* Glass Border */}
                   <View style={styles.cartItemBorder} />
@@ -93,24 +91,24 @@ export default function CartScreen() {
                   <View style={styles.cartItemContent}>
                      <View style={styles.cartItemRow}>
                         <View style={styles.itemImgWrapper}>
-                          <Image source={{ uri: item.product.image_url || 'https://via.placeholder.com/150' }} style={styles.itemImg} contentFit="cover" />
+                          <Image source={{ uri: item.product.image_url || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300' }} style={styles.itemImg} contentFit="cover" />
                           <View style={styles.itemImgBorder} />
                         </View>
                         
                         <View style={styles.itemInfo}>
-                          <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: 1, marginBottom: 4 }}>
+                          <Typography variant="caption" color="secondary" style={{ letterSpacing: 1.5, marginBottom: 4, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>
                             {item.product.brand?.name?.toUpperCase() || 'TRYVIA'}
                           </Typography>
-                          <Typography variant="h2" weight="medium" numberOfLines={2} style={styles.itemName}>
+                          <Typography variant="body" weight="medium" numberOfLines={2} style={styles.itemName}>
                             {item.product.name}
                           </Typography>
-                          <Typography variant="h3" style={{ color: '#fff', fontFamily: 'CormorantGaramond_700Bold', marginVertical: 8, fontSize: 22 }}>
+                          <Typography variant="price" weight="bold" color="primary" style={{ marginVertical: 6, fontSize: 20 }}>
                             ₹{item.price}
                           </Typography>
                           
                           <View style={styles.itemTags}>
                              <View style={styles.typeTag}>
-                               <Typography variant="caption" weight="bold" style={{ color: '#000', letterSpacing: 1 }}>
+                               <Typography variant="caption" weight="bold" style={{ color: '#FFFFFF', letterSpacing: 1, fontSize: 9 }}>
                                  {item.type === 'tester' ? 'MINIATURE' : 'FULL SIZE'}
                                </Typography>
                              </View>
@@ -121,17 +119,17 @@ export default function CartScreen() {
                      {/* Quantity & Actions */}
                      <View style={styles.itemActionsRow}>
                        <View style={styles.qtyBox}>
-                         <TouchableOpacity onPress={() => removeItem(item.id)} style={styles.qtyBtn}>
-                           <Minus size={16} color="#fff" />
+                         <TouchableOpacity onPress={() => removeItem(item.id)} style={styles.qtyBtn} activeOpacity={0.7}>
+                           <Minus size={14} color={theme.colors.text.primary} />
                          </TouchableOpacity>
-                         <Typography variant="h3" style={styles.qtyText}>{item.quantity}</Typography>
-                         <TouchableOpacity onPress={() => addItem(item.product, item.type)} style={styles.qtyBtn}>
-                           <Plus size={16} color="#fff" />
+                         <Typography variant="number" weight="bold" style={styles.qtyText}>{item.quantity}</Typography>
+                         <TouchableOpacity onPress={() => addItem(item.product, item.type)} style={styles.qtyBtn} activeOpacity={0.7}>
+                           <Plus size={14} color={theme.colors.text.primary} />
                          </TouchableOpacity>
                        </View>
                        
-                       <TouchableOpacity style={styles.deleteBtn} onPress={() => removeItem(item.id)}>
-                         <Trash2 size={18} color="rgba(255,255,255,0.5)" />
+                       <TouchableOpacity style={styles.deleteBtn} onPress={() => removeItem(item.id)} activeOpacity={0.7}>
+                         <Trash2 size={16} color={theme.colors.text.secondary} />
                        </TouchableOpacity>
                      </View>
                   </View>
@@ -140,28 +138,27 @@ export default function CartScreen() {
             </Animated.View>
 
             <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.billingSummary}>
-               <Typography variant="h2" weight="medium" style={{ marginBottom: 24, letterSpacing: 2 }}>SUMMARY</Typography>
-               
+                <Typography variant="h2" weight="medium" style={{ marginBottom: 20, letterSpacing: 2 }}>SUMMARY</Typography>
+                
                 <View style={styles.summaryRow}>
                   <Typography variant="body" color="secondary" style={{ letterSpacing: 1 }}>Subtotal</Typography>
-                  <Typography variant="h3" style={{ fontFamily: 'CormorantGaramond_700Bold' }}>₹{subtotal}</Typography>
+                  <Typography variant="price" weight="semibold">₹{subtotal.toFixed(2)}</Typography>
                 </View>
                
-               {walletDeduction > 0 && (
-                 <View style={styles.summaryRow}>
-                   <Typography variant="body" color="secondary" style={{ letterSpacing: 1 }}>Wallet Applied</Typography>
-                   <Typography variant="h3" style={{ color: theme.colors.primary.main, fontFamily: 'CormorantGaramond_700Bold' }}>- ₹{walletDeduction}</Typography>
-                </View>
+               {useCartStore.getState().appliedWalletCredit && (
+                 <View style={{ marginBottom: 16 }}>
+                   <UpgradeWalletCard credit={useCartStore.getState().appliedWalletCredit!} />
+                 </View>
                )}
                
                <View style={styles.divider} />
                
                <View style={styles.summaryRow}>
                  <Typography variant="h2" weight="medium" style={{ letterSpacing: 1 }}>Total</Typography>
-                 <Typography variant="h1" style={{ color: theme.colors.text.primary, fontFamily: 'CormorantGaramond_700Bold', fontSize: 36 }}>₹{total}</Typography>
+                 <Typography variant="price" weight="bold" style={{ color: theme.colors.text.primary, fontSize: 30 }}>₹{total.toFixed(2)}</Typography>
                </View>
 
-               <View style={{ marginTop: 32 }}>
+               <View style={{ marginTop: 24 }}>
                  <PremiumButton 
                    title="Checkout Securely"
                    onPress={handleCheckout}
@@ -234,35 +231,38 @@ const styles = StyleSheet.create({
   cartItemWrapper: {
     borderRadius: 24,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 15,
+    elevation: 4,
   },
   cartItemBorder: {
     ...(StyleSheet.absoluteFill as any),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 24,
+    pointerEvents: 'none',
   },
   cartItemContent: {
     padding: 16,
   },
   cartItemRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
   itemImgWrapper: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: '#F5F5F3',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   itemImg: {
     width: '100%',
@@ -271,84 +271,95 @@ const styles = StyleSheet.create({
   itemImgBorder: {
     ...(StyleSheet.absoluteFill as any),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: 'rgba(255, 255, 255, 0.6)',
     borderRadius: 16,
+    pointerEvents: 'none',
   },
   itemInfo: {
     flex: 1,
-    marginLeft: 20,
+    marginLeft: 16,
     justifyContent: 'center',
   },
   itemName: {
-    lineHeight: 26,
-    fontFamily: 'CormorantGaramond_700Bold',
-    color: '#fff',
+    lineHeight: 20,
+    color: theme.colors.text.primary,
   },
   itemTags: {
     flexDirection: 'row',
     marginTop: 4,
   },
   typeTag: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,1)',
+    backgroundColor: '#121212',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   itemActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16,
-    marginTop: 8,
+    paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    borderTopColor: 'rgba(0,0,0,0.06)',
   },
   qtyBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 18,
+    padding: 3,
+    gap: 10,
   },
   qtyBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: 'rgba(0,0,0,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   qtyText: {
-    minWidth: 24,
+    minWidth: 20,
     textAlign: 'center',
-    fontSize: 20,
-    fontFamily: 'CormorantGaramond_700Bold',
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text.primary,
   },
   deleteBtn: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 20,
   },
   billingSummary: {
     padding: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
     marginBottom: 40,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginVertical: 16,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    marginVertical: 14,
   },
   successScreen: {
     flex: 1,
