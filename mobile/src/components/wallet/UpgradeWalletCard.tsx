@@ -9,10 +9,12 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 
 interface UpgradeWalletCardProps {
   credit: WalletCredit;
+  fullSizePrice: number;
   compact?: boolean;
 }
 
-export function UpgradeWalletCard({ credit, compact = false }: UpgradeWalletCardProps) {
+export function UpgradeWalletCard({ credit, fullSizePrice, compact = false }: UpgradeWalletCardProps) {
+  const finalPrice = fullSizePrice - credit.redeemable_amount;
   return (
     <Animated.View entering={FadeInUp.duration(600)}>
       <GlassCard intensity={40} style={styles.card}>
@@ -38,19 +40,27 @@ export function UpgradeWalletCard({ credit, compact = false }: UpgradeWalletCard
 
         <View style={styles.breakdownBox}>
           <View style={styles.row}>
-            <Typography variant="body" color="secondary">Wallet Balance</Typography>
-            <Typography variant="body" weight="medium">₹{credit.original_amount.toFixed(2)}</Typography>
+            <Typography variant="body" color="secondary">Full-size price</Typography>
+            <Typography variant="body" weight="medium">₹{fullSizePrice.toFixed(2)}</Typography>
           </View>
           
           <View style={styles.row}>
-            <Typography variant="body" color="primary">Redeemable Amount (75%)</Typography>
+            <Typography variant="body" color="primary">TRYVIA Wallet Credit</Typography>
             <Typography variant="body" color="primary" weight="bold">-₹{credit.redeemable_amount.toFixed(2)}</Typography>
           </View>
           
-          <View style={styles.row}>
-            <Typography variant="body" color="secondary">Platform Fee (25%)</Typography>
-            <Typography variant="body" color="secondary">₹{credit.platform_fee.toFixed(2)}</Typography>
+          <View style={[styles.row, { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.1)' }]}>
+            <Typography variant="body" weight="bold">Amount Payable</Typography>
+            <Typography variant="body" weight="bold" style={{ fontSize: 18 }}>₹{finalPrice.toFixed(2)}</Typography>
           </View>
+          
+          {!compact && (
+            <View style={{ marginTop: 8 }}>
+              <Typography variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                *Credit derived from previous tester purchase (₹{credit.original_amount} - 25% Platform Fee)
+              </Typography>
+            </View>
+          )}
         </View>
       </GlassCard>
     </Animated.View>

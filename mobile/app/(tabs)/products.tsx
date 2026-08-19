@@ -18,10 +18,10 @@ import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
-  { name: 'Moisturizer', img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Serums', img: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Sunscreen', img: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Cleanser', img: 'https://images.unsplash.com/photo-1555820585-c5ae44394b79?q=80&w=300&auto=format&fit=crop' }
+  { id: 1, name: 'Skincare', img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300&auto=format&fit=crop' },
+  { id: 2, name: 'Fragrance', img: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=300&auto=format&fit=crop' },
+  { id: 3, name: 'Haircare', img: 'https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=300&auto=format&fit=crop' },
+  { id: 4, name: 'Makeup', img: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=300&auto=format&fit=crop' }
 ];
 
 export default function ProductsScreen() {
@@ -30,11 +30,12 @@ export default function ProductsScreen() {
   const { totalItems } = useCartStore();
   const { user } = useAuthStore();
   const walletBalance = user?.walletBalance || 0;
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: allProducts } = useQuery({
-    queryKey: ['allProducts'],
-    queryFn: () => productService.getProducts(20),
+  const { data: allProducts, isLoading } = useQuery({
+    queryKey: ['allProducts', searchQuery, activeCategory],
+    queryFn: () => productService.getProducts(20, searchQuery, activeCategory || undefined),
   });
 
   return (
@@ -67,6 +68,21 @@ export default function ProductsScreen() {
         </View>
 
       </Animated.View>
+      <Animated.View entering={FadeIn.duration(1000).delay(200)} style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill as any} />
+          <Search size={20} color={theme.colors.text.secondary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for products, brands..."
+            placeholderTextColor={theme.colors.text.secondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <View style={styles.glassBorder} />
+        </View>
+      </Animated.View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Luxury Circular Categories */}
@@ -74,16 +90,16 @@ export default function ProductsScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {CATEGORIES.map((cat) => (
               <TouchableOpacity 
-                key={cat.name}
-                style={[styles.categoryCircleWrapper, activeCategory === cat.name && styles.categoryActive]}
-                onPress={() => setActiveCategory(activeCategory === cat.name ? null : cat.name)}
+                key={cat.id}
+                style={[styles.categoryCircleWrapper, activeCategory === cat.id && styles.categoryActive]}
+                onPress={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
               >
-                <View style={[styles.categoryCircle, activeCategory === cat.name && styles.categoryActiveCircle]}>
+                <View style={[styles.categoryCircle, activeCategory === cat.id && styles.categoryActiveCircle]}>
                   <BlurView  intensity={20} tint="light" style={StyleSheet.absoluteFill as any} />
                   <Image source={{ uri: cat.img }} style={styles.categoryImg} contentFit="cover" />
                   <View style={styles.circleBorder} />
                 </View>
-                <Typography variant="caption" weight={activeCategory === cat.name ? 'bold' : 'medium'} style={{ marginTop: 16, letterSpacing: 2 }}>
+                <Typography variant="caption" weight={activeCategory === cat.id ? 'bold' : 'medium'} style={{ marginTop: 16, letterSpacing: 2 }}>
                   {cat.name.toUpperCase()}
                 </Typography>
               </TouchableOpacity>
@@ -94,24 +110,30 @@ export default function ProductsScreen() {
         {/* Apple-style Staggered Grid Feed */}
         <Animated.View entering={FadeInUp.duration(1000).delay(600)} style={styles.section}>
           <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Full Size Collection</Typography>
-          <View style={styles.feedGrid}>
-             {allProducts?.map((item, index) => (
-                <View key={item.id} style={[styles.gridCard, { marginTop: index % 2 !== 0 ? 40 : 0 }]}>
-                  <ProductCard 
-                    product={{
-                      id: item.id,
-                      name: item.name,
-                      brand: item.brand?.name || 'DIOR',
-                      fullPrice: item.full_price,
-                      testerPrice: item.tester_price,
-                      imageUrl: item.image_url || 'https://via.placeholder.com/300'
-                    }}
-                    onPress={() => router.push(`/product/${item.id}` as any)}
-                    style={{ width: '100%', marginRight: 0 }}
-                  />
-                </View>
-             ))}
-          </View>
+          {isLoading ? (
+            <Typography variant="body" color="secondary" style={{ textAlign: 'center', marginTop: 24 }}>Loading products...</Typography>
+          ) : allProducts?.length === 0 ? (
+            <Typography variant="body" color="secondary" style={{ textAlign: 'center', marginTop: 24 }}>No products found.</Typography>
+          ) : (
+            <View style={styles.feedGrid}>
+               {allProducts?.map((item, index) => (
+                  <View key={item.id} style={[styles.gridCard, { marginTop: index % 2 !== 0 ? 40 : 0 }]}>
+                    <ProductCard 
+                      product={{
+                        id: item.id,
+                        name: item.name,
+                        brand: item.brand?.name || 'DIOR',
+                        fullPrice: item.full_price,
+                        testerPrice: item.tester_price,
+                        imageUrl: item.image_url || 'https://via.placeholder.com/300'
+                      }}
+                      onPress={() => router.push(`/product/${item.id}` as any)}
+                      style={{ width: '100%', marginRight: 0 }}
+                    />
+                  </View>
+               ))}
+            </View>
+          )}
         </Animated.View>
         
         <View style={{ height: 180 }} />

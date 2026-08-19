@@ -137,8 +137,8 @@ function calculateTotals(items: CartItem[], appliedCredit: WalletCredit | null) 
     platformFee = appliedCredit.platform_fee;
   }
   
-  // Final total = Subtotal - Discount + Platform Fee
-  const total = subtotal - walletDeduction + platformFee;
+  // Final total = Subtotal - Discount
+  const total = subtotal - walletDeduction;
 
   return {
     items,

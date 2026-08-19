@@ -66,9 +66,9 @@ export const useOrderStore = create<OrderState>((set, get) => ({
           paymentMethod: 'Tryvia Pay', // Mock
           items: bo.items.map((bi: any) => ({
             id: bi.product_id.toString(),
-            name: `Product #${bi.product_id}`, // Note: normally we fetch details
-            brand: 'TRYVIA',
-            imageUrl: 'https://via.placeholder.com/200',
+            name: bi.product_name || `Product #${bi.product_id}`,
+            brand: bi.product_brand || 'TRYVIA',
+            imageUrl: bi.product_image_url || 'https://via.placeholder.com/200',
             type: bi.item_type.toLowerCase() as 'tester' | 'full',
             quantity: bi.quantity,
             price: bi.unit_price

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routers import auth, products
+from app.api.routers import auth, products, wallet, orders
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -19,6 +19,8 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(products.router, prefix=f"{settings.API_V1_STR}/products", tags=["products"])
+app.include_router(wallet.router, prefix=f"{settings.API_V1_STR}/wallet", tags=["wallet"])
+app.include_router(orders.router, prefix=f"{settings.API_V1_STR}/orders", tags=["orders"])
 
 @app.get("/")
 def root():

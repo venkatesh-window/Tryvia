@@ -15,7 +15,7 @@ import { Order } from '../../src/store/useOrderStore';
 export default function CartModal() {
   const router = useRouter();
   const theme = useTheme();
-  const { items, total, subtotal, walletDeduction, removeItem } = useCartStore();
+  const { items, total, subtotal, walletDeduction, appliedWalletCredit, removeItem } = useCartStore();
 
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
@@ -92,10 +92,17 @@ export default function CartModal() {
         </View>
         
         {walletDeduction > 0 && (
-          <View style={styles.totalRow}>
-            <Typography variant="body" color="secondary">Wallet Applied</Typography>
-            <Typography variant="price" color="primary" weight="bold">-₹{walletDeduction}</Typography>
-          </View>
+          <>
+            <View style={styles.totalRow}>
+              <Typography variant="body" color="primary">Wallet Credit (75% of Tester)</Typography>
+              <Typography variant="price" color="primary" weight="bold">-₹{walletDeduction}</Typography>
+            </View>
+            <View style={{ marginBottom: 8 }}>
+              <Typography variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                *From your ₹{appliedWalletCredit?.original_amount} tester purchase (25% Platform Fee applied)
+              </Typography>
+            </View>
+          </>
         )}
 
         <View style={[styles.totalRow, { marginTop: 8, borderTopWidth: 1, borderColor: 'rgba(0,0,0,0.05)', paddingTop: 16 }]}>

@@ -86,15 +86,41 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   restoreToken: async () => {
     try {
-      const token = await getItemAsync(TOKEN_KEY);
+      set({ isLoading: true });
+      let token = await getItemAsync(TOKEN_KEY);
+      
+      // Auto-login the seeded user if no token
+      if (!token) {
+        const { authService } = await import('../api/services/authService');
+        const loginRes = await authService.login({ username: 'test@tryvia.com', password: 'password123' });
+        token = loginRes.access_token;
+        await setItemAsync(TOKEN_KEY, token);
+      }
+      
       if (token) {
-        set({ token, user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
+        const { authService } = await import('../api/services/authService');
+        const user = await authService.getMe();
+        
+        // Map backend user to frontend user format
+        const frontendUser: User = {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name || 'Tester User',
+          phone: '+91 98401 23456', // Mock address for now as the backend user doesn't have an address table
+          loyaltyTier: user.loyalty_tier || 'BRONZE',
+          walletBalance: user.wallet_balance || 0,
+          points: user.points || 0,
+          address: DEFAULT_USER.address,
+          preferences: DEFAULT_USER.preferences,
+        };
+        
+        set({ token, user: frontendUser, isAuthenticated: true, isLoading: false });
       } else {
-        set({ token: 'mock_token', user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
+        set({ token: null, user: null, isAuthenticated: false, isLoading: false });
       }
     } catch (e) {
       console.error('Failed to restore token', e);
-      set({ token: 'mock_token', user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
+      set({ token: null, user: null, isAuthenticated: false, isLoading: false });
     }
   },
 

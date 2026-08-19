@@ -45,12 +45,22 @@ class ProductResponse(BaseModel):
         from_attributes = True
 
 @router.get("/", response_model=List[ProductResponse])
-async def get_products(limit: int = 10, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Product)
-        .options(selectinload(Product.brand), selectinload(Product.category))
-        .limit(limit)
-    )
+async def get_products(
+    limit: int = 10,
+    search: str | None = None,
+    category_id: int | None = None,
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(Product).options(selectinload(Product.brand), selectinload(Product.category))
+    
+    if search:
+        query = query.where(Product.name.ilike(f"%{search}%") | Product.description.ilike(f"%{search}%"))
+        
+    if category_id:
+        query = query.where(Product.category_id == category_id)
+        
+    query = query.limit(limit)
+    result = await db.execute(query)
     products = result.scalars().all()
     return products
 

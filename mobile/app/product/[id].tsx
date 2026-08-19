@@ -175,7 +175,7 @@ export default function ProductDetailsScreen() {
 
               {eligibleCredit && (
                 <View style={{ marginBottom: 24 }}>
-                  <UpgradeWalletCard credit={eligibleCredit} compact={true} />
+                  <UpgradeWalletCard credit={eligibleCredit} fullSizePrice={product.full_price} compact={true} />
                 </View>
               )}
 

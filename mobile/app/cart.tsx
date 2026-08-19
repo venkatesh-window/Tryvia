@@ -145,9 +145,12 @@ export default function CartScreen() {
                   <Typography variant="price" weight="semibold">₹{subtotal.toFixed(2)}</Typography>
                 </View>
                
-               {useCartStore.getState().appliedWalletCredit && (
+               {useCartStore.getState().appliedWalletCredit && items.find(i => i.type === 'full') && (
                  <View style={{ marginBottom: 16 }}>
-                   <UpgradeWalletCard credit={useCartStore.getState().appliedWalletCredit!} />
+                   <UpgradeWalletCard 
+                     credit={useCartStore.getState().appliedWalletCredit!} 
+                     fullSizePrice={items.find(i => i.type === 'full')!.product.full_price}
+                   />
                  </View>
                )}
                

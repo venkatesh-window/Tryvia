@@ -31,8 +31,14 @@ interface OrdersModalProps {
 const STATUS_STEPS: OrderStatus[] = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED'];
 
 export const OrdersModal: React.FC<OrdersModalProps> = ({ visible, onClose }) => {
-  const { orders } = useOrderStore();
+  const { orders, fetchOrders } = useOrderStore();
   const { addItem } = useCartStore();
+
+  React.useEffect(() => {
+    if (visible) {
+      fetchOrders();
+    }
+  }, [visible]);
 
   const handleReorder = (order: (typeof orders)[0]) => {
     if (Platform.OS === 'ios') {
