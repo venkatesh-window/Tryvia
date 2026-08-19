@@ -94,17 +94,17 @@ export default function ProfileScreen() {
               <View style={styles.profileCardDivider} />
               
               <View style={styles.profileFooterRow}>
-                <View>
-                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 }}>MEMBERSHIP</Typography>
-                  <View style={[styles.vipTag, { height: 32, justifyContent: 'center' }]}>
-                     <Typography variant="caption" weight="bold" style={{ color: '#000', letterSpacing: 1 }}>TRYVIA BLACK</Typography>
+                <View style={{ flexShrink: 1, marginRight: 10 }}>
+                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4 }}>MEMBERSHIP</Typography>
+                  <View style={[styles.vipTag, { height: 32, justifyContent: 'center', alignSelf: 'flex-start' }]}>
+                     <Typography variant="caption" weight="bold" style={{ color: '#000', letterSpacing: 1 }} numberOfLines={1}>TRYVIA BLACK</Typography>
                   </View>
                 </View>
                 
-                <TouchableOpacity activeOpacity={0.7} onPress={() => handleMenuPress('wallet')} style={{ alignItems: 'flex-end' }}>
-                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 }}>WALLET BALANCE</Typography>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => handleMenuPress('wallet')} style={{ alignItems: 'flex-end', flexShrink: 1 }}>
+                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4, textAlign: 'right' }}>WALLET BALANCE</Typography>
                   <View style={{ height: 32, justifyContent: 'center' }}>
-                    <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 24, lineHeight: 28 }}>₹{user?.walletBalance || 0}</Typography>
+                    <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 24, lineHeight: 28 }} numberOfLines={1}>₹{user?.walletBalance || 0}</Typography>
                   </View>
                 </TouchableOpacity>
               </View>

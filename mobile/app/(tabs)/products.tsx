@@ -44,7 +44,7 @@ export default function ProductsScreen() {
       {/* Floating Glass Header */}
       <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={styles.headerTopRow}>
-           <Typography variant="h2" weight="medium" style={styles.logo}>COLLECTION</Typography>
+           <Typography variant="h2" weight="medium" style={styles.logo} numberOfLines={1}>COLLECTION</Typography>
            
            <View style={styles.headerIcons}>
              <BlurView  intensity={30} tint="light" style={styles.walletCapsule}>
@@ -156,13 +156,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   logo: {
-    letterSpacing: 4,
+    flexShrink: 1,
+    fontSize: 20,
+    letterSpacing: 2,
     color: theme.colors.text.primary,
   },
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    flexShrink: 0,
+    gap: 12,
   },
   walletCapsule: {
     flexDirection: 'row',
@@ -262,7 +265,7 @@ const styles = StyleSheet.create({
   },
   categoryCircleWrapper: {
     alignItems: 'center',
-    width: 88,
+    minWidth: 100,
     opacity: 0.8,
   },
   categoryActive: {

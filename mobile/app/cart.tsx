@@ -66,8 +66,8 @@ export default function CartScreen() {
         {items.length === 0 ? (
           <Animated.View entering={FadeInUp.duration(1000).delay(200)} style={styles.emptyState}>
             <GlassCard intensity={15} style={{ padding: 40, alignItems: 'center' }}>
-               <Typography variant="h2" style={{ marginBottom: 16, textAlign: 'center' }}>Your bag is empty</Typography>
-               <Typography variant="body" color="secondary" style={{ textAlign: 'center', marginBottom: 32 }}>
+               <Typography variant="h2" align="center" style={{ marginBottom: 16, paddingHorizontal: 4 }}>Your bag is empty</Typography>
+               <Typography variant="body" align="center" color="secondary" style={{ marginBottom: 32 }}>
                  Discover extraordinary pieces to add to your collection.
                </Typography>
                <PremiumButton 
