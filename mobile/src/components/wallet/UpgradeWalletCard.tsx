@@ -34,7 +34,7 @@ export function UpgradeWalletCard({ credit, fullSizePrice, compact = false }: Up
 
         {!compact && (
           <Typography variant="caption" color="secondary" style={styles.message}>
-            You previously purchased a tester for this product. 75% of your tester purchase is available as a discount towards the full-size product!
+            You previously purchased a tester for this product. 90% of your tester purchase is available as a discount towards the full-size product!
           </Typography>
         )}
 

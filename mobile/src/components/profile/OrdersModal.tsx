@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { router } from 'expo-router';
 import { Typography } from '../ui/Typography';
 import { PremiumButton } from '../ui/PremiumButton';
 import { useOrderStore, OrderStatus } from '../../store/useOrderStore';
@@ -226,16 +227,36 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({ visible, onClose }) =>
                         </Typography>
                       </View>
 
-                      <TouchableOpacity
-                        style={styles.reorderBtn}
-                        onPress={() => handleReorder(order)}
-                        activeOpacity={0.8}
-                      >
-                        <RotateCcw size={13} color="#FFFFFF" />
-                        <Typography variant="caption" weight="medium" style={{ color: '#FFFFFF', marginLeft: 6 }}>
-                          Order Again
-                        </Typography>
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity
+                          style={styles.reorderBtn}
+                          onPress={() => handleReorder(order)}
+                          activeOpacity={0.8}
+                        >
+                          <RotateCcw size={13} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.reorderBtn, { backgroundColor: '#F5F5F3', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }]}
+                          onPress={() => { onClose(); router.push(`/invoice/${order.id}`); }}
+                          activeOpacity={0.8}
+                        >
+                          <Typography variant="caption" weight="medium" style={{ color: '#121212' }}>
+                            Invoice
+                          </Typography>
+                        </TouchableOpacity>
+                        {order.status === 'PAID' || order.status === 'SHIPPED' || order.status === 'DELIVERED' ? (
+                          <TouchableOpacity
+                            style={[styles.reorderBtn, { backgroundColor: '#D4AF37' }]}
+                            onPress={() => { onClose(); router.push(`/review/${order.id}`); }}
+                            activeOpacity={0.8}
+                          >
+                            <Sparkles size={13} color="#FFFFFF" />
+                            <Typography variant="caption" weight="medium" style={{ color: '#FFFFFF', marginLeft: 6 }}>
+                              Review
+                            </Typography>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
                     </View>
                   </View>
                 );

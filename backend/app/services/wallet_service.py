@@ -17,8 +17,8 @@ class WalletService:
             # Fallback safe defaults if no rule exists in db
             rule = WalletRule(
                 min_tester_purchase=200.00,
-                redeem_percentage=75.00,
-                platform_fee_percentage=25.00,
+                redeem_percentage=90.00,
+                platform_fee_percentage=10.00,
                 expiry_days=90
             )
         return rule
@@ -89,7 +89,7 @@ class WalletService:
                 WalletCredit.status == WalletCreditStatus.ACTIVE,
                 WalletCredit.expiry_date > now
             )
-            .order_by(WalletCredit.original_amount.desc(), WalletCredit.id.desc())
+            .order_by(WalletCredit.created_at.desc(), WalletCredit.id.desc())
         )
         return result.scalars().first()
 

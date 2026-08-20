@@ -8,7 +8,7 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-import { Settings, Package, Heart, CreditCard, LogOut, ChevronRight } from 'lucide-react-native';
+import { Settings, Package, Heart, CreditCard, LogOut, ChevronRight, Sparkles } from 'lucide-react-native';
 import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
@@ -101,6 +101,14 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 
+                <View style={{ flexShrink: 1, marginRight: 10, alignItems: 'center' }}>
+                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4 }}>STARS</Typography>
+                  <View style={{ height: 32, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
+                     <Sparkles size={14} color="#D4AF37" style={{ marginRight: 4 }} />
+                     <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 18 }} numberOfLines={1}>{user?.tryviaStars || 0}</Typography>
+                  </View>
+                </View>
+
                 <TouchableOpacity activeOpacity={0.7} onPress={() => handleMenuPress('wallet')} style={{ alignItems: 'flex-end', flexShrink: 1 }}>
                   <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4, textAlign: 'right' }}>WALLET BALANCE</Typography>
                   <View style={{ height: 32, justifyContent: 'center' }}>

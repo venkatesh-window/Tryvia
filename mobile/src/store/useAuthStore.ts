@@ -24,6 +24,7 @@ export interface User {
   loyaltyTier: string;
   walletBalance: number;
   points: number;
+  tryviaStars: number;
   address: ShippingAddress;
   preferences: UserPreferences;
 }
@@ -41,6 +42,7 @@ interface AuthState {
   updateProfile: (updates: Partial<User>) => void;
   addWalletBalance: (amount: number) => void;
   deductWalletBalance: (amount: number) => void;
+  addStars: (amount: number) => void;
 }
 
 const DEFAULT_USER: User = {
@@ -51,6 +53,7 @@ const DEFAULT_USER: User = {
   loyaltyTier: 'TRYVIA BLACK',
   walletBalance: 1400,
   points: 4200,
+  tryviaStars: 0,
   address: {
     fullName: 'Venkatesh S',
     street: '42 Altamount Road, Penthouse B',
@@ -110,6 +113,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           loyaltyTier: user.loyalty_tier || 'BRONZE',
           walletBalance: user.wallet_balance || 0,
           points: user.points || 0,
+          tryviaStars: 0,
           address: DEFAULT_USER.address,
           preferences: DEFAULT_USER.preferences,
         };
@@ -157,6 +161,18 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: {
           ...state.user,
           walletBalance: Math.max(0, state.user.walletBalance - amount)
+        }
+      };
+    });
+  },
+
+  addStars: (amount: number) => {
+    set((state) => {
+      if (!state.user) return state;
+      return {
+        user: {
+          ...state.user,
+          tryviaStars: (state.user.tryviaStars || 0) + amount
         }
       };
     });

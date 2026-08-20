@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../api/schemas/product';
 import { walletService, WalletCredit } from '../api/services/walletService';
 
@@ -31,7 +33,9 @@ interface CartState {
   checkWalletEligibility: () => Promise<void>;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
   items: [],
   
   totalItems: 0,
@@ -122,7 +126,12 @@ export const useCartStore = create<CartState>((set, get) => ({
       set({ isCheckingEligibility: false });
     }
   }
-}));
+  }),
+  {
+    name: 'tryvia-cart-storage',
+    storage: createJSONStorage(() => AsyncStorage),
+  }
+));
 
 // Helper to recalculate totals
 function calculateTotals(items: CartItem[], appliedCredit: WalletCredit | null) {

@@ -229,8 +229,8 @@ async def seed():
         from app.db.models.wallet_core import WalletRule
         default_rule = WalletRule(
             min_tester_purchase=200.00,
-            redeem_percentage=75.00,
-            platform_fee_percentage=25.00,
+            redeem_percentage=90.00,
+            platform_fee_percentage=10.00,
             expiry_days=90
         )
         session.add(default_rule)

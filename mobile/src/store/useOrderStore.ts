@@ -68,7 +68,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
             id: bi.product_id.toString(),
             name: bi.product_name || `Product #${bi.product_id}`,
             brand: bi.product_brand || 'TRYVIA',
-            imageUrl: bi.product_image_url || 'https://via.placeholder.com/200',
+            imageUrl: bi.product_image_url || 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80',
             type: bi.item_type.toLowerCase() as 'tester' | 'full',
             quantity: bi.quantity,
             price: bi.unit_price
@@ -117,7 +117,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
           id: i.id,
           name: i.product.name,
           brand: i.product.brand?.name || 'TRYVIA',
-          imageUrl: i.product.image_url || 'https://via.placeholder.com/200',
+          imageUrl: i.product.image_url || 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80',
           type: i.type,
           quantity: i.quantity,
           price: i.price

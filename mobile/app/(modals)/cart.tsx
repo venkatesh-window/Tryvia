@@ -94,12 +94,12 @@ export default function CartModal() {
         {walletDeduction > 0 && (
           <>
             <View style={styles.totalRow}>
-              <Typography variant="body" color="primary">Wallet Credit (75% of Tester)</Typography>
-              <Typography variant="price" color="primary" weight="bold">-₹{walletDeduction}</Typography>
+              <Typography variant="body" color="primary">Wallet Credit (90% of Tester)</Typography>
+              <Typography variant="h3" color="primary">-₹{appliedWalletCredit?.redeemable_amount.toFixed(2)}</Typography>
             </View>
-            <View style={{ marginBottom: 8 }}>
-              <Typography variant="caption" color="secondary" style={{ fontSize: 10 }}>
-                *From your ₹{appliedWalletCredit?.original_amount} tester purchase (25% Platform Fee applied)
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12 }}>
+              <Typography variant="caption" style={{ color: '#666', fontStyle: 'italic' }}>
+                *From your ₹{appliedWalletCredit?.original_amount} tester purchase (10% Platform Fee applied)
               </Typography>
             </View>
           </>

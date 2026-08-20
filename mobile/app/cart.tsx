@@ -14,8 +14,6 @@ import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { theme } from '../src/theme/theme';
 import { UpgradeWalletCard } from '../src/components/wallet/UpgradeWalletCard';
 
-import { MockPaymentGatewayModal } from '../src/components/payment/MockPaymentGatewayModal';
-import { OrderSuccessModal } from '../src/components/payment/OrderSuccessModal';
 import { Order } from '../src/store/useOrderStore';
 
 export default function CartScreen() {
@@ -23,26 +21,8 @@ export default function CartScreen() {
   const insets = useSafeAreaInsets();
   const { items, subtotal, walletDeduction, total, addItem, removeItem, clearCart, totalItems } = useCartStore();
 
-  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
-
   const handleCheckout = () => {
-    setIsPaymentModalVisible(true);
-  };
-
-  const handlePaymentSuccess = (order: Order) => {
-    setIsPaymentModalVisible(false);
-    setCompletedOrder(order);
-  };
-
-  const handleViewOrders = () => {
-    setCompletedOrder(null);
-    router.replace('/(tabs)/profile' as any);
-  };
-
-  const handleContinueShopping = () => {
-    setCompletedOrder(null);
-    router.replace('/(tabs)' as any);
+    router.push('/checkout' as any);
   };
 
   return (
@@ -175,20 +155,7 @@ export default function CartScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Mock Payment Gateway Modal */}
-      <MockPaymentGatewayModal
-        visible={isPaymentModalVisible}
-        onClose={() => setIsPaymentModalVisible(false)}
-        onSuccess={handlePaymentSuccess}
-      />
-
-      {/* Order Placed Success Modal */}
-      <OrderSuccessModal
-        visible={!!completedOrder}
-        order={completedOrder}
-        onViewOrders={handleViewOrders}
-        onContinueShopping={handleContinueShopping}
-      />
+      {/* Modals moved to checkout.tsx */}
     </ScreenContainer>
   );
 }

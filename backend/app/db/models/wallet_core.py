@@ -77,8 +77,8 @@ class WalletRule(Base):
     is_active = Column(Boolean, default=True)
     
     min_tester_purchase = Column(Numeric(10, 2), default=200.00)
-    redeem_percentage = Column(Numeric(5, 2), default=75.00)
-    platform_fee_percentage = Column(Numeric(5, 2), default=25.00)
+    redeem_percentage = Column(Numeric(5, 2), default=90.00)
+    platform_fee_percentage = Column(Numeric(5, 2), default=10.00)
     expiry_days = Column(Integer, default=90)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
