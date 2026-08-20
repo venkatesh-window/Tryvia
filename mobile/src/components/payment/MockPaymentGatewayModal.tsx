@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
@@ -28,6 +29,7 @@ import { useOrderStore, Order } from '../../store/useOrderStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePaymentMethodsStore, SavedCard, SavedUpi } from '../../store/usePaymentMethodsStore';
 import { theme } from '../../theme/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MockPaymentGatewayModalProps {
   visible: boolean;
@@ -40,6 +42,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
   onClose,
   onSuccess,
 }) => {
+  const insets = useSafeAreaInsets();
   const { items, total, subtotal, walletDeduction, clearCart, appliedWalletCredit } = useCartStore();
   const { placeOrder } = useOrderStore();
   const { user, deductWalletBalance } = useAuthStore();
@@ -113,54 +116,53 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView 
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
           onPress={onClose}
-          disabled={isProcessing}
         >
-          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
+          <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFill as any} />
         </TouchableOpacity>
 
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           {/* Header */}
           <View style={styles.modalHeader}>
             <View>
               <View style={styles.secureBadgeRow}>
-                <ShieldCheck size={13} color="#B8860B" />
+                <ShieldCheck size={14} color="#B8860B" />
                 <Typography variant="caption" weight="bold" style={styles.secureBadge}>
-                  256-BIT ENCRYPTED
+                  TRYVIA SECURE PAY
                 </Typography>
               </View>
               <Typography variant="h2" weight="medium" style={styles.title}>
-                Checkout & Pay
+                Select Payment Method
               </Typography>
             </View>
 
-            <TouchableOpacity onPress={onClose} disabled={isProcessing} style={styles.closeBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7} hitSlop={8}>
               <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
 
-          {/* Amount Due Bar */}
+          {/* Amount Bar */}
           <View style={styles.amountBar}>
             <View>
-              <Typography variant="caption" color="secondary" style={{ letterSpacing: 1.5, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>
-                TOTAL PAYABLE
+              <Typography variant="caption" color="secondary" style={{ fontSize: 11 }}>
+                TOTAL PAYABLE AMOUNT
               </Typography>
               <Typography variant="price" weight="bold" style={styles.amountText}>
-                ₹{total}
+                ₹{total.toFixed(2)}
               </Typography>
             </View>
 
-            {appliedWalletCredit && (
+            {walletDeduction > 0 && (
               <View style={styles.walletSavedBadge}>
-                <Typography variant="caption" weight="semibold" style={{ color: '#B8860B', fontSize: 11 }}>
-                  -₹{appliedWalletCredit.redeemable_amount.toFixed(2)} Wallet Discount
-                </Typography>
-                <Typography variant="caption" color="secondary" style={{ fontSize: 9, marginTop: 2, textAlign: 'right' }}>
-                  + ₹{appliedWalletCredit.platform_fee.toFixed(2)} Platform Fee
+                <Typography variant="caption" weight="bold" style={{ color: '#B8860B', fontSize: 11 }}>
+                  Saved ₹{walletDeduction} from Wallet
                 </Typography>
               </View>
             )}
@@ -168,27 +170,32 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
 
           {isProcessing ? (
             <View style={styles.processingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.text.primary} style={{ marginBottom: 20 }} />
-              <Typography variant="h2" weight="medium" style={{ color: theme.colors.text.primary, textAlign: 'center', marginBottom: 8 }}>
-                Processing Payment
+              <ActivityIndicator size="large" color="#121212" style={{ marginBottom: 20 }} />
+              <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 8 }}>
+                Processing Luxury Payment
               </Typography>
-              <Typography variant="body" color="secondary" style={{ textAlign: 'center', letterSpacing: 0.5 }}>
+              <Typography variant="caption" color="secondary" style={{ textAlign: 'center', paddingHorizontal: 40 }}>
                 {processingStep}
               </Typography>
             </View>
           ) : (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
-              {/* Payment Methods Tabs */}
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              contentContainerStyle={styles.scrollBody}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Payment Method Tabs */}
               <View style={styles.tabsRow}>
                 <TouchableOpacity
                   style={[styles.tabItem, activeTab === 'upi' && styles.activeTabItem]}
                   onPress={() => setActiveTab('upi')}
                   activeOpacity={0.8}
                 >
-                  <QrCode size={16} color={activeTab === 'upi' ? '#FFFFFF' : '#666666'} />
+                  <Smartphone size={15} color={activeTab === 'upi' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
                     weight="medium"
+                    numberOfLines={1}
                     style={[styles.tabText, activeTab === 'upi' && styles.activeTabText]}
                   >
                     UPI
@@ -200,13 +207,14 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                   onPress={() => setActiveTab('card')}
                   activeOpacity={0.8}
                 >
-                  <CreditCard size={16} color={activeTab === 'card' ? '#FFFFFF' : '#666666'} />
+                  <CreditCard size={15} color={activeTab === 'card' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
                     weight="medium"
+                    numberOfLines={1}
                     style={[styles.tabText, activeTab === 'card' && styles.activeTabText]}
                   >
-                    Card
+                    Cards
                   </Typography>
                 </TouchableOpacity>
 
@@ -215,10 +223,11 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                   onPress={() => setActiveTab('netbanking')}
                   activeOpacity={0.8}
                 >
-                  <Building2 size={16} color={activeTab === 'netbanking' ? '#FFFFFF' : '#666666'} />
+                  <Building2 size={15} color={activeTab === 'netbanking' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
                     weight="medium"
+                    numberOfLines={1}
                     style={[styles.tabText, activeTab === 'netbanking' && styles.activeTabText]}
                   >
                     Banking
@@ -230,10 +239,11 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                   onPress={() => setActiveTab('cod')}
                   activeOpacity={0.8}
                 >
-                  <Banknote size={16} color={activeTab === 'cod' ? '#FFFFFF' : '#666666'} />
+                  <Banknote size={15} color={activeTab === 'cod' ? '#FFFFFF' : '#666666'} />
                   <Typography
                     variant="caption"
                     weight="medium"
+                    numberOfLines={1}
                     style={[styles.tabText, activeTab === 'cod' && styles.activeTabText]}
                   >
                     COD
@@ -458,7 +468,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
             </ScrollView>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

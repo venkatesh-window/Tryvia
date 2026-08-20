@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
 import { ProductCard } from '../../src/components/ui/ProductCard';
 import { productService } from '../../src/api/services/productService';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../src/store/useCartStore';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { theme } from '../../src/theme/theme';
@@ -14,8 +13,7 @@ import { BlurView } from 'expo-blur';
 import { CreditCard, ShoppingBag, Search } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-
-const { width } = Dimensions.get('window');
+import { useResponsive } from '../../src/hooks/useResponsive';
 
 const CATEGORIES = [
   { id: 1, name: 'Skincare', img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300&auto=format&fit=crop' },
@@ -26,7 +24,7 @@ const CATEGORIES = [
 
 export default function ProductsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { width, safeTopPadding, bottomTabBarPadding, isSmallDevice } = useResponsive();
   const { totalItems } = useCartStore();
   const { user } = useAuthStore();
   const walletBalance = user?.walletBalance || 0;
@@ -38,43 +36,45 @@ export default function ProductsScreen() {
     queryFn: () => productService.getProducts(20, searchQuery, activeCategory || undefined),
   });
 
+  const gridCardWidth = (width - 40 - 12) / 2;
+
   return (
     <ScreenContainer showOrbs={true}>
       
       {/* Floating Glass Header */}
-      <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
+      <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: safeTopPadding }]}>
         <View style={styles.headerTopRow}>
            <Typography variant="h2" weight="medium" style={styles.logo} numberOfLines={1}>COLLECTION</Typography>
            
            <View style={styles.headerIcons}>
-             <BlurView  intensity={30} tint="light" style={styles.walletCapsule}>
-                <CreditCard size={14} color={theme.colors.text.primary} />
-                <Typography variant="price" weight="bold" color="primary" style={{ marginLeft: 6, fontSize: 14 }}>
+             <BlurView intensity={30} tint="light" style={styles.walletCapsule}>
+                <CreditCard size={13} color={theme.colors.text.primary} />
+                <Typography variant="price" weight="bold" color="primary" numberOfLines={1} style={{ marginLeft: 5, fontSize: 13 }}>
                   ₹{walletBalance}
                 </Typography>
              </BlurView>
              
-             <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)} activeOpacity={0.8}>
-               <BlurView  intensity={40} tint="light" style={styles.cartBtnBlur}>
-                 <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+             <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)} activeOpacity={0.8} hitSlop={8}>
+               <BlurView intensity={40} tint="light" style={styles.cartBtnBlur}>
+                 <ShoppingBag size={19} color={theme.colors.text.primary} strokeWidth={1.5} />
                </BlurView>
                {totalItems > 0 && (
                  <View style={styles.badge}>
-                   <Typography variant="caption" weight="bold" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
+                   <Typography variant="caption" weight="bold" style={{ color: '#fff', fontSize: 9 }}>{totalItems}</Typography>
                  </View>
                )}
              </TouchableOpacity>
            </View>
         </View>
-
       </Animated.View>
+
       <Animated.View entering={FadeIn.duration(1000).delay(200)} style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill as any} />
-          <Search size={20} color={theme.colors.text.secondary} style={styles.searchIcon} />
+          <Search size={18} color={theme.colors.text.secondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for products, brands..."
+            placeholder="Search products, brands..."
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -83,7 +83,7 @@ export default function ProductsScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomTabBarPadding }]} showsVerticalScrollIndicator={false}>
         
         {/* Luxury Circular Categories */}
         <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.section}>
@@ -93,13 +93,14 @@ export default function ProductsScreen() {
                 key={cat.id}
                 style={[styles.categoryCircleWrapper, activeCategory === cat.id && styles.categoryActive]}
                 onPress={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                activeOpacity={0.7}
               >
                 <View style={[styles.categoryCircle, activeCategory === cat.id && styles.categoryActiveCircle]}>
-                  <BlurView  intensity={20} tint="light" style={StyleSheet.absoluteFill as any} />
+                  <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill as any} />
                   <Image source={{ uri: cat.img }} style={styles.categoryImg} contentFit="cover" />
                   <View style={styles.circleBorder} />
                 </View>
-                <Typography variant="caption" weight={activeCategory === cat.id ? 'bold' : 'medium'} style={{ marginTop: 16, letterSpacing: 2 }}>
+                <Typography variant="caption" weight={activeCategory === cat.id ? 'bold' : 'medium'} style={{ marginTop: 10, letterSpacing: 1.5, fontSize: 10 }}>
                   {cat.name.toUpperCase()}
                 </Typography>
               </TouchableOpacity>
@@ -117,7 +118,7 @@ export default function ProductsScreen() {
           ) : (
             <View style={styles.feedGrid}>
                {allProducts?.map((item, index) => (
-                  <View key={item.id} style={[styles.gridCard, { marginTop: index % 2 !== 0 ? 40 : 0 }]}>
+                  <View key={item.id} style={{ width: gridCardWidth, marginTop: index % 2 !== 0 ? 24 : 0 }}>
                     <ProductCard 
                       product={{
                         id: item.id,
@@ -128,15 +129,12 @@ export default function ProductsScreen() {
                         imageUrl: item.image_url || 'https://via.placeholder.com/300'
                       }}
                       onPress={() => router.push(`/product/${item.id}` as any)}
-                      style={{ width: '100%', marginRight: 0 }}
                     />
                   </View>
                ))}
             </View>
           )}
         </Animated.View>
-        
-        <View style={{ height: 180 }} />
       </ScrollView>
     </ScreenContainer>
   );
@@ -144,7 +142,7 @@ export default function ProductsScreen() {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingBottom: 16,
+    paddingBottom: 12,
     backgroundColor: 'transparent',
     zIndex: 10,
   },
@@ -152,8 +150,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
   },
   logo: {
     flexShrink: 1,
@@ -165,29 +163,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 0,
-    gap: 12,
+    gap: 10,
   },
   walletCapsule: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border.glass,
   },
   iconBtn: {
     position: 'relative',
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cartBtnBlur: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -197,13 +195,13 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: -1,
+    right: -1,
     backgroundColor: theme.colors.text.primary,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 8.5,
+    paddingHorizontal: 3,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -211,77 +209,79 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   searchContainer: {
-    paddingHorizontal: 24,
-    marginTop: 16,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 4,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 24,
-    height: 56,
-    paddingHorizontal: 20,
+    borderRadius: 20,
+    height: 48,
+    paddingHorizontal: 16,
     backgroundColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
     shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 5,
+    shadowRadius: 12,
+    elevation: 4,
   },
   glassBorder: {
     ...(StyleSheet.absoluteFill as any),
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.8)',
     pointerEvents: 'none',
   },
   searchIcon: {
-    marginRight: 16,
+    marginRight: 12,
     zIndex: 2,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.typography.fontFamily.body,
     color: theme.colors.text.primary,
     zIndex: 2,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   scrollContent: {
-    paddingTop: 8,
+    paddingTop: 12,
   },
   section: {
-    marginBottom: 48,
+    marginBottom: 36,
   },
   sectionTitle: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
+    paddingHorizontal: 20,
+    marginBottom: 20,
     color: theme.colors.text.primary,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    fontSize: 20,
   },
   categoryScroll: {
-    paddingHorizontal: 24,
-    gap: 32,
+    paddingHorizontal: 20,
+    gap: 20,
   },
   categoryCircleWrapper: {
     alignItems: 'center',
-    minWidth: 100,
-    opacity: 0.8,
+    minWidth: 80,
+    opacity: 0.85,
   },
   categoryActive: {
     opacity: 1,
   },
   categoryCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.2)',
     shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   categoryImg: {
     width: '100%',
@@ -290,23 +290,21 @@ const styles = StyleSheet.create({
   },
   circleBorder: {
     ...(StyleSheet.absoluteFill as any),
-    borderRadius: 44,
+    borderRadius: 36,
     borderWidth: 1.5,
     borderColor: theme.colors.border.glass,
     pointerEvents: 'none',
   },
   categoryActiveCircle: {
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: theme.colors.primary.dark,
   },
   feedGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     justifyContent: 'space-between',
-    rowGap: 32,
-  },
-  gridCard: {
-    width: '46%',
+    rowGap: 16,
   },
 });
+

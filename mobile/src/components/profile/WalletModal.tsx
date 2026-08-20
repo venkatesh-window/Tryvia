@@ -7,6 +7,7 @@ import { theme } from '../../theme/theme';
 import { BlurView } from 'expo-blur';
 import { walletService, WalletBalanceSummary } from '../../api/services/walletService';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface WalletModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ interface WalletModalProps {
 }
 
 export const WalletModal: React.FC<WalletModalProps> = ({ visible, onClose }) => {
+  const insets = useSafeAreaInsets();
   const [summary, setSummary] = useState<WalletBalanceSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +42,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ visible, onClose }) =>
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -49,7 +51,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ visible, onClose }) =>
                 Smart Upgrade Credits
               </Typography>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={8}>
               <X size={20} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>

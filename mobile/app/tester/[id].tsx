@@ -1,25 +1,23 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
 import { PremiumButton } from '../../src/components/ui/PremiumButton';
 import { productService } from '../../src/api/services/productService';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../src/store/useCartStore';
 import { theme } from '../../src/theme/theme';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
-import { ShoppingBag, ChevronLeft, Sparkles } from 'lucide-react-native';
+import { ShoppingBag, ChevronLeft } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInUp, useAnimatedScrollHandler, useSharedValue, useAnimatedStyle, interpolate } from 'react-native-reanimated';
-
-const { width, height } = Dimensions.get('window');
+import { useResponsive } from '../../src/hooks/useResponsive';
 
 export default function TesterDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { width, height, safeTopPadding, insets, isSmallDevice } = useResponsive();
   const { addItem, totalItems } = useCartStore();
   const scrollY = useSharedValue(0);
 
@@ -53,6 +51,8 @@ export default function TesterDetailsScreen() {
     };
   });
 
+  const heroHeight = Math.min(height * 0.52, 420);
+
   if (isLoading || !product) {
     return (
       <ScreenContainer showOrbs={true}>
@@ -67,25 +67,25 @@ export default function TesterDetailsScreen() {
     <ScreenContainer showOrbs={false}>
       
       {/* Floating Transparent Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
+      <View style={[styles.header, { paddingTop: safeTopPadding }]}>
         <Animated.View style={[StyleSheet.absoluteFill, headerStyle]}>
-          <BlurView  intensity={80} tint="light" style={StyleSheet.absoluteFill as any} />
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill as any} />
         </Animated.View>
 
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconCircleBtn}>
-           <BlurView  intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
-           <ChevronLeft size={24} color={theme.colors.text.primary} strokeWidth={1.5} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconCircleBtn} hitSlop={8}>
+           <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
+           <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={1.5} />
         </TouchableOpacity>
         
         <View style={{ flex: 1 }} />
         
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconCircleBtn} onPress={() => router.push('/cart' as any)}>
-            <BlurView  intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
-            <ShoppingBag size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+          <TouchableOpacity style={styles.iconCircleBtn} onPress={() => router.push('/cart' as any)} hitSlop={8}>
+            <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill as any} />
+            <ShoppingBag size={18} color={theme.colors.text.primary} strokeWidth={1.5} />
             {totalItems > 0 && (
               <View style={styles.badge}>
-                <Typography variant="caption" style={{ color: '#fff', fontSize: 10 }}>{totalItems}</Typography>
+                <Typography variant="caption" style={{ color: '#fff', fontSize: 9 }}>{totalItems}</Typography>
               </View>
             )}
           </TouchableOpacity>
@@ -96,29 +96,29 @@ export default function TesterDetailsScreen() {
         showsVerticalScrollIndicator={false} 
         onScroll={scrollHandler}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 20) + 32 }]}
       >
         
         {/* Immersive Image Gallery */}
-        <View style={styles.imageGallery}>
+        <View style={[styles.imageGallery, { width, height: heroHeight }]}>
            <Animated.View style={[styles.imageWrapper, imageStyle]}>
              <Image source={{ uri: product.image_url || 'https://via.placeholder.com/600' }} style={styles.mainImage} contentFit="cover" />
            </Animated.View>
            
            <Animated.View entering={FadeIn.duration(1000).delay(600)} style={styles.testerBadge}>
-             <BlurView  intensity={40} tint="dark" style={StyleSheet.absoluteFill as any} />
+             <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill as any} />
              <View style={styles.testerBadgeBorder} />
-             <Typography variant="caption" weight="bold" style={{ color: '#fff', letterSpacing: 2 }}>MINIATURE</Typography>
+             <Typography variant="caption" weight="bold" style={{ color: '#fff', letterSpacing: 1.5, fontSize: 10 }}>MINIATURE</Typography>
            </Animated.View>
         </View>
 
         {/* Content Section - Overlapping the image */}
         <Animated.View entering={FadeInUp.duration(1000).delay(300)} style={styles.contentSection}>
           <View style={styles.contentGlass}>
-            <BlurView  intensity={60} tint="light" style={StyleSheet.absoluteFill as any} />
+            <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill as any} />
             <View style={styles.contentBorder} />
             
-            <View style={styles.contentPadding}>
+            <View style={[styles.contentPadding, isSmallDevice && { padding: 20 }]}>
               <Typography variant="caption" color="secondary" style={styles.brandName}>
                 {product.brand?.name?.toUpperCase()}
               </Typography>
@@ -127,13 +127,11 @@ export default function TesterDetailsScreen() {
                 {product.name}
               </Typography>
 
-
               <View style={styles.priceRow}>
                 <View>
-                  <Typography variant="caption" color="secondary" style={{ letterSpacing: 2, marginBottom: 4, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>TRIAL SIZE</Typography>
-                  <Typography variant="price" weight="bold" style={{ fontSize: 32 }}>₹{product.tester_price}</Typography>
+                  <Typography variant="caption" color="secondary" style={{ letterSpacing: 1.5, marginBottom: 2, fontFamily: 'Inter_600SemiBold', fontSize: 9 }}>TRIAL SIZE</Typography>
+                  <Typography variant="price" weight="bold" style={{ fontSize: isSmallDevice ? 26 : 30 }}>₹{product.tester_price}</Typography>
                 </View>
-
               </View>
 
               {/* Core Actions */}
@@ -144,14 +142,13 @@ export default function TesterDetailsScreen() {
                     addItem(product, 'tester');
                     router.push('/cart' as any);
                   }}
-                  style={styles.addToCartBtn}
                 />
               </View>
               
               <View style={styles.divider} />
 
               {/* About this item */}
-              <Typography variant="h3" weight="medium" style={{ marginBottom: 24 }}>The Trial Experience</Typography>
+              <Typography variant="h3" weight="medium" style={{ marginBottom: 16 }}>The Trial Experience</Typography>
               <Typography variant="body" color="secondary" style={styles.description}>
                 Experience {product.name} without the commitment. This exquisite miniature contains enough product for an immersive 3-5 day trial, allowing you to discover its texture and fragrance on your own skin before upgrading.
               </Typography>
@@ -187,17 +184,17 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     zIndex: 100,
   },
   headerIcons: {
     flexDirection: 'row',
   },
   iconCircleBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -206,8 +203,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     backgroundColor: theme.colors.text.primary,
     width: 16,
     height: 16,
@@ -218,18 +215,16 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
   imageGallery: {
-    width: width,
-    height: height * 0.65, 
     position: 'relative',
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
   imageWrapper: {
     width: '100%',
     height: '100%',
-    padding: 60,
+    padding: 36,
   },
   mainImage: {
     width: '100%',
@@ -237,87 +232,79 @@ const styles = StyleSheet.create({
   },
   testerBadge: {
     position: 'absolute',
-    top: height * 0.2,
-    left: 32,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    top: 64,
+    left: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   testerBadgeBorder: {
     ...(StyleSheet.absoluteFill as any),
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 20,
+    borderRadius: 14,
   },
   contentSection: {
-    marginTop: -80,
+    marginTop: -50,
     paddingHorizontal: 16,
   },
   contentGlass: {
-    borderRadius: 40,
+    borderRadius: 32,
     overflow: 'hidden',
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: -10 },
+    shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.1,
-    shadowRadius: 30,
-    elevation: 20,
+    shadowRadius: 24,
+    elevation: 16,
   },
   contentBorder: {
     ...(StyleSheet.absoluteFill as any),
-    borderRadius: 40,
+    borderRadius: 32,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.8)',
     pointerEvents: 'none',
   },
   contentPadding: {
-    padding: 32,
+    padding: 24,
   },
   brandName: {
-    letterSpacing: 4,
-    marginBottom: 16,
+    letterSpacing: 3,
+    marginBottom: 10,
+    fontSize: 10,
   },
   productName: {
-    marginBottom: 16,
-    lineHeight: 40,
-    fontSize: 32,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 4,
+    marginBottom: 12,
+    lineHeight: 34,
+    fontSize: 26,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 28,
   },
   actionsBox: {
-    marginBottom: 40,
-  },
-  addToCartBtn: {
-    height: 64,
+    marginBottom: 28,
   },
   divider: {
     height: 1,
     backgroundColor: 'rgba(0,0,0,0.05)',
-    marginBottom: 40,
+    marginBottom: 28,
   },
   description: {
-    lineHeight: 28,
-    marginBottom: 32,
-    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 24,
+    fontSize: 14,
   },
   highlightsContainer: {
-    gap: 16,
+    gap: 12,
   },
   highlightItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   highlightDot: {
     width: 6,
@@ -326,3 +313,4 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary.main,
   }
 });
+

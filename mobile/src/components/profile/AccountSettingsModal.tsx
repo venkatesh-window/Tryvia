@@ -8,6 +8,7 @@ import {
   TextInput,
   Switch,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Typography } from '../ui/Typography';
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AccountSettingsModalProps {
   visible: boolean;
@@ -29,6 +31,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   visible,
   onClose,
 }) => {
+  const insets = useSafeAreaInsets();
   const { user, updateProfile } = useAuthStore();
 
   const [fullName, setFullName] = useState(user?.fullName || 'Venkatesh S');
@@ -81,7 +84,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -90,7 +96,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
           <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
         </TouchableOpacity>
 
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -102,12 +108,16 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               </Typography>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7} hitSlop={8}>
               <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollBody}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Personal Details */}
             <Typography variant="caption" color="secondary" style={styles.sectionTitle}>
               PERSONAL INFORMATION
@@ -161,15 +171,15 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               </View>
             </View>
 
-            {/* Shipping Address */}
+            {/* Delivery Address */}
             <Typography variant="caption" color="secondary" style={[styles.sectionTitle, { marginTop: 24 }]}>
-              DEFAULT SHIPPING ADDRESS
+              DEFAULT DELIVERY ADDRESS
             </Typography>
 
             <View style={styles.card}>
               <View style={styles.inputGroup}>
                 <Typography variant="caption" color="secondary" style={styles.inputLabel}>
-                  STREET / APARTMENT / SUITE
+                  STREET / APARTMENT
                 </Typography>
                 <TextInput
                   style={styles.textInput}
@@ -182,8 +192,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
               <View style={styles.inputDivider} />
 
-              <View style={{ flexDirection: 'row' }}>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                   <Typography variant="caption" color="secondary" style={styles.inputLabel}>
                     CITY
                   </Typography>
@@ -196,9 +206,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   />
                 </View>
 
-                <View style={{ width: 1, backgroundColor: 'rgba(0,0,0,0.06)' }} />
-
-                <View style={[styles.inputGroup, { flex: 1, paddingLeft: 16 }]}>
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                   <Typography variant="caption" color="secondary" style={styles.inputLabel}>
                     PINCODE
                   </Typography>
@@ -206,10 +214,9 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     style={styles.textInput}
                     value={pincode}
                     onChangeText={setPincode}
-                    placeholder="PIN Code"
+                    placeholder="Pincode"
                     placeholderTextColor="rgba(0,0,0,0.35)"
                     keyboardType="numeric"
-                    maxLength={6}
                   />
                 </View>
               </View>
@@ -218,7 +225,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
               <View style={styles.inputGroup}>
                 <Typography variant="caption" color="secondary" style={styles.inputLabel}>
-                  STATE / PROVINCE
+                  STATE
                 </Typography>
                 <TextInput
                   style={styles.textInput}
@@ -230,19 +237,19 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               </View>
             </View>
 
-            {/* Preferences */}
+            {/* VIP & App Preferences */}
             <Typography variant="caption" color="secondary" style={[styles.sectionTitle, { marginTop: 24 }]}>
-              PRIVILEGES & NOTIFICATIONS
+              VIP PRIVILEGES & ALERTS
             </Typography>
 
             <View style={styles.card}>
               <View style={styles.preferenceRow}>
                 <View style={{ flex: 1, marginRight: 12 }}>
                   <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>
-                    WhatsApp Dispatch Updates
+                    WhatsApp Concierge Updates
                   </Typography>
                   <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>
-                    Real-time courier alerts directly to your verified phone.
+                    Receive private order tracking and release dispatch alerts.
                   </Typography>
                 </View>
                 <Switch
@@ -313,7 +320,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
             <View style={{ height: 40 }} />
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -329,7 +336,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '90%',
-    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.12,
@@ -382,7 +388,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   inputGroup: {
-    paddingVertical: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  inputRow: {
+    flexDirection: 'row',
   },
   inputLabel: {
     fontSize: 9,

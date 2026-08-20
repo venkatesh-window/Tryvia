@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextProps, StyleSheet } from 'react-native';
+import { Text, TextProps, StyleSheet, useWindowDimensions } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 interface TypographyProps extends TextProps {
@@ -8,6 +8,7 @@ interface TypographyProps extends TextProps {
   weight?: 'light' | 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold';
   italic?: boolean;
   align?: 'left' | 'center' | 'right';
+  responsive?: boolean;
 }
 
 export function Typography({
@@ -16,11 +17,14 @@ export function Typography({
   weight = 'regular',
   italic = false,
   align = 'left',
+  responsive = true,
   style,
   children,
   ...props
 }: TypographyProps) {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 360;
 
   const getTextColor = () => {
     switch (color) {
@@ -64,6 +68,20 @@ export function Typography({
   };
 
   const getFontSize = () => {
+    if (isSmallScreen && responsive) {
+      switch (variant) {
+        case 'h1': return 28;
+        case 'h2': return 21;
+        case 'h3': return 16;
+        case 'price': return 16;
+        case 'number': return 15;
+        case 'serif': return 15;
+        case 'caption': return 11;
+        case 'body':
+        default: return 13;
+      }
+    }
+
     switch (variant) {
       case 'h1': return 32;
       case 'h2': return 24;
@@ -79,6 +97,7 @@ export function Typography({
 
   return (
     <Text
+      maxFontSizeMultiplier={1.3}
       style={[
         {
           color: getTextColor(),
@@ -94,3 +113,4 @@ export function Typography({
     </Text>
   );
 }
+

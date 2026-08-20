@@ -1,18 +1,19 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import { Home, ShoppingBag, Gift, Award, User } from 'lucide-react-native';
 import { theme } from '../../src/theme/theme';
 import { MotiView } from 'moti';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Custom Tab Bar Icon wrapper for premium animations
 const TabIcon = ({ focused, IconComponent }: { focused: boolean, IconComponent: any }) => {
   return (
     <MotiView
       animate={{
-        scale: focused ? 1.15 : 1,
-        translateY: focused ? -4 : 0,
+        scale: focused ? 1.12 : 1,
+        translateY: focused ? -2 : 0,
       }}
       transition={{
         type: 'spring',
@@ -31,7 +32,7 @@ const TabIcon = ({ focused, IconComponent }: { focused: boolean, IconComponent: 
         />
       )}
       <IconComponent 
-        size={24} 
+        size={22} 
         color={focused ? theme.colors.primary.main : theme.colors.text.secondary} 
         strokeWidth={focused ? 2 : 1.5}
       />
@@ -50,6 +51,9 @@ const TabIcon = ({ focused, IconComponent }: { focused: boolean, IconComponent: 
 };
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + (insets.bottom > 0 ? insets.bottom : 8);
+
   return (
     <Tabs
       screenOptions={{
@@ -60,14 +64,16 @@ export default function TabLayout() {
           bottom: 0,
           left: 0,
           right: 0,
-          height: 64,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom > 0 ? insets.bottom - 4 : 4,
+          paddingTop: 6,
           elevation: 0,
           borderTopWidth: 0,
           backgroundColor: 'transparent',
         },
         tabBarBackground: () => (
           <View style={styles.tabBarBackgroundContainer}>
-            <BlurView  tint="light" intensity={60} style={StyleSheet.absoluteFill as any} />
+            <BlurView tint="light" intensity={60} style={StyleSheet.absoluteFill as any} />
             <View style={styles.tabBarGlassBorder} />
           </View>
         ),
@@ -91,7 +97,6 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={Gift} />,
         }}
       />
-
       <Tabs.Screen
         name="profile"
         options={{
@@ -123,14 +128,14 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
   },
   activeGlow: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.6)',
     shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 0 },
@@ -139,10 +144,11 @@ const styles = StyleSheet.create({
   },
   indicatorDot: {
     position: 'absolute',
-    bottom: -6,
+    bottom: -4,
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: theme.colors.text.primary,
   }
 });
+

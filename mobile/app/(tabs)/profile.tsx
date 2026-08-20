@@ -6,9 +6,8 @@ import { PremiumButton } from '../../src/components/ui/PremiumButton';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-import { Settings, Package, Heart, CreditCard, LogOut, ChevronRight, Sparkles } from 'lucide-react-native';
+import { Settings, Package, Heart, CreditCard, ChevronRight, Sparkles } from 'lucide-react-native';
 import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
@@ -20,6 +19,7 @@ import { AccountSettingsModal } from '../../src/components/profile/AccountSettin
 import { WalletModal } from '../../src/components/profile/WalletModal';
 import * as Haptics from 'expo-haptics';
 import { TouchableOpacity, Platform } from 'react-native';
+import { useResponsive } from '../../src/hooks/useResponsive';
 
 const MENU_ITEMS = [
   { key: 'orders', icon: Package, label: 'My Orders' },
@@ -33,7 +33,7 @@ type ProfileModalKey = typeof MENU_ITEMS[number]['key'] | 'wallet';
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { width, safeTopPadding, bottomTabBarPadding, isSmallDevice } = useResponsive();
 
   const [activeModal, setActiveModal] = useState<ProfileModalKey | null>(null);
 
@@ -52,13 +52,13 @@ export default function ProfileScreen() {
     <ScreenContainer showOrbs={true}>
       
       {/* Floating Header */}
-      <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 16) }]}>
+      <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: safeTopPadding }]}>
         <View style={styles.headerTopRow}>
            <Typography variant="h2" weight="medium" style={styles.logo}>PROFILE</Typography>
         </View>
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomTabBarPadding }]} showsVerticalScrollIndicator={false}>
         
         {/* User Identity Card */}
         <Animated.View entering={FadeInUp.duration(1000).delay(200)}>
@@ -68,13 +68,13 @@ export default function ProfileScreen() {
               style={StyleSheet.absoluteFill as any} 
               contentFit="cover" 
             />
-            <BlurView  intensity={90} tint="dark" style={StyleSheet.absoluteFill as any} />
+            <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill as any} />
             <View style={styles.profileCardGlassBorder} />
             
-            <View style={styles.profileCardContent}>
+            <View style={[styles.profileCardContent, isSmallDevice && { padding: 16 }]}>
               <View style={styles.profileHeaderRow}>
                 <View style={styles.avatarContainer}>
-                  <BlurView  intensity={50} tint="light" style={styles.avatarBlur}>
+                  <BlurView intensity={50} tint="light" style={styles.avatarBlur}>
                     <Typography variant="h2" style={{ color: '#000', fontFamily: 'CormorantGaramond_700Bold' }}>
                       {user?.fullName?.charAt(0) || 'U'}
                     </Typography>
@@ -82,10 +82,10 @@ export default function ProfileScreen() {
                 </View>
                 
                 <View style={styles.profileInfo}>
-                  <Typography variant="h2" weight="medium" style={{ color: '#fff', marginBottom: 4 }}>
+                  <Typography variant="h2" weight="medium" numberOfLines={1} style={{ color: '#fff', marginBottom: 2 }}>
                     {user?.fullName || 'Luxury Member'}
                   </Typography>
-                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: 1 }}>
+                  <Typography variant="caption" numberOfLines={1} style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 }}>
                     {user?.email || 'member@tryvia.com'}
                   </Typography>
                 </View>
@@ -94,25 +94,25 @@ export default function ProfileScreen() {
               <View style={styles.profileCardDivider} />
               
               <View style={styles.profileFooterRow}>
-                <View style={{ flexShrink: 1, marginRight: 10 }}>
-                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4 }}>MEMBERSHIP</Typography>
-                  <View style={[styles.vipTag, { height: 32, justifyContent: 'center', alignSelf: 'flex-start' }]}>
-                     <Typography variant="caption" weight="bold" style={{ color: '#000', letterSpacing: 1 }} numberOfLines={1}>TRYVIA BLACK</Typography>
+                <View style={styles.footerCol}>
+                  <Typography variant="caption" style={styles.footerColLabel}>MEMBERSHIP</Typography>
+                  <View style={styles.vipTag}>
+                     <Typography variant="caption" weight="bold" style={{ color: '#000', fontSize: 10, letterSpacing: 0.5 }} numberOfLines={1}>TRYVIA BLACK</Typography>
                   </View>
                 </View>
                 
-                <View style={{ flexShrink: 1, marginRight: 10, alignItems: 'center' }}>
-                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4 }}>STARS</Typography>
-                  <View style={{ height: 32, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                     <Sparkles size={14} color="#D4AF37" style={{ marginRight: 4 }} />
-                     <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 18 }} numberOfLines={1}>{user?.tryviaStars || 0}</Typography>
+                <View style={[styles.footerCol, { alignItems: 'center' }]}>
+                  <Typography variant="caption" style={styles.footerColLabel}>STARS</Typography>
+                  <View style={{ height: 28, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
+                     <Sparkles size={13} color="#D4AF37" style={{ marginRight: 4 }} />
+                     <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 16 }} numberOfLines={1}>{user?.tryviaStars || 0}</Typography>
                   </View>
                 </View>
 
-                <TouchableOpacity activeOpacity={0.7} onPress={() => handleMenuPress('wallet')} style={{ alignItems: 'flex-end', flexShrink: 1 }}>
-                  <Typography variant="caption" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 4, textAlign: 'right' }}>WALLET BALANCE</Typography>
-                  <View style={{ height: 32, justifyContent: 'center' }}>
-                    <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 24, lineHeight: 28 }} numberOfLines={1}>₹{user?.walletBalance || 0}</Typography>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => handleMenuPress('wallet')} style={[styles.footerCol, { alignItems: 'flex-end' }]}>
+                  <Typography variant="caption" style={[styles.footerColLabel, { textAlign: 'right' }]}>WALLET</Typography>
+                  <View style={{ height: 28, justifyContent: 'center' }}>
+                    <Typography variant="price" style={{ color: '#fff', fontFamily: 'Inter_700Bold', fontSize: 18 }} numberOfLines={1}>₹{user?.walletBalance || 0}</Typography>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -122,7 +122,7 @@ export default function ProfileScreen() {
 
         {/* Menu Items */}
         <Animated.View entering={FadeInUp.duration(1000).delay(400)} style={styles.menuContainer}>
-          {MENU_ITEMS.map((item, index) => (
+          {MENU_ITEMS.map((item) => (
             <TouchableOpacity
               key={item.key}
               activeOpacity={0.7}
@@ -131,12 +131,12 @@ export default function ProfileScreen() {
               <GlassCard intensity={25} style={styles.menuItemCard}>
                 <View style={styles.menuItemRow}>
                   <View style={styles.menuIconWrapper}>
-                    <item.icon size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+                    <item.icon size={18} color={theme.colors.text.primary} strokeWidth={1.5} />
                   </View>
                   <Typography variant="body" weight="medium" style={styles.menuLabel}>
                     {item.label}
                   </Typography>
-                  <ChevronRight size={20} color={theme.colors.text.secondary} />
+                  <ChevronRight size={18} color={theme.colors.text.secondary} />
                 </View>
               </GlassCard>
             </TouchableOpacity>
@@ -151,11 +151,9 @@ export default function ProfileScreen() {
             onPress={handleLogout} 
           />
         </Animated.View>
-
-        <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* 4 Interactive Modals */}
+      {/* Modals */}
       <OrdersModal
         visible={activeModal === 'orders'}
         onClose={() => setActiveModal(null)}
@@ -186,56 +184,57 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingBottom: 16,
+    paddingBottom: 12,
     backgroundColor: 'transparent',
     zIndex: 10,
   },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
   },
   logo: {
-    letterSpacing: 4,
+    letterSpacing: 3,
     color: theme.colors.text.primary,
+    fontSize: 22,
   },
   scrollContent: {
-    paddingTop: 16,
-    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingHorizontal: 20,
   },
   profileCardWrapper: {
-    borderRadius: 24,
+    borderRadius: 22,
     overflow: 'hidden',
-    marginBottom: 40,
+    marginBottom: 28,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
   profileCardGlassBorder: {
     ...(StyleSheet.absoluteFill as any),
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
   profileCardContent: {
-    padding: 24,
+    padding: 20,
   },
   profileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 18,
   },
   avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
-    marginRight: 20,
+    marginRight: 16,
   },
   avatarBlur: {
     flex: 1,
@@ -249,48 +248,58 @@ const styles = StyleSheet.create({
   profileCardDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.15)',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   profileFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+  },
+  footerCol: {
+    flex: 1,
+  },
+  footerColLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    fontSize: 9,
   },
   vipTag: {
     backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   menuContainer: {
-    marginBottom: 40,
-    gap: 16,
+    marginBottom: 28,
+    gap: 12,
   },
   menuItemCard: {
-    padding: 8,
+    padding: 4,
   },
   menuItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
+    minHeight: 48,
   },
   menuIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   menuLabel: {
     flex: 1,
     letterSpacing: 0.5,
+    fontSize: 14,
   },
   logoutWrapper: {
-    marginTop: 24,
+    marginTop: 8,
   },
-  bottomPadding: {
-    height: 140, // Accounts for floating tab bar
-  }
 });
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Pressable, ViewStyle, Platform } from 'react-native';
+import { StyleSheet, Pressable, ViewStyle, Platform, View } from 'react-native';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
 import { Typography } from './Typography';
@@ -56,6 +56,8 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
       weight="medium"
       color={getTextColor()}
       align="center"
+      numberOfLines={1}
+      style={styles.buttonText}
     >
       {title}
     </Typography>
@@ -71,8 +73,8 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
       {({ pressed }) => (
         <MotiView
           animate={{
-            scale: pressed ? 0.95 : 1,
-            opacity: pressed ? 0.8 : 1,
+            scale: pressed ? 0.96 : 1,
+            opacity: pressed ? 0.85 : 1,
           }}
           transition={{
             type: 'spring',
@@ -89,28 +91,30 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
             },
             variant === 'primary' ? {
               shadowColor: theme.colors.shadow.glass,
-              shadowOffset: { width: 0, height: 16 },
-              shadowOpacity: 0.3,
-              shadowRadius: 20,
-              elevation: 12,
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 8,
             } : {},
             variant === 'glass' ? {
               shadowColor: theme.colors.shadow.glow,
               shadowOffset: { width: 0, height: 0 },
               shadowOpacity: 0.8,
               shadowRadius: 15,
-              elevation: 10,
+              elevation: 6,
               overflow: 'hidden',
             } : {},
             style,
           ]}
         >
           {variant === 'glass' ? (
-            <BlurView  intensity={40} tint="light" style={styles.blurContainer}>
+            <BlurView intensity={40} tint="light" style={styles.blurContainer}>
               {innerContent}
             </BlurView>
           ) : (
-            innerContent
+            <View style={styles.solidContainer}>
+              {innerContent}
+            </View>
           )}
         </MotiView>
       )}
@@ -120,15 +124,25 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 56,
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  solidContainer: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   blurContainer: {
     ...(StyleSheet.absoluteFill as any),
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.3)', // Frosted glass appearance
   },
+  buttonText: {
+    letterSpacing: 0.5,
+  },
 });
+

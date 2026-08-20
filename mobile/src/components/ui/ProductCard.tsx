@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable, ViewStyle, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ViewStyle, Platform, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
@@ -27,8 +27,11 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, style }) => {
   const theme = useTheme();
   const { addItem } = useCartStore();
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 360;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: any) => {
+    e?.stopPropagation?.();
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -47,11 +50,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
   };
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} style={{ width: '100%' }}>
       {({ pressed }) => (
         <MotiView
           animate={{
-            scale: pressed ? 0.96 : 1,
+            scale: pressed ? 0.97 : 1,
             translateY: pressed ? 2 : 0,
           }}
           transition={{
@@ -59,14 +62,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
             stiffness: 300,
             damping: 20,
           }}
-          style={[styles.container, { width: 200, marginRight: 16 }, style]}
+          style={[styles.container, style]}
         >
           {/* Outer Glass Card */}
           <View style={[styles.glassWrapper, { 
-            borderRadius: theme.radius.xl,
+            borderRadius: isSmallScreen ? theme.radius.lg : theme.radius.xl,
             shadowColor: theme.colors.shadow.glass, 
           }]}>
-            <BlurView  intensity={35} tint="light" style={styles.blurContainer}>
+            <BlurView intensity={35} tint="light" style={styles.blurContainer}>
               
               {/* Product Image Stage */}
               <View style={[styles.imageStage, { backgroundColor: theme.colors.background.default }]}>
@@ -79,26 +82,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
                 
                 {/* Floating Tags */}
                 <View style={styles.tagContainer}>
-                  <BlurView  intensity={80} tint="light" style={styles.tagBlur}>
+                  <BlurView intensity={80} tint="light" style={styles.tagBlur}>
                     <Typography variant="caption" weight="medium" style={styles.tagText}>100+ buys</Typography>
                   </BlurView>
                 </View>
                 
                 {/* Floating Add to Cart */}
-                <Pressable onPress={handleAddToCart} style={({ pressed }) => [
+                <Pressable onPress={handleAddToCart} hitSlop={8} style={({ pressed: btnPressed }) => [
                   styles.addToCartBtn,
-                  pressed && { transform: [{ scale: 0.9 }] }
+                  btnPressed && { transform: [{ scale: 0.92 }] }
                 ]}>
-                  <BlurView  intensity={50} tint="light" style={styles.cartBtnBlur}>
-                    <Plus size={20} color={theme.colors.text.primary} strokeWidth={1.5} />
+                  <BlurView intensity={60} tint="light" style={styles.cartBtnBlur}>
+                    <Plus size={18} color={theme.colors.text.primary} strokeWidth={2} />
                   </BlurView>
                 </Pressable>
               </View>
 
               {/* Product Info */}
-              <View style={styles.infoContainer}>
+              <View style={[styles.infoContainer, isSmallScreen && { padding: 12 }]}>
                 <Typography variant="caption" color="secondary" style={styles.brand} numberOfLines={1}>
-                  {product.brand.toUpperCase()}
+                  {product.brand?.toUpperCase()}
                 </Typography>
                 
                 <Typography variant="body" weight="medium" style={styles.name} numberOfLines={2}>
@@ -110,11 +113,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
                 <View style={styles.priceRow}>
                   <View style={styles.priceColumn}>
                     <Typography variant="caption" color="secondary" style={styles.priceSubLabel}>TESTER</Typography>
-                    <Typography variant="price" weight="bold" color="primary">₹{product.testerPrice}</Typography>
+                    <Typography variant="price" weight="bold" color="primary" numberOfLines={1} style={styles.testerPriceText}>
+                      ₹{product.testerPrice}
+                    </Typography>
                   </View>
                   <View style={[styles.priceColumn, styles.fullPriceContainer]}>
                     <Typography variant="caption" color="secondary" style={styles.priceSubLabel}>FULL SIZE</Typography>
-                    <Typography variant="number" weight="regular" color="secondary" style={styles.fullPrice}>
+                    <Typography variant="number" weight="regular" color="secondary" numberOfLines={1} style={styles.fullPrice}>
                       ₹{product.fullPrice}
                     </Typography>
                   </View>
@@ -132,56 +137,56 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
 const styles = StyleSheet.create({
   container: {
     overflow: 'visible',
-    marginVertical: 10,
+    marginVertical: 6,
   },
   glassWrapper: {
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.8)',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 6,
   },
   blurContainer: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   imageStage: {
-    height: 200,
     width: '100%',
+    aspectRatio: 1,
     overflow: 'hidden',
+    position: 'relative',
   },
   image: {
-    flex: 1,
     width: '100%',
     height: '100%',
   },
   addToCartBtn: {
     position: 'absolute',
-    bottom: 16,
-    right: 16,
-    borderRadius: 24,
+    bottom: 10,
+    right: 10,
+    borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowRadius: 6,
+    elevation: 4,
   },
   cartBtnBlur: {
-    width: 48,
-    height: 48,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
   },
   tagContainer: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: 10,
+    left: 10,
     borderRadius: 8,
     overflow: 'hidden',
     zIndex: 10,
@@ -189,32 +194,33 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.4)',
   },
   tagBlur: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   tagText: {
     fontSize: 9,
     letterSpacing: 0.5,
   },
   infoContainer: {
-    padding: 16,
+    padding: 14,
   },
   brand: {
-    letterSpacing: 2,
-    marginBottom: 6,
-    fontSize: 10,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+    fontSize: 9,
     fontFamily: 'Inter_600SemiBold',
   },
   name: {
-    minHeight: 42,
-    lineHeight: 20,
-    marginBottom: 12,
+    minHeight: 38,
+    lineHeight: 18,
+    marginBottom: 8,
+    fontSize: 13,
   },
   priceDivider: {
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    marginBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 8,
   },
   priceRow: {
     flexDirection: 'row',
@@ -223,18 +229,23 @@ const styles = StyleSheet.create({
   },
   priceColumn: {
     justifyContent: 'flex-end',
+    flexShrink: 1,
   },
   priceSubLabel: {
-    fontSize: 9,
-    letterSpacing: 1,
-    marginBottom: 2,
+    fontSize: 8,
+    letterSpacing: 0.5,
+    marginBottom: 1,
     fontFamily: 'Inter_600SemiBold',
+  },
+  testerPriceText: {
+    fontSize: 15,
   },
   fullPriceContainer: {
     alignItems: 'flex-end',
   },
   fullPrice: {
     textDecorationLine: 'line-through',
-    fontSize: 13,
+    fontSize: 12,
   },
 });
+

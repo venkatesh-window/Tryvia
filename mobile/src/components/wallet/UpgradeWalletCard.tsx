@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Typography } from '../ui/Typography';
 import { GlassCard } from '../ui/GlassCard';
 import { WalletCredit } from '../../api/services/walletService';
@@ -14,14 +14,17 @@ interface UpgradeWalletCardProps {
 }
 
 export function UpgradeWalletCard({ credit, fullSizePrice, compact = false }: UpgradeWalletCardProps) {
-  const finalPrice = fullSizePrice - credit.redeemable_amount;
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 360;
+  const finalPrice = Math.max(0, fullSizePrice - credit.redeemable_amount);
+
   return (
     <Animated.View entering={FadeInUp.duration(600)}>
-      <GlassCard intensity={40} style={styles.card}>
+      <GlassCard intensity={40} style={[styles.card, isSmallScreen && { padding: 12 }]}>
         <View style={styles.headerRow}>
           <View style={styles.titleGroup}>
             <Sparkles size={16} color={theme.colors.text.primary} />
-            <Typography variant="h3" weight="bold" style={styles.title}>
+            <Typography variant="h3" weight="bold" style={styles.title} numberOfLines={1}>
               TRYVIA Upgrade Wallet
             </Typography>
           </View>
@@ -45,18 +48,18 @@ export function UpgradeWalletCard({ credit, fullSizePrice, compact = false }: Up
           </View>
           
           <View style={styles.row}>
-            <Typography variant="body" color="primary">TRYVIA Wallet Credit</Typography>
+            <Typography variant="body" color="primary" style={{ flexShrink: 1, marginRight: 8 }}>TRYVIA Wallet Credit</Typography>
             <Typography variant="body" color="primary" weight="bold">-₹{credit.redeemable_amount.toFixed(2)}</Typography>
           </View>
           
-          <View style={[styles.row, { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.1)' }]}>
+          <View style={[styles.row, styles.totalRow]}>
             <Typography variant="body" weight="bold">Amount Payable</Typography>
-            <Typography variant="body" weight="bold" style={{ fontSize: 18 }}>₹{finalPrice.toFixed(2)}</Typography>
+            <Typography variant="body" weight="bold" style={{ fontSize: isSmallScreen ? 16 : 18 }}>₹{finalPrice.toFixed(2)}</Typography>
           </View>
           
           {!compact && (
-            <View style={{ marginTop: 8 }}>
-              <Typography variant="caption" color="secondary" style={{ fontSize: 10 }}>
+            <View style={{ marginTop: 6 }}>
+              <Typography variant="caption" color="secondary" style={{ fontSize: 9 }}>
                 *Credit derived from previous tester purchase (₹{credit.original_amount} - 25% Platform Fee)
               </Typography>
             </View>
@@ -70,7 +73,7 @@ export function UpgradeWalletCard({ credit, fullSizePrice, compact = false }: Up
 const styles = StyleSheet.create({
   card: {
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.4)', // Subtle gold tint for upgrade
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
@@ -79,42 +82,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
+    gap: 8,
   },
   titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
   title: {
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    fontSize: 15,
   },
   statusBadge: {
     backgroundColor: 'rgba(34, 197, 94, 0.15)', // Light green
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
   },
   statusText: {
     color: '#15803d',
-    fontSize: 10,
-    letterSpacing: 1,
+    fontSize: 9,
+    letterSpacing: 0.5,
   },
   message: {
-    marginBottom: 16,
-    lineHeight: 20,
+    marginBottom: 12,
+    lineHeight: 18,
+    fontSize: 12,
   },
   breakdownBox: {
     backgroundColor: 'rgba(0, 0, 0, 0.03)',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
-    gap: 8,
+    gap: 6,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  totalRow: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.08)',
   }
 });
+

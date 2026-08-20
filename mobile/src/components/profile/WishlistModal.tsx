@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface WishlistModalProps {
   visible: boolean;
@@ -35,6 +36,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
   onClose,
   onOpenCart,
 }) => {
+  const insets = useSafeAreaInsets();
   const { items, removeFromWishlist } = useWishlistStore();
   const { addItem } = useCartStore();
 
@@ -63,7 +65,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
           <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
         </TouchableOpacity>
 
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -75,7 +77,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
               </Typography>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7} hitSlop={8}>
               <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>

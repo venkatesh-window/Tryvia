@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Typography } from '../ui/Typography';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PaymentMethodsModalProps {
   visible: boolean;
@@ -30,6 +32,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
   visible,
   onClose,
 }) => {
+  const insets = useSafeAreaInsets();
   const { methods, addCard, addUpi, removeMethod, setDefaultMethod } = usePaymentMethodsStore();
 
   const [isAddingCard, setIsAddingCard] = useState(false);
@@ -83,7 +86,10 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -92,7 +98,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
           <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill as any} />
         </TouchableOpacity>
 
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -109,7 +115,11 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollBody}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Cards Section */}
             <View style={styles.sectionHeaderRow}>
               <Typography variant="caption" color="secondary" style={styles.sectionTitle}>
@@ -332,7 +342,7 @@ export const PaymentMethodsModal: React.FC<PaymentMethodsModalProps> = ({
             <View style={{ height: 40 }} />
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

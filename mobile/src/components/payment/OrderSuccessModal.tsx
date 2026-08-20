@@ -8,6 +8,7 @@ import { Image } from 'expo-image';
 import { CheckCircle, Sparkles, MapPin } from 'lucide-react-native';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 import { theme } from '../../theme/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface OrderSuccessModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   onViewOrders,
   onContinueShopping,
 }) => {
+  const insets = useSafeAreaInsets();
   if (!order) return null;
 
   return (
@@ -30,7 +32,13 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
         <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent, 
+            { 
+              paddingTop: Math.max(insets.top, 24),
+              paddingBottom: Math.max(insets.bottom, 24) + 24,
+            }
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Animated Gold Checkmark */}

@@ -1,5 +1,5 @@
 import React, { useEffect, memo } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { theme } from '../../theme/theme';
 import Animated, { 
   useSharedValue, 
@@ -12,7 +12,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-const { width, height } = Dimensions.get('window');
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -20,8 +19,8 @@ interface ScreenContainerProps {
 }
 
 // Ultra-premium animated bubble component
-const Bubble = memo(({ delay, startX, size, duration }: any) => {
-  const translateY = useSharedValue(height);
+const Bubble = memo(({ delay, startX, size, duration, windowHeight }: any) => {
+  const translateY = useSharedValue(windowHeight || 800);
   const translateX = useSharedValue(startX);
   const opacity = useSharedValue(0);
 
@@ -46,7 +45,7 @@ const Bubble = memo(({ delay, startX, size, duration }: any) => {
       withTiming(0.5, { duration: duration - 4000 }),
       withTiming(0, { duration: 2000 })
     ));
-  }, []);
+  }, [windowHeight]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -70,6 +69,7 @@ const Bubble = memo(({ delay, startX, size, duration }: any) => {
 });
 
 export function ScreenContainer({ children, showOrbs = true }: ScreenContainerProps) {
+  const { width, height } = useWindowDimensions();
   const gradientOpacity = useSharedValue(0.4);
 
   useEffect(() => {
@@ -100,14 +100,12 @@ export function ScreenContainer({ children, showOrbs = true }: ScreenContainerPr
             />
           </Animated.View>
 
-
-
           {/* Drifting Glass Bubbles */}
-          <Bubble delay={0} startX={width * 0.2} size={45} duration={14000} />
-          <Bubble delay={3000} startX={width * 0.7} size={65} duration={18000} />
-          <Bubble delay={6000} startX={width * 0.4} size={35} duration={12000} />
-          <Bubble delay={8000} startX={width * 0.8} size={25} duration={16000} />
-          <Bubble delay={1000} startX={width * 0.1} size={55} duration={20000} />
+          <Bubble delay={0} startX={width * 0.2} size={45} duration={14000} windowHeight={height} />
+          <Bubble delay={3000} startX={width * 0.7} size={65} duration={18000} windowHeight={height} />
+          <Bubble delay={6000} startX={width * 0.4} size={35} duration={12000} windowHeight={height} />
+          <Bubble delay={8000} startX={width * 0.8} size={25} duration={16000} windowHeight={height} />
+          <Bubble delay={1000} startX={width * 0.1} size={55} duration={20000} windowHeight={height} />
         </>
       )}
       
@@ -126,21 +124,6 @@ const styles = StyleSheet.create({
   backgroundBase: {
     ...(StyleSheet.absoluteFill as any),
     backgroundColor: theme.colors.background.default,
-  },
-  volumetricGlow: {
-    position: 'absolute',
-    top: '15%',
-    left: '5%',
-    right: '5%',
-    height: height * 0.6,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    borderRadius: 300,
-    shadowColor: theme.colors.tertiary.main,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 100,
-    elevation: 0,
-    transform: [{ scale: 1.2 }],
   },
   contentLayer: {
     flex: 1,
@@ -168,3 +151,4 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-45deg' }]
   }
 });
+
