@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "start": "cd mobile && npx expo start",
-    "backend": "cd backend && .\\venv\\Scripts\\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
-    "seed": "cd backend && .\\venv\\Scripts\\python.exe seed.py",
+    "backend": "npm --prefix backend run dev",
+    "server": "npm --prefix backend run dev",
+    "seed": "npm --prefix backend run seed",
     "web": "cd mobile && npx expo start --web",
     "android": "cd mobile && npx expo start --android",
     "ios": "cd mobile && npx expo start --ios"
