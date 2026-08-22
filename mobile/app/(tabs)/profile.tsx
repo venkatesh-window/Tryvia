@@ -35,7 +35,7 @@ const MENU_ITEMS = [
 type ProfileModalKey = typeof MENU_ITEMS[number]['key'] | 'wallet';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState<ProfileModalKey | null>(null);
@@ -48,16 +48,20 @@ export default function ProfileScreen() {
   };
 
   const handleMenuPress = (key: ProfileModalKey) => {
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setActiveModal(key);
   };
 
-  const userName = user?.fullName || 'Tester User';
-  const userEmail = user?.email || 'test@tryvia.com';
-  const userInitial = userName.charAt(0).toUpperCase() || 'T';
-  const walletBalance = user?.walletBalance || 350;
+  const userName = user?.fullName || 'Guest Explorer';
+  const userEmail = user?.email || 'Sign in to access your luxury profile';
+  const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'G';
+  const walletBalance = user?.walletBalance || 0;
   const starsCount = user?.tryviaStars || 0;
 
   return (
@@ -96,59 +100,78 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Identity & Stats Card */}
-        <Animated.View entering={FadeInUp.duration(550).delay(100)} style={styles.profileCard}>
-          {/* Top User Info Section */}
-          <View style={styles.userTopSection}>
-            {/* Pink Initial Avatar */}
-            <View style={styles.avatarCircle}>
-              <Typography style={styles.avatarText}>{userInitial}</Typography>
+        {/* User Identity & Stats Card / Guest CTA */}
+        {isAuthenticated && user ? (
+          <Animated.View entering={FadeInUp.duration(550).delay(100)} style={styles.profileCard}>
+            {/* Top User Info Section */}
+            <View style={styles.userTopSection}>
+              {/* Pink Initial Avatar */}
+              <View style={styles.avatarCircle}>
+                <Typography style={styles.avatarText}>{userInitial}</Typography>
+              </View>
+
+              {/* Name & Email */}
+              <View style={styles.userInfo}>
+                <Typography style={styles.userName}>{userName}</Typography>
+                <Typography style={styles.userEmail}>{userEmail}</Typography>
+              </View>
             </View>
 
-            {/* Name & Email */}
-            <View style={styles.userInfo}>
-              <Typography style={styles.userName}>{userName}</Typography>
-              <Typography style={styles.userEmail}>{userEmail}</Typography>
-            </View>
-          </View>
-
-          {/* Bottom 3-Column Stats Row */}
-          <View style={styles.statsRow}>
-            {/* Membership */}
-            <View style={styles.statColumn}>
-              <Typography style={styles.statLabel}>MEMBERSHIP</Typography>
-              <View style={styles.membershipValueRow}>
-                <Typography style={styles.membershipText}>TRYVIA BLACK</Typography>
-                <View style={styles.crownBadge}>
-                  <Crown size={11} color="#CB6D73" strokeWidth={2} />
+            {/* Bottom 3-Column Stats Row */}
+            <View style={styles.statsRow}>
+              {/* Membership */}
+              <View style={styles.statColumn}>
+                <Typography style={styles.statLabel}>MEMBERSHIP</Typography>
+                <View style={styles.membershipValueRow}>
+                  <Typography style={styles.membershipText}>TRYVIA BLACK</Typography>
+                  <View style={styles.crownBadge}>
+                    <Crown size={11} color="#CB6D73" strokeWidth={2} />
+                  </View>
                 </View>
               </View>
-            </View>
 
-            <View style={styles.statDivider} />
+              <View style={styles.statDivider} />
 
-            {/* Stars */}
-            <View style={styles.statColumn}>
-              <Typography style={styles.statLabel}>STARS</Typography>
-              <View style={styles.starsValueRow}>
-                <Sparkles size={14} color="#CB6D73" strokeWidth={2} />
-                <Typography style={styles.statValue}> {starsCount}</Typography>
+              {/* Stars */}
+              <View style={styles.statColumn}>
+                <Typography style={styles.statLabel}>STARS</Typography>
+                <View style={styles.starsValueRow}>
+                  <Sparkles size={14} color="#CB6D73" strokeWidth={2} />
+                  <Typography style={styles.statValue}> {starsCount}</Typography>
+                </View>
               </View>
+
+              <View style={styles.statDivider} />
+
+              {/* Wallet */}
+              <TouchableOpacity
+                style={styles.statColumn}
+                activeOpacity={0.7}
+                onPress={() => handleMenuPress('wallet')}
+              >
+                <Typography style={styles.statLabel}>WALLET</Typography>
+                <Typography style={styles.statValue}>₹{walletBalance}</Typography>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.statDivider} />
-
-            {/* Wallet */}
+          </Animated.View>
+        ) : (
+          <Animated.View entering={FadeInUp.duration(550).delay(100)} style={styles.guestCard}>
+            <View style={styles.guestIconRow}>
+              <Crown size={28} color="#CB6D73" strokeWidth={1.5} />
+            </View>
+            <Typography style={styles.guestTitle}>Welcome to TryVia</Typography>
+            <Typography style={styles.guestSub}>
+              Sign in to unlock exclusive luxury tester perks, 90% upgrade credits, and tracked shipments.
+            </Typography>
             <TouchableOpacity
-              style={styles.statColumn}
-              activeOpacity={0.7}
-              onPress={() => handleMenuPress('wallet')}
+              style={styles.guestSignInBtn}
+              activeOpacity={0.85}
+              onPress={() => router.push('/auth')}
             >
-              <Typography style={styles.statLabel}>WALLET</Typography>
-              <Typography style={styles.statValue}>₹{walletBalance}</Typography>
+              <Typography style={styles.guestSignInText}>Sign In / Join TryVia</Typography>
             </TouchableOpacity>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        )}
 
         {/* Menu Items Card */}
         <Animated.View entering={FadeInUp.duration(550).delay(220)} style={styles.menuCard}>
@@ -179,16 +202,18 @@ export default function ProfileScreen() {
         </Animated.View>
 
         {/* Log Out Pill Button */}
-        <Animated.View entering={FadeInUp.duration(500).delay(320)}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.8}
-            onPress={handleLogout}
-          >
-            <LogOut size={18} color="#CB6D73" strokeWidth={1.75} />
-            <Typography style={styles.logoutText}>Log Out</Typography>
-          </TouchableOpacity>
-        </Animated.View>
+        {isAuthenticated && (
+          <Animated.View entering={FadeInUp.duration(500).delay(320)}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.8}
+              onPress={handleLogout}
+            >
+              <LogOut size={18} color="#CB6D73" strokeWidth={1.75} />
+              <Typography style={styles.logoutText}>Log Out</Typography>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </ScrollView>
 
       {/* Profile Feature Modals */}
@@ -420,5 +445,60 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#CB6D73',
     fontFamily: 'Inter_600SemiBold',
+  },
+  guestCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  guestIconRow: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FAF0F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  guestTitle: {
+    fontFamily: 'CormorantGaramond_700Bold',
+    fontSize: 26,
+    color: '#1A1918',
+    marginBottom: 6,
+  },
+  guestSub: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12.5,
+    color: '#8E8A85',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 18,
+    paddingHorizontal: 10,
+  },
+  guestSignInBtn: {
+    backgroundColor: '#1A1918',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  guestSignInText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });
