@@ -1,154 +1,106 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { BlurView } from 'expo-blur';
-import { StyleSheet, View, Platform } from 'react-native';
-import { Home, ShoppingBag, Gift, Award, User } from 'lucide-react-native';
-import { theme } from '../../src/theme/theme';
-import { MotiView } from 'moti';
+import { StyleSheet, Platform } from 'react-native';
+import { Home, LayoutGrid, Tag, Package, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// Custom Tab Bar Icon wrapper for premium animations
-const TabIcon = ({ focused, IconComponent }: { focused: boolean, IconComponent: any }) => {
-  return (
-    <MotiView
-      animate={{
-        scale: focused ? 1.12 : 1,
-        translateY: focused ? -2 : 0,
-      }}
-      transition={{
-        type: 'spring',
-        stiffness: 400,
-        damping: 15,
-      }}
-      style={styles.iconContainer}
-    >
-      {/* Active Glow Backdrop */}
-      {focused && (
-        <MotiView
-          from={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          style={styles.activeGlow}
-        />
-      )}
-      <IconComponent 
-        size={22} 
-        color={focused ? theme.colors.primary.main : theme.colors.text.secondary} 
-        strokeWidth={focused ? 2 : 1.5}
-      />
-      
-      {/* Subtle indicator dot */}
-      {focused && (
-        <MotiView
-          from={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 100, type: 'spring', stiffness: 400, damping: 15 }}
-          style={styles.indicatorDot}
-        />
-      )}
-    </MotiView>
-  );
-};
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = 56 + (insets.bottom > 0 ? insets.bottom : 8);
+  const tabBarHeight = 58 + (insets.bottom > 0 ? insets.bottom : 6);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: '#CB6D73',
+        tabBarInactiveTintColor: '#8E8A85',
+        tabBarLabelStyle: {
+          fontSize: 10.5,
+          fontFamily: 'Inter_500Medium',
+          marginTop: -2,
+          marginBottom: 4,
+        },
         tabBarStyle: {
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
           height: tabBarHeight,
-          paddingBottom: insets.bottom > 0 ? insets.bottom - 4 : 4,
-          paddingTop: 6,
-          elevation: 0,
-          borderTopWidth: 0,
-          backgroundColor: 'transparent',
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingTop: 8,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#EFEBE5',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 10,
         },
-        tabBarBackground: () => (
-          <View style={styles.tabBarBackgroundContainer}>
-            <BlurView tint="light" intensity={60} style={StyleSheet.absoluteFill as any} />
-            <View style={styles.tabBarGlassBorder} />
-          </View>
-        ),
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={Home} />,
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Home size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="products"
+        name="categories"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={ShoppingBag} />,
+          tabBarLabel: 'Categories',
+          tabBarIcon: ({ color, focused }) => (
+            <LayoutGrid size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="testers"
+        name="offers"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={Gift} />,
+          tabBarLabel: 'Offers',
+          tabBarIcon: ({ color, focused }) => (
+            <Tag size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          tabBarLabel: 'Orders',
+          tabBarIcon: ({ color, focused }) => (
+            <Package size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={User} />,
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <User size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
+          ),
+        }}
+      />
+      {/* Hidden secondary tab routes if needed */}
+      <Tabs.Screen
+        name="products"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="testers"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  tabBarBackgroundContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.4)', // Frost
-    shadowColor: theme.colors.shadow.glass,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 15,
-  },
-  tabBarGlassBorder: {
-    ...(StyleSheet.absoluteFill as any),
-    borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 44,
-    height: 44,
-  },
-  activeGlow: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-  },
-  indicatorDot: {
-    position: 'absolute',
-    bottom: -4,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: theme.colors.text.primary,
-  }
-});
+
 

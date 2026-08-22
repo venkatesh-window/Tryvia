@@ -1,13 +1,12 @@
-import React from 'react';
-import { View, StyleSheet, Pressable, ViewStyle, Platform, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Pressable, ViewStyle, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
 import { Typography } from './Typography';
 import { useTheme } from '../../hooks/useTheme';
-import { Plus } from 'lucide-react-native';
+import { Heart, ShoppingBag } from 'lucide-react-native';
 import { useCartStore } from '../../store/useCartStore';
-import { BlurView } from 'expo-blur';
 
 export interface ProductData {
   id: number;
@@ -16,6 +15,8 @@ export interface ProductData {
   fullPrice: number;
   testerPrice: number;
   imageUrl: string;
+  tags?: string[];
+  category?: string;
 }
 
 interface ProductCardProps {
@@ -27,8 +28,18 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, style }) => {
   const theme = useTheme();
   const { addItem } = useCartStore();
-  const { width } = useWindowDimensions();
-  const isSmallScreen = width < 360;
+  const [isLiked, setIsLiked] = useState(false);
+
+  // Generate luxury tags if none provided
+  const tags = product.tags || (
+    product.name.toLowerCase().includes('cream') || product.name.toLowerCase().includes('facial')
+      ? ['Hydrating', 'For All Skin Types']
+      : product.name.toLowerCase().includes('parfum') || product.name.toLowerCase().includes('eau')
+      ? ['Floral', 'Luxury']
+      : product.name.toLowerCase().includes('lip') || product.name.toLowerCase().includes('glow')
+      ? ['Nourishing', 'Glossy']
+      : ['Tester Available', 'Best Seller']
+  );
 
   const handleAddToCart = (e: any) => {
     e?.stopPropagation?.();
@@ -42,91 +53,101 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
       tester_price: product.testerPrice,
       image_url: product.imageUrl,
       brand: { id: 0, name: product.brand },
-      category: { id: 0, name: 'Category' },
+      category: { id: 0, name: product.category || 'Beauty' },
       stock_full: 10,
       stock_tester: 10,
     };
     addItem(cartProduct, 'tester');
   };
 
+  const handleToggleLike = (e: any) => {
+    e?.stopPropagation?.();
+    if (Platform.OS === 'ios') {
+      Haptics.selectionAsync();
+    }
+    setIsLiked(prev => !prev);
+  };
+
   return (
-    <Pressable onPress={onPress} style={{ width: '100%' }}>
+    <Pressable onPress={onPress} style={[{ width: '100%' }, style]}>
       {({ pressed }) => (
         <MotiView
           animate={{
-            scale: pressed ? 0.97 : 1,
-            translateY: pressed ? 2 : 0,
+            scale: pressed ? 0.98 : 1,
+            translateY: pressed ? 1 : 0,
           }}
           transition={{
             type: 'spring',
-            stiffness: 300,
-            damping: 20,
+            stiffness: 350,
+            damping: 25,
           }}
-          style={[styles.container, style]}
+          style={styles.cardContainer}
         >
-          {/* Outer Glass Card */}
-          <View style={[styles.glassWrapper, { 
-            borderRadius: isSmallScreen ? theme.radius.lg : theme.radius.xl,
-            shadowColor: theme.colors.shadow.glass, 
-          }]}>
-            <BlurView intensity={35} tint="light" style={styles.blurContainer}>
-              
-              {/* Product Image Stage */}
-              <View style={[styles.imageStage, { backgroundColor: theme.colors.background.default }]}>
-                <Image
-                  source={{ uri: product.imageUrl }}
-                  style={styles.image}
-                  contentFit="cover"
-                  transition={300}
-                />
-                
-                {/* Floating Tags */}
-                <View style={styles.tagContainer}>
-                  <BlurView intensity={80} tint="light" style={styles.tagBlur}>
-                    <Typography variant="caption" weight="medium" style={styles.tagText}>100+ buys</Typography>
-                  </BlurView>
-                </View>
-                
-                {/* Floating Add to Cart */}
-                <Pressable onPress={handleAddToCart} hitSlop={8} style={({ pressed: btnPressed }) => [
-                  styles.addToCartBtn,
-                  btnPressed && { transform: [{ scale: 0.92 }] }
-                ]}>
-                  <BlurView intensity={60} tint="light" style={styles.cartBtnBlur}>
-                    <Plus size={18} color={theme.colors.text.primary} strokeWidth={2} />
-                  </BlurView>
-                </Pressable>
-              </View>
+          {/* Top Image Stage */}
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: product.imageUrl }}
+              style={styles.image}
+              contentFit="cover"
+              transition={300}
+            />
 
-              {/* Product Info */}
-              <View style={[styles.infoContainer, isSmallScreen && { padding: 12 }]}>
-                <Typography variant="caption" color="secondary" style={styles.brand} numberOfLines={1}>
-                  {product.brand?.toUpperCase()}
-                </Typography>
-                
-                <Typography variant="body" weight="medium" style={styles.name} numberOfLines={2}>
-                  {product.name}
-                </Typography>
-                
-                <View style={styles.priceDivider} />
-                
-                <View style={styles.priceRow}>
-                  <View style={styles.priceColumn}>
-                    <Typography variant="caption" color="secondary" style={styles.priceSubLabel}>TESTER</Typography>
-                    <Typography variant="price" weight="bold" color="primary" numberOfLines={1} style={styles.testerPriceText}>
-                      ₹{product.testerPrice}
-                    </Typography>
-                  </View>
-                  <View style={[styles.priceColumn, styles.fullPriceContainer]}>
-                    <Typography variant="caption" color="secondary" style={styles.priceSubLabel}>FULL SIZE</Typography>
-                    <Typography variant="number" weight="regular" color="secondary" numberOfLines={1} style={styles.fullPrice}>
-                      ₹{product.fullPrice}
-                    </Typography>
-                  </View>
-                </View>
-              </View>
+            {/* Wishlist Heart Button */}
+            <Pressable
+              onPress={handleToggleLike}
+              hitSlop={8}
+              style={({ pressed: heartPressed }) => [
+                styles.heartBtn,
+                heartPressed && { transform: [{ scale: 0.88 }] }
+              ]}
+            >
+              <Heart
+                size={18}
+                color={isLiked ? '#CB6D73' : '#1A1918'}
+                fill={isLiked ? '#CB6D73' : 'transparent'}
+                strokeWidth={1.5}
+              />
+            </Pressable>
+          </View>
 
-            </BlurView>
+          {/* Bottom Info Section */}
+          <View style={styles.infoSection}>
+            {/* Brand Title in rose */}
+            <Typography variant="caption" weight="semibold" style={styles.brandText} numberOfLines={1}>
+              {product.brand?.toUpperCase()}
+            </Typography>
+
+            {/* Product Name */}
+            <Typography variant="body" weight="medium" style={styles.nameText} numberOfLines={2}>
+              {product.name}
+            </Typography>
+
+            {/* Tags / Chips Row */}
+            <View style={styles.tagsRow}>
+              {tags.map((tag, idx) => (
+                <View key={idx} style={styles.tagChip}>
+                  <Typography style={styles.tagLabel}>{tag}</Typography>
+                </View>
+              ))}
+            </View>
+
+            {/* Price & Bag Button */}
+            <View style={styles.bottomRow}>
+              <Typography variant="h3" weight="bold" style={styles.priceText}>
+                ₹{product.testerPrice || product.fullPrice}
+              </Typography>
+
+              <Pressable
+                onPress={handleAddToCart}
+                hitSlop={8}
+                style={({ pressed: btnPressed }) => [
+                  styles.bagButton,
+                  btnPressed && { transform: [{ scale: 0.9 }] }
+                ]}
+              >
+                <ShoppingBag size={17} color="#FFFFFF" strokeWidth={2} />
+              </Pressable>
+            </View>
           </View>
         </MotiView>
       )}
@@ -135,117 +156,98 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
 };
 
 const styles = StyleSheet.create({
-  container: {
-    overflow: 'visible',
-    marginVertical: 6,
-  },
-  glassWrapper: {
+  cardContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 6,
+    borderColor: '#ECE7E1',
+    shadowColor: '#32281E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  blurContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  imageStage: {
+  imageContainer: {
     width: '100%',
     aspectRatio: 1,
-    overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#F5F2EC',
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  addToCartBtn: {
+  heartBtn: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    borderRadius: 22,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  cartBtnBlur: {
-    width: 42,
-    height: 42,
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
   },
-  tagContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-    zIndex: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
-  tagBlur: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  tagText: {
-    fontSize: 9,
-    letterSpacing: 0.5,
-  },
-  infoContainer: {
+  infoSection: {
     padding: 14,
   },
-  brand: {
-    letterSpacing: 1.5,
+  brandText: {
+    color: '#CB6D73',
+    fontSize: 10,
+    letterSpacing: 1.2,
     marginBottom: 4,
-    fontSize: 9,
     fontFamily: 'Inter_600SemiBold',
   },
-  name: {
-    minHeight: 38,
+  nameText: {
+    color: '#1A1918',
+    fontSize: 14,
     lineHeight: 18,
-    marginBottom: 8,
-    fontSize: 13,
-  },
-  priceDivider: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    fontWeight: '600',
+    minHeight: 36,
     marginBottom: 8,
   },
-  priceRow: {
+  tagsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  tagChip: {
+    backgroundColor: '#F4F0EB',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tagLabel: {
+    fontSize: 10,
+    color: '#65605B',
+    fontFamily: 'Inter_400Regular',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    paddingTop: 2,
   },
-  priceColumn: {
-    justifyContent: 'flex-end',
-    flexShrink: 1,
+  priceText: {
+    fontSize: 17,
+    color: '#1A1918',
+    fontWeight: '700',
   },
-  priceSubLabel: {
-    fontSize: 8,
-    letterSpacing: 0.5,
-    marginBottom: 1,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  testerPriceText: {
-    fontSize: 15,
-  },
-  fullPriceContainer: {
-    alignItems: 'flex-end',
-  },
-  fullPrice: {
-    textDecorationLine: 'line-through',
-    fontSize: 12,
+  bagButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#CB6D73',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#CB6D73',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 2,
   },
 });
+
 

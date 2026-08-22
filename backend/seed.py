@@ -26,11 +26,12 @@ async def seed():
 
         # Create Brands
         kiehls = Brand(name="Kiehls", description="Premium Skincare")
+        chanel = Brand(name="Chanel", description="Haute Couture & Luxury Beauty")
         mfk = Brand(name="Maison Francis Kurkdjian", description="Luxury Fragrance")
         estee = Brand(name="Estee Lauder", description="Luxury Skincare & Makeup")
         olaplex = Brand(name="Olaplex", description="Professional Haircare")
         dior = Brand(name="Dior Beauty", description="Luxury Makeup & Skincare")
-        session.add_all([kiehls, mfk, estee, olaplex, dior])
+        session.add_all([kiehls, chanel, mfk, estee, olaplex, dior])
         
         await session.commit()
         
@@ -53,9 +54,16 @@ async def seed():
                 brand_id=kiehls.id, category_id=skincare.id
             ),
             Product(
+                name="Coco Noir Eau de Parfum",
+                full_price=18500, tester_price=950, stock_full=30, stock_tester=80,
+                image_url="https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=600&auto=format&fit=crop",
+                description="A magnetic, luminous fragrance combining black rose and oriental patchouli in an iconic black glass flacon.",
+                brand_id=chanel.id, category_id=fragrance.id
+            ),
+            Product(
                 name="Baccarat Rouge 540",
                 full_price=28500, tester_price=950, stock_full=20, stock_tester=100,
-                image_url="https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=600&auto=format&fit=crop",
+                image_url="https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?q=80&w=600&auto=format&fit=crop",
                 description="Luminous and sophisticated, Baccarat Rouge 540 lays on the skin like an amber floral and woody breeze.",
                 brand_id=mfk.id, category_id=fragrance.id
             ),

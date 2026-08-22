@@ -10,7 +10,7 @@ import { useCartStore } from '../../src/store/useCartStore';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { theme } from '../../src/theme/theme';
 import { BlurView } from 'expo-blur';
-import { CreditCard, ShoppingBag, Search } from 'lucide-react-native';
+import { CreditCard, ShoppingBag, Search, Sparkles } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useResponsive } from '../../src/hooks/useResponsive';
@@ -108,17 +108,35 @@ export default function ProductsScreen() {
           </ScrollView>
         </Animated.View>
 
-        {/* Apple-style Staggered Grid Feed */}
+        {/* Staggered Grid Feed */}
         <Animated.View entering={FadeInUp.duration(1000).delay(600)} style={styles.section}>
-          <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Full Size Collection</Typography>
+          <Typography variant="h3" weight="bold" style={styles.sectionTitle}>Full Size Collection</Typography>
           {isLoading ? (
             <Typography variant="body" color="secondary" style={{ textAlign: 'center', marginTop: 24 }}>Loading products...</Typography>
-          ) : allProducts?.length === 0 ? (
-            <Typography variant="body" color="secondary" style={{ textAlign: 'center', marginTop: 24 }}>No products found.</Typography>
+          ) : !allProducts || allProducts.length === 0 ? (
+            <View style={styles.emptyStateCard}>
+              <View style={styles.emptyIconCircle}>
+                <Sparkles size={24} color="#CB6D73" strokeWidth={1.75} />
+              </View>
+              <Typography style={styles.emptyTitle}>No Products Added Yet</Typography>
+              <Typography style={styles.emptySubtitle}>
+                We are curating exquisite additions for this collection. Stay tuned!
+              </Typography>
+              <TouchableOpacity
+                style={styles.emptyResetBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  setActiveCategory(null);
+                  setSearchQuery('');
+                }}
+              >
+                <Typography style={styles.emptyResetBtnText}>Explore All Products</Typography>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={styles.feedGrid}>
-               {allProducts?.map((item, index) => (
-                  <View key={item.id} style={{ width: gridCardWidth, marginTop: index % 2 !== 0 ? 24 : 0 }}>
+               {allProducts.map((item, index) => (
+                  <View key={item.id} style={{ width: gridCardWidth }}>
                     <ProductCard 
                       product={{
                         id: item.id,
@@ -126,7 +144,7 @@ export default function ProductsScreen() {
                         brand: item.brand?.name || 'DIOR',
                         fullPrice: item.full_price,
                         testerPrice: item.tester_price,
-                        imageUrl: item.image_url || 'https://via.placeholder.com/300'
+                        imageUrl: item.image_url || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop'
                       }}
                       onPress={() => router.push(`/product/${item.id}` as any)}
                     />
@@ -305,6 +323,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: 'space-between',
     rowGap: 16,
+  },
+  emptyStateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+    marginHorizontal: 20,
+    marginTop: 10,
+  },
+  emptyIconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#FDF0F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#F8D8DC',
+  },
+  emptyTitle: {
+    fontFamily: 'CormorantGaramond_700Bold',
+    fontSize: 22,
+    color: '#1A1918',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 13.5,
+    color: '#8E8A85',
+    textAlign: 'center',
+    lineHeight: 19,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 20,
+    maxWidth: 260,
+  },
+  emptyResetBtn: {
+    backgroundColor: '#232127',
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 22,
+  },
+  emptyResetBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
 });
 
