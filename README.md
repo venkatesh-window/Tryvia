@@ -157,8 +157,3 @@ Open two terminal windows:
 | `GET` | `/api/v1/orders/` | List user order history |
 | `GET` | `/api/v1/wallet/balance` | Get wallet balance and active upgrade credits |
 | `GET` | `/api/v1/wallet/eligibility/:id` | Check upgrade discount eligibility for a product |
-
----
-
-## 📄 License
-This project is proprietary and developed exclusively for the **TryVia** platform.
