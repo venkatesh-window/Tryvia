@@ -1,392 +1,164 @@
-✨ TRYVIA
+# ✨ TryVia — Luxury Beauty Discovery & Sampling Platform
 
-«Discover → Try → Experience → Upgrade → Review → Earn»
+> **« Discover → Try → Experience → Upgrade → Review → Earn »**
 
-TRYVIA is a premium Beauty Discovery, Sampling, and Smart Upgrade Platform that transforms the way customers shop for beauty products. Instead of purchasing expensive full-sized products without knowing if they'll work, users can first buy affordable tester products, experience them, and seamlessly upgrade to the full-sized version using their locked TRYVIA Wallet.
-
-Inspired by the premium experiences of Apple Store, Sephora, Nykaa Luxe, Airbnb, Pinterest, and Glossier, TRYVIA delivers a luxurious shopping journey through elegant UI, intelligent recommendations, rewarding gamification, and a transparent upgrade system.
+**TryVia** is a premium Beauty Discovery, Sampling, and Smart Upgrade Platform that transforms the way customers shop for luxury beauty and haute parfumerie. Instead of purchasing expensive full-sized products without knowing if they work, users can first buy affordable tester products, experience them, and seamlessly upgrade to the full-sized version using their locked **TryVia Wallet**.
 
 ---
 
-🌟 Vision
+## 🌟 Key Innovations
 
-To eliminate purchase regret in beauty shopping by making product discovery affordable, rewarding, personalized, and enjoyable.
-
----
-
-🎯 Problem Statement
-
-Customers often purchase expensive skincare, makeup, and beauty products without knowing whether they are suitable for their skin type or personal preferences.
-
-This leads to:
-
-- Wasted money on unsuitable products
-- Low customer confidence
-- High return rates
-- Poor product discovery
-- Difficulty finding the right beauty products
-
-TRYVIA solves these challenges by introducing an intelligent Try Before You Buy ecosystem.
+* 🧪 **Try Before You Buy**: Order luxury sample formulations (3ml – 10ml) from world-renowned brands like *Chanel*, *Dior*, *Kiehl's*, and *Le Labo*.
+* 💎 **Smart Upgrade System (90% Locked Credit)**:
+  * When you purchase a tester for **₹300**, the entire value is credited to your TryVia Wallet.
+  * When you upgrade to the full-sized formulation (**₹5,200**), **90% of your tester purchase (₹270)** is automatically applied as a discount.
+  * The 10% remaining is retained as a transparent platform fee.
+* 🔐 **Clerk Authentication with Custom UI**:
+  * 100% bespoke luxury interface in warm porcelain (`#FAF8F5`) and dusty rose (`#CB6D73`).
+  * Seamless **Google OAuth** and **Email/Password with 6-digit OTP verification**.
+* 🛍️ **Guest Exploration & Member Gating**:
+  * Guests can freely explore the product catalog, hero carousels, and category galleries.
+  * Cart, Wishlist, and Checkout are gated to protect member upgrade credits and order history.
 
 ---
 
-💡 Solution
+## 🛠️ Technology Stack (MERN Architecture)
 
-TRYVIA allows users to purchase affordable tester products before committing to the full-sized version.
+### 📱 Frontend (Mobile & Web)
+* **Framework**: React Native with **Expo SDK 54** & **Expo Router**
+* **Language**: TypeScript (Strict Mode)
+* **Styling & Aesthetics**: Custom Vanilla Design System (Porcelain, Dusty Rose, Glassmorphism)
+* **Animations**: `react-native-reanimated` & `moti` (Fluid 60 FPS spring physics & layout transitions)
+* **State Management**: `zustand` (Auth, Cart, Wishlist, Theme)
+* **Data Fetching**: `@tanstack/react-query` & `axios`
+* **Authentication**: **Clerk** (`@clerk/clerk-expo` + Native-safe direct FAPI integration with Google OAuth)
+* **Validation**: `zod`
+* **Typography**: Cormorant Garamond & Inter (Google Fonts)
+* **Icons**: `lucide-react-native` & `react-native-svg`
 
-After purchasing and trying a tester:
-
-- The tester purchase amount is credited to a locked TRYVIA Wallet.
-- During an upgrade, 90% of the tester value is automatically applied to the matching full-sized product.
-- The remaining 10% is retained as the platform fee, ensuring a transparent and sustainable business model.
-
-Users can also purchase full-sized products directly, earn rewards, complete beauty challenges, collect badges, and track their savings through a premium analytics dashboard.
-
----
-
-🔄 User Journey
-
-Discover
-
-↓
-
-Browse Products
-
-↓
-
-Buy Testers
-
-↓
-
-Experience Products
-
-↓
-
-Receive TRYVIA Wallet Credit
-
-↓
-
-Upgrade to Full-Sized Product
-
-↓
-
-Leave Reviews
-
-↓
-
-Earn Rewards
-
-↓
-
-Continue Shopping
+### 🚀 Backend
+* **Runtime**: Node.js
+* **Framework**: Express.js
+* **Language**: TypeScript (`ts-node-dev` for hot-reloading)
+* **Database**: **MongoDB** with **Mongoose ODM**
+* **Authentication**: JWT (JSON Web Tokens) & `bcryptjs`
+* **Security & Middleware**: `cors`, `dotenv`, centralized error handling
+* **API Style**: Modular RESTful APIs mounted on `/api/v1`
 
 ---
 
-🚀 Core Features
+## 📂 Project Architecture
 
-🏠 Home
-
-- Premium luxury home experience
-- Personalized recommendations
-- Trending beauty products
-- Premium hero banners
-- Beauty categories
-- Recently viewed products
-- AI Beauty Assistant
-
----
-
-🛍 Products
-
-- Full product catalog
-- Smart filters
-- Brand discovery
-- AI recommendations
-- Wishlist
-- Cart
-- Reviews & ratings
-
----
-
-🧴 Testers
-
-- Affordable sample products
-- Limited edition testers
-- Trending testers
-- Reward stars
-- Wallet eligibility
-- Upgrade information
-
----
-
-💎 Smart Upgrade System
-
-Example:
-
-Tester Price : ₹200
-
-Full Product : ₹600
-
-Wallet Credit : ₹200
-
-Wallet Applied (90%) : ₹180
-
-Platform Fee (10%) : ₹20
-
-Customer Pays : ₹420
-
-This allows customers to confidently upgrade while rewarding their initial tester purchase.
+```
+Tryvia/
+├── 📁 backend/                         # Express.js + TypeScript + MongoDB
+│   ├── 📁 src/
+│   │   ├── 📁 config/                  # MongoDB Mongoose connection manager
+│   │   ├── 📁 middleware/              # JWT auth and centralized error handlers
+│   │   ├── 📁 models/                  # Mongoose Schemas (User, Product, Brand, Category, Order, Wallet)
+│   │   ├── 📁 routes/                  # Express Routers (auth, products, orders, wallet)
+│   │   ├── seed.ts                     # TypeScript database seeder
+│   │   └── server.ts                   # Express server entry point (:8000)
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── 📁 mobile/                          # React Native + Expo App
+│   ├── 📁 app/                         # Expo Router screens
+│   │   ├── 📁 (tabs)/                  # Bottom Tab Navigator (Home, Products, Categories, Offers, Orders, Profile)
+│   │   ├── 📁 product/[id].tsx         # Luxury Product Details bottom-sheet screen
+│   │   ├── 📁 tester/[id].tsx          # Tester discovery details screen
+│   │   ├── auth.tsx                    # Custom Luxury Sign In / Sign Up & OTP Modal
+│   │   ├── cart.tsx                    # Shopping Bag with quantity steppers & checkout
+│   │   ├── index.tsx                   # Luxury intro splash sequence
+│   │   └── _layout.tsx                 # Root layout & providers
+│   ├── 📁 src/
+│   │   ├── 📁 api/                     # Axios API clients, Zod schemas & services
+│   │   ├── 📁 components/              # UI components (ProductCard, GoogleIcon, Typography)
+│   │   ├── 📁 services/                # Clerk auth & OAuth services
+│   │   ├── 📁 store/                   # Zustand stores (useAuthStore, useCartStore, useWishlistStore)
+│   │   ├── 📁 theme/                   # Luxury porcelain & dusty rose design tokens
+│   │   └── 📁 utils/                   # Secure storage & token caching
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── package.json                        # Root npm scripts
+└── README.md
+```
 
 ---
 
-💰 TRYVIA Wallet
+## 🚀 Getting Started
 
-Features include:
+### 1. Prerequisites
+* **Node.js**: v18+ or v20+
+* **MongoDB**: Running locally at `mongodb://localhost:27017` or a MongoDB Atlas URI
 
-- Locked wallet credits
-- Product-linked redemption
-- Wallet expiry tracking
-- Upgrade history
-- Savings analytics
-- Wallet transactions
+### 2. Installation
+Install dependencies for root, backend, and mobile:
+```bash
+# Install backend dependencies
+cd backend && npm install
 
----
+# Install mobile dependencies
+cd ../mobile && npm install
+```
 
-⭐ Rewards & Gamification
+### 3. Environment Variables
+Create `.env` files in `backend/` and `mobile/`:
 
-Earn TRYVIA Stars through:
+**`backend/.env`**:
+```env
+PORT=8000
+MONGODB_URI=mongodb://localhost:27017/tryvia
+JWT_SECRET=tryvia_secret_jwt_key_super_secure_2026
+JWT_EXPIRES_IN=7d
+```
 
-- Purchases
-- Tester purchases
-- Reviews
-- Referrals
-- Daily check-ins
-- Beauty challenges
-- Streak rewards
+**`mobile/.env`**:
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+EXPO_PUBLIC_API_URL=http://localhost:8000/api/v1
+```
 
-Reward levels:
+### 4. Seed the Database
+Populate MongoDB with luxury brands (*Chanel*, *Dior*, *Kiehl's*, *Le Labo*), categories, products, and default test accounts:
+```bash
+npm run seed
+```
 
-- Bronze
-- Silver
-- Gold
-- Platinum
-- Diamond
-- Elite
+### 5. Start the Application
+Open two terminal windows:
 
----
+* **Start Backend (Express + MongoDB)**:
+  ```bash
+  npm run backend
+  ```
+  *Server starts at `http://localhost:8000` (`http://localhost:8000/api/v1`)*
 
-🤖 AI Beauty Assistant
-
-The AI Assistant helps users with:
-
-- Product discovery
-- Personalized recommendations
-- Skin care guidance
-- Order tracking
-- Reward explanations
-- FAQs
-- Navigation assistance
-
----
-
-🎨 Design Philosophy
-
-TRYVIA follows a Soft Luxury Glassmorphism design language inspired by:
-
-- Apple VisionOS
-- Apple Store
-- Sephora
-- Nykaa Luxe
-- Airbnb
-- Glossier
-
-Design Highlights
-
-- Frosted glass UI
-- Soft pastel gradients
-- Floating glass cards
-- Elegant typography
-- Luxury product cards
-- Smooth 60 FPS animations
-- Premium micro-interactions
-- Accessibility-first design
+* **Start Frontend (Web / Expo Go)**:
+  ```bash
+  npm run web       # For Web browser preview
+  npm run start     # For Expo Go on Android / iOS
+  ```
 
 ---
 
-🛠 Technology Stack
+## 🔒 API Endpoints Overview
 
-Mobile
-
-- React Native (Expo)
-- TypeScript
-- Expo Router
-- NativeWind
-- Gluestack UI
-- React Native Reanimated
-- Moti
-- Zustand
-- TanStack Query
-- React Hook Form
-- Zod
-- Axios
-- Expo Blur
-- Expo Image
-- React Native SVG
-- Gesture Handler
-
-Backend
-
-- FastAPI
-- PostgreSQL
-- SQLAlchemy
-- Alembic
-- Redis
-- JWT Authentication
-- Pydantic
-- Async APIs
-- Supabase Storage
-
-Architecture
-
-- Clean Architecture
-- Feature-First Structure
-- Repository Pattern
-- Dependency Injection
-- SOLID Principles
-- Service Layer
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/register` | Register new user account |
+| `POST` | `/api/v1/auth/login` | Login with email/password (returns JWT) |
+| `GET` | `/api/v1/auth/me` | Fetch authenticated member profile |
+| `GET` | `/api/v1/products` | Retrieve all products (supports search & category filter) |
+| `GET` | `/api/v1/products/testers` | Retrieve trending tester formulations |
+| `GET` | `/api/v1/products/:id` | Get specific product details by ID |
+| `POST` | `/api/v1/orders/` | Place order with 90% smart wallet credit lock |
+| `GET` | `/api/v1/orders/` | List user order history |
+| `GET` | `/api/v1/wallet/balance` | Get wallet balance and active upgrade credits |
+| `GET` | `/api/v1/wallet/eligibility/:id` | Check upgrade discount eligibility for a product |
 
 ---
 
-📱 Major Screens
-
-- Splash
-- Onboarding
-- Authentication
-- Home
-- Products
-- Testers
-- Product Details
-- Tester Details
-- Wallet
-- Rewards
-- Wishlist
-- Cart
-- Checkout
-- Orders
-- Notifications
-- Search
-- AI Assistant
-- Profile
-- Settings
-
----
-
-🔒 Security
-
-- JWT Authentication
-- Refresh Tokens
-- Secure Storage
-- Input Validation
-- Role-Based Access Control
-- Rate Limiting
-- SQL Injection Protection
-- XSS Protection
-- Audit Logging
-- Secure API Design
-
----
-
-⚡ Performance
-
-- Image Optimization
-- Lazy Loading
-- Virtualized Lists
-- Infinite Scrolling
-- Pagination
-- Offline Cache
-- Background Refresh
-- Memoization
-- Optimistic Updates
-- Smooth 60 FPS Animations
-
----
-
-📂 Project Architecture
-
-TRYVIA
-├── app
-├── src
-│   ├── components
-│   ├── features
-│   ├── screens
-│   ├── hooks
-│   ├── services
-│   ├── api
-│   ├── store
-│   ├── theme
-│   ├── utils
-│   ├── constants
-│   ├── types
-│   ├── assets
-│   └── animations
-├── backend
-├── database
-├── docs
-└── tests
-
----
-
-🎯 Project Goals
-
-- Eliminate beauty purchase regret
-- Encourage product discovery
-- Increase customer confidence
-- Improve upgrade conversions
-- Deliver a luxury shopping experience
-- Build long-term customer loyalty
-- Create an engaging beauty rewards ecosystem
-
----
-
-🚀 Future Roadmap
-
-- AI Skin Analysis
-- AR Virtual Try-On
-- Smart Beauty Routine Planner
-- Personalized Beauty Subscription
-- Community Reviews & Social Feed
-- Creator & Influencer Marketplace
-- Live Beauty Shopping
-- Voice Shopping Assistant
-- Multi-language Support
-- Global Expansion
-
----
-
-👨‍💻 Development Standards
-
-This project follows enterprise-grade engineering practices:
-
-- Production-ready architecture
-- Strict TypeScript
-- Clean Architecture
-- Modular feature development
-- Reusable components
-- Comprehensive documentation
-- High-performance rendering
-- Accessibility (WCAG AA)
-- Secure coding practices
-- Automated testing
-- CI/CD-ready deployment
-
----
-
-📄 License
-
-This project is proprietary and developed exclusively for the TRYVIA platform. All rights reserved.
-
----
-
-❤️ Built With Passion
-
-TRYVIA is more than an e-commerce application—it's a next-generation beauty discovery ecosystem designed to help users confidently explore, experience, and upgrade to the products they truly love.
+## 📄 License
+This project is proprietary and developed exclusively for the **TryVia** platform.
