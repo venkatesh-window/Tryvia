@@ -61,12 +61,13 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Handle global errors like 401 Unauthorized
+// Response Interceptor: Handle global errors like 401 Unauthorized on protected routes
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response && error.response.status === 401) {
-      console.log('Unauthorized - clearing token');
+    const requestUrl = error.config?.url || '';
+    // Only clear token if 401 happens on a protected API route (not during login)
+    if (error.response && error.response.status === 401 && !requestUrl.includes('/auth/login')) {
       await deleteItemAsync(TOKEN_KEY);
     }
     return Promise.reject(error);

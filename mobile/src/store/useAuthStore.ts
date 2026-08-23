@@ -17,15 +17,15 @@ export interface UserPreferences {
 }
 
 export interface User {
-  id: number;
+  id: number | string;
   email: string;
   fullName: string;
-  phone: string;
+  phone?: string;
   loyaltyTier: string;
   walletBalance: number;
   points: number;
   tryviaStars: number;
-  address: ShippingAddress;
+  address?: ShippingAddress | null;
   preferences: UserPreferences;
 }
 
@@ -45,36 +45,18 @@ interface AuthState {
   addStars: (amount: number) => void;
 }
 
-const DEFAULT_USER: User = {
-  id: 1,
-  email: 'venkatesh@tryvia.luxury',
-  fullName: 'Venkatesh S',
-  phone: '+91 98401 23456',
-  loyaltyTier: 'TRYVIA BLACK',
-  walletBalance: 1400,
-  points: 4200,
-  tryviaStars: 0,
-  address: {
-    fullName: 'Venkatesh S',
-    street: '42 Altamount Road, Penthouse B',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400026',
-    phone: '+91 98401 23456',
-  },
-  preferences: {
-    whatsappUpdates: true,
-    exclusiveInvites: true,
-    biometrics: false,
-  },
+const DEFAULT_PREFERENCES: UserPreferences = {
+  whatsappUpdates: true,
+  exclusiveInvites: true,
+  biometrics: false,
 };
 
 const TOKEN_KEY = 'tryvia_jwt_token';
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: 'mock_token_tryvia',
-  user: DEFAULT_USER,
-  isAuthenticated: true,
+  token: null,
+  user: null,
+  isAuthenticated: false,
   isLoading: false,
 
   login: async (token: string, user: User) => {
@@ -99,46 +81,31 @@ export const useAuthStore = create<AuthState>((set) => ({
         try {
           user = await authService.getMe();
         } catch (err: any) {
-          // Token was invalid / expired / from old backend -> clear it
           await deleteItemAsync(TOKEN_KEY);
           token = null;
-        }
-      }
-
-      // If no valid token, perform auto-login for seeded test user
-      if (!token) {
-        try {
-          const loginRes = await authService.login({ username: 'test@tryvia.com', password: 'password123' });
-          token = loginRes.access_token;
-          await setItemAsync(TOKEN_KEY, token);
-          user = await authService.getMe();
-        } catch (loginErr) {
-          // Server might be offline or initializing
-          user = null;
         }
       }
       
       if (token && user) {
         const frontendUser: User = {
           id: user.id || 1,
-          email: user.email || 'test@tryvia.com',
-          fullName: user.full_name || 'Tester User',
-          phone: '+91 98401 23456',
-          loyaltyTier: user.loyalty_tier || 'TRYVIA BLACK',
+          email: user.email || '',
+          fullName: user.full_name || user.email?.split('@')[0] || 'Member',
+          phone: user.phone || '',
+          loyaltyTier: user.loyalty_tier || 'TRYVIA MEMBER',
           walletBalance: user.wallet_balance ?? 350,
           points: user.points || 0,
           tryviaStars: user.stars || 0,
-          address: DEFAULT_USER.address,
-          preferences: DEFAULT_USER.preferences,
+          address: user.address || null,
+          preferences: user.preferences || DEFAULT_PREFERENCES,
         };
         
         set({ token, user: frontendUser, isAuthenticated: true, isLoading: false });
       } else {
-        // Fallback to default user if offline so app remains usable
-        set({ token: 'offline_token', user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
+        set({ token: null, user: null, isAuthenticated: false, isLoading: false });
       }
     } catch (e) {
-      set({ token: 'offline_token', user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
+      set({ token: null, user: null, isAuthenticated: false, isLoading: false });
     }
   },
 

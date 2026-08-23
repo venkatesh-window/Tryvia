@@ -5,6 +5,7 @@ import { ScreenContainer } from '../src/components/ui/ScreenContainer';
 import { Typography } from '../src/components/ui/Typography';
 import { PremiumButton } from '../src/components/ui/PremiumButton';
 import { useCartStore } from '../src/store/useCartStore';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { ChevronLeft } from 'lucide-react-native';
 import { theme } from '../src/theme/theme';
 import { useForm, Controller } from 'react-hook-form';
@@ -27,22 +28,37 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { safeTopPadding, insets, isSmallDevice } = useResponsive();
   const { subtotal, walletDeduction, platformFee, total } = useCartStore();
+  const { user, updateProfile } = useAuthStore();
 
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
-      fullName: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      pincode: ''
-    }
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      address: user?.address?.street || '',
+      city: user?.address?.city || '',
+      pincode: user?.address?.pincode || '',
+    },
   });
 
-  const onSubmit = () => {
+  const onSubmit = (data: FormData) => {
+    // If user hasn't saved an address, save it to their profile for future use
+    if (user && (!user.address || !user.address.street)) {
+      updateProfile({
+        phone: data.phone,
+        address: {
+          fullName: data.fullName,
+          street: data.address,
+          city: data.city,
+          state: user.address?.state || 'Maharashtra',
+          pincode: data.pincode,
+          phone: data.phone,
+        },
+      });
+    }
     setIsPaymentModalVisible(true);
   };
 
