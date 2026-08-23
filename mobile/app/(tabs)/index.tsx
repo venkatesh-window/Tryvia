@@ -60,6 +60,81 @@ const HERO_BANNERS = [
   },
 ];
 
+const INITIAL_PRODUCTS = [
+  {
+    id: 1,
+    name: 'Midnight Recovery Cloud Cream',
+    description: 'A luxurious botanical facial cream formulated with squalane and evening primrose oil.',
+    full_price: 5200,
+    tester_price: 300,
+    stock_full: 25,
+    stock_tester: 50,
+    image_url: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800',
+    brand: { id: 1, name: "Kiehl's" },
+    category: { id: 1, name: 'Skincare' },
+  },
+  {
+    id: 2,
+    name: 'Coco Noir Eau De Parfum',
+    description: 'An intimate, seductive fragrance with luminous bergamot and velvety May rose.',
+    full_price: 14500,
+    tester_price: 350,
+    stock_full: 15,
+    stock_tester: 40,
+    image_url: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=800',
+    brand: { id: 2, name: 'Chanel' },
+    category: { id: 2, name: 'Fragrance' },
+  },
+  {
+    id: 3,
+    name: 'Dior Addict Lip Glow Oil',
+    description: 'Nourishing glossy lip oil infused with cherry oil for mirror shine and hydration.',
+    full_price: 3800,
+    tester_price: 250,
+    stock_full: 30,
+    stock_tester: 60,
+    image_url: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=800',
+    brand: { id: 3, name: 'Dior' },
+    category: { id: 3, name: 'Makeup' },
+  },
+  {
+    id: 4,
+    name: 'Sauvage Eau de Parfum',
+    description: 'Crisp Calabrian bergamot and radiant woody amber facets.',
+    full_price: 11500,
+    tester_price: 350,
+    stock_full: 20,
+    stock_tester: 45,
+    image_url: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?q=80&w=800',
+    brand: { id: 3, name: 'Dior' },
+    category: { id: 2, name: 'Fragrance' },
+  },
+  {
+    id: 5,
+    name: 'Bleu De Chanel Parfum',
+    description: 'Intense woody aromatic fragrance with refined New Caledonian sandalwood.',
+    full_price: 12800,
+    tester_price: 350,
+    stock_full: 18,
+    stock_tester: 35,
+    image_url: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?q=80&w=800',
+    brand: { id: 2, name: 'Chanel' },
+    category: { id: 2, name: 'Fragrance' },
+  },
+  {
+    id: 6,
+    name: 'Santal 33 Eau de Parfum',
+    description: 'Iconic blend of smoky cardamom, violet, iris, and creamy cedarwood.',
+    full_price: 24000,
+    tester_price: 450,
+    stock_full: 10,
+    stock_tester: 25,
+    image_url: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?q=80&w=800',
+    brand: { id: 4, name: 'Le Labo' },
+    category: { id: 2, name: 'Fragrance' },
+  },
+];
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -73,10 +148,12 @@ export default function HomeScreen() {
 
   const walletBalance = user?.walletBalance || 350;
 
-  const { data: products } = useQuery({
+  const { data: fetchedProducts } = useQuery({
     queryKey: ['homeProducts'],
     queryFn: () => productService.getProducts(14),
   });
+
+  const products = (fetchedProducts && fetchedProducts.length > 0) ? fetchedProducts : INITIAL_PRODUCTS;
 
   const horizontalPadding = 20;
   const gap = 12;
@@ -104,11 +181,11 @@ export default function HomeScreen() {
   }, [bannerWidth]);
 
   // Filter products by search or category if active
-  const filteredProducts = products?.filter(p => {
-    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand?.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCat = !activeCategory || p.category?.name.toLowerCase() === activeCategory.toLowerCase();
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCat = !activeCategory || p.category?.name?.toLowerCase() === activeCategory.toLowerCase();
     return matchesSearch && matchesCat;
-  }) || [];
+  });
 
   const handleBannerScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollOffset = event.nativeEvent.contentOffset.x;

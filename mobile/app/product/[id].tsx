@@ -9,6 +9,7 @@ import { walletService, WalletCredit } from '../../src/api/services/walletServic
 import { UpgradeWalletCard } from '../../src/components/wallet/UpgradeWalletCard';
 import { useCartStore } from '../../src/store/useCartStore';
 import { useWishlistStore } from '../../src/store/useWishlistStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { Image } from 'expo-image';
 import { 
   ChevronLeft, 
@@ -33,6 +34,7 @@ export default function ProductDetailsScreen() {
   const { width, height } = useWindowDimensions();
   const { addItem, totalItems } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { isAuthenticated } = useAuthStore();
 
   const [selectedSize, setSelectedSize] = useState<'full' | 'tester'>('full');
   const [eligibleCredit, setEligibleCredit] = useState<WalletCredit | null>(null);
@@ -40,22 +42,27 @@ export default function ProductDetailsScreen() {
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: () => productService.getProductById(Number(id)),
+    enabled: !!id,
   });
 
   useEffect(() => {
-    if (product?.id) {
+    if (product?.id && isAuthenticated) {
       walletService.checkEligibility(product.id).then(res => {
         if (res.eligible && res.credit) {
           setEligibleCredit(res.credit);
         }
       }).catch(e => console.log('Error checking wallet:', e));
     }
-  }, [product?.id]);
+  }, [product?.id, isAuthenticated]);
 
   const isFavorited = product ? isInWishlist(product.id) : false;
 
   const handleToggleWishlist = () => {
     if (!product) return;
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -64,6 +71,10 @@ export default function ProductDetailsScreen() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }

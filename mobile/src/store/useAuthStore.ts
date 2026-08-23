@@ -91,40 +91,54 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true });
       let token = await getItemAsync(TOKEN_KEY);
+      const { authService } = await import('../api/services/authService');
       
-      // Auto-login the seeded user if no token
+      let user: any = null;
+
+      if (token) {
+        try {
+          user = await authService.getMe();
+        } catch (err: any) {
+          // Token was invalid / expired / from old backend -> clear it
+          await deleteItemAsync(TOKEN_KEY);
+          token = null;
+        }
+      }
+
+      // If no valid token, perform auto-login for seeded test user
       if (!token) {
-        const { authService } = await import('../api/services/authService');
-        const loginRes = await authService.login({ username: 'test@tryvia.com', password: 'password123' });
-        token = loginRes.access_token;
-        await setItemAsync(TOKEN_KEY, token);
+        try {
+          const loginRes = await authService.login({ username: 'test@tryvia.com', password: 'password123' });
+          token = loginRes.access_token;
+          await setItemAsync(TOKEN_KEY, token);
+          user = await authService.getMe();
+        } catch (loginErr) {
+          // Server might be offline or initializing
+          user = null;
+        }
       }
       
-      if (token) {
-        const { authService } = await import('../api/services/authService');
-        const user = await authService.getMe();
-        
-        // Map backend user to frontend user format
+      if (token && user) {
         const frontendUser: User = {
-          id: user.id,
-          email: user.email,
+          id: user.id || 1,
+          email: user.email || 'test@tryvia.com',
           fullName: user.full_name || 'Tester User',
-          phone: '+91 98401 23456', // Mock address for now as the backend user doesn't have an address table
-          loyaltyTier: user.loyalty_tier || 'BRONZE',
-          walletBalance: user.wallet_balance || 0,
+          phone: '+91 98401 23456',
+          loyaltyTier: user.loyalty_tier || 'TRYVIA BLACK',
+          walletBalance: user.wallet_balance ?? 350,
           points: user.points || 0,
-          tryviaStars: 0,
+          tryviaStars: user.stars || 0,
           address: DEFAULT_USER.address,
           preferences: DEFAULT_USER.preferences,
         };
         
         set({ token, user: frontendUser, isAuthenticated: true, isLoading: false });
       } else {
-        set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+        // Fallback to default user if offline so app remains usable
+        set({ token: 'offline_token', user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
       }
     } catch (e) {
-      console.error('Failed to restore token', e);
-      set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+      set({ token: 'offline_token', user: DEFAULT_USER, isAuthenticated: true, isLoading: false });
     }
   },
 

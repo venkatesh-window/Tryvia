@@ -83,6 +83,7 @@ function RootLayoutNav() {
         />
         <Stack.Screen name="product/[id]" />
         <Stack.Screen name="tester/[id]" />
+        <Stack.Screen name="auth" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="cart" options={{ presentation: 'modal' }} />
       </Stack>
     </QueryClientProvider>

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ScreenContainer } from '../src/components/ui/ScreenContainer';
 import { Typography } from '../src/components/ui/Typography';
 import { useCartStore } from '../src/store/useCartStore';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { Image } from 'expo-image';
 import { 
   ChevronLeft, 
@@ -26,8 +27,13 @@ export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, subtotal, total, addItem, removeItem } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   const handleCheckout = () => {
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }

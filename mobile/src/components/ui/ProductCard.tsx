@@ -7,6 +7,8 @@ import { Typography } from './Typography';
 import { useTheme } from '../../hooks/useTheme';
 import { Heart, ShoppingBag } from 'lucide-react-native';
 import { useCartStore } from '../../store/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useRouter } from 'expo-router';
 
 export interface ProductData {
   id: number;
@@ -26,8 +28,10 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, style }) => {
+  const router = useRouter();
   const theme = useTheme();
   const { addItem } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
   const [isLiked, setIsLiked] = useState(false);
 
   // Generate luxury tags if none provided
@@ -43,6 +47,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
 
   const handleAddToCart = (e: any) => {
     e?.stopPropagation?.();
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -62,6 +70,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, styl
 
   const handleToggleLike = (e: any) => {
     e?.stopPropagation?.();
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
     if (Platform.OS === 'ios') {
       Haptics.selectionAsync();
     }
