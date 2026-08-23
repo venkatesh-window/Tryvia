@@ -19,12 +19,12 @@ const ORDERS_DATA = [
     items: [
       {
         name: 'Midnight Recovery Cloud Cream',
-        type: '(Tester)',
+        type: '(Mini)',
         image: require('../../assets/cat_skincare.jpg'),
       },
       {
         name: 'Coco Noir Parfum',
-        type: '(Tester)',
+        type: '(Mini)',
         image: require('../../assets/cat_fragrance.jpg'),
       },
     ],
@@ -66,7 +66,7 @@ export default function OrdersScreen() {
         </View>
 
         <Typography style={styles.subtitle}>
-          Track your tester shipments & smart upgrades
+          Track your mini shipments & smart upgrades
         </Typography>
 
         <ScrollView

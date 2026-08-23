@@ -6,6 +6,7 @@ import { Product } from '../models/Product';
 import { WalletCredit } from '../models/WalletCredit';
 import { WalletRule } from '../models/WalletRule';
 import { User } from '../models/User';
+import { SystemConfig } from '../models/SystemConfig';
 
 const router = Router();
 
@@ -23,6 +24,10 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
     let subtotal = 0;
     const orderItems: IOrderItem[] = [];
     const testerProductIds: mongoose.Types.ObjectId[] = [];
+    
+    // Fetch global commission rate
+    const systemConfig = await SystemConfig.findOne() || { platformCommissionRate: 0.15 };
+    const commissionRate = systemConfig.platformCommissionRate;
 
     for (const item of items) {
       let productDoc: any;
@@ -40,15 +45,30 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       const itemType = item.item_type === 'full' ? 'full' : 'tester';
       const unitPrice = itemType === 'full' ? productDoc.fullPrice : productDoc.testerPrice;
       const totalPrice = unitPrice * (item.quantity || 1);
+      
+      const qty = item.quantity || 1;
+      if (itemType === 'full' && productDoc.stockFull < qty) {
+        res.status(400).json({ detail: `Insufficient stock for full size of ${productDoc.name}` });
+        return;
+      }
+      if (itemType === 'tester' && productDoc.stockTester < qty) {
+        res.status(400).json({ detail: `Insufficient stock for tester of ${productDoc.name}` });
+        return;
+      }
+
+      const itemPlatformFee = totalPrice * commissionRate;
+      const vendorEarnings = totalPrice - itemPlatformFee;
 
       subtotal += totalPrice;
 
       orderItems.push({
         product: productDoc._id,
         itemType,
-        quantity: item.quantity || 1,
+        quantity: qty,
         unitPrice,
         totalPrice,
+        platformFee: itemPlatformFee,
+        vendorEarnings: vendorEarnings
       });
 
       if (itemType === 'tester') {
@@ -59,14 +79,26 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
     let walletDiscount = 0;
     let platformFee = 0;
     let totalAmount = subtotal;
+    let credit: any = null;
 
     // Process Wallet Credit Redemption
     if (apply_wallet_credit_id) {
-      const credit = await WalletCredit.findOne({
-        user: user._id,
-        $or: [{ numericId: apply_wallet_credit_id }, { _id: apply_wallet_credit_id }],
-        status: 'ACTIVE',
-      });
+      let creditQuery: any = { user: user._id, status: 'ACTIVE' };
+      if (!isNaN(Number(apply_wallet_credit_id))) {
+        creditQuery.$or = [
+          { numericId: Number(apply_wallet_credit_id) }
+        ];
+        if (mongoose.Types.ObjectId.isValid(apply_wallet_credit_id)) {
+          creditQuery.$or.push({ _id: apply_wallet_credit_id });
+        }
+      } else if (mongoose.Types.ObjectId.isValid(apply_wallet_credit_id)) {
+        creditQuery._id = apply_wallet_credit_id;
+      } else {
+        res.status(400).json({ detail: 'Invalid apply_wallet_credit_id' });
+        return;
+      }
+
+      credit = await WalletCredit.findOne(creditQuery);
 
       if (credit) {
         walletDiscount = credit.redeemableAmount;
@@ -90,7 +122,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       platformFee,
       totalAmount,
       status: 'PAID',
-      appliedCreditId: apply_wallet_credit_id,
+      appliedCreditId: credit ? credit.numericId : undefined,
     });
 
     await order.save();
@@ -131,6 +163,17 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
         // Update user's wallet balance
         await User.findByIdAndUpdate(user._id, {
           $inc: { walletBalance: redeemableAmount },
+        });
+      }
+      
+      // Deduct inventory
+      if (item.itemType === 'full') {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stockFull: -item.quantity }
+        });
+      } else {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stockTester: -item.quantity }
         });
       }
     }

@@ -11,8 +11,10 @@ export interface IProduct extends Document {
   imageUrl?: string;
   brand: mongoose.Types.ObjectId;
   category: mongoose.Types.ObjectId;
+  vendor?: mongoose.Types.ObjectId;
   tags?: string[];
   isFeatured?: boolean;
+  status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
 }
 
 const ProductSchema = new Schema<IProduct>(
@@ -27,8 +29,10 @@ const ProductSchema = new Schema<IProduct>(
     imageUrl: { type: String },
     brand: { type: Schema.Types.ObjectId, ref: 'Brand', required: true },
     category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
+    vendor: { type: Schema.Types.ObjectId, ref: 'Vendor' },
     tags: [{ type: String }],
     isFeatured: { type: Boolean, default: false },
+    status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'OUT_OF_STOCK'], default: 'ACTIVE' },
   },
   {
     timestamps: true,
@@ -40,6 +44,10 @@ const ProductSchema = new Schema<IProduct>(
         ret.stock_full = ret.stockFull;
         ret.stock_tester = ret.stockTester;
         ret.image_url = ret.imageUrl;
+        if (ret.vendor) {
+          ret.vendor_id = ret.vendor;
+        }
+        ret.status = ret.status;
         delete ret.__v;
         return ret;
       },

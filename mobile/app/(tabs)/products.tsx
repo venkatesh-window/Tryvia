@@ -16,7 +16,7 @@ import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useResponsive } from '../../src/hooks/useResponsive';
 
 const CATEGORIES = [
-  { id: 1, name: 'Skincare', img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300&auto=format&fit=crop' },
+  { id: 1, name: 'Skincare', img: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=300&auto=format&fit=crop' },
   { id: 2, name: 'Fragrance', img: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=300&auto=format&fit=crop' },
   { id: 3, name: 'Haircare', img: 'https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=300&auto=format&fit=crop' },
   { id: 4, name: 'Makeup', img: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=300&auto=format&fit=crop' }
@@ -119,15 +119,17 @@ export default function ProductsScreen() {
       {/* Floating Glass Header */}
       <Animated.View entering={FadeIn.duration(1000)} style={[styles.headerContainer, { paddingTop: safeTopPadding }]}>
         <View style={styles.headerTopRow}>
-           <Typography variant="h2" weight="medium" style={styles.logo} numberOfLines={1}>COLLECTION</Typography>
+           <Typography style={styles.logo} numberOfLines={1}>Products</Typography>
            
            <View style={styles.headerIcons}>
-             <BlurView intensity={30} tint="light" style={styles.walletCapsule}>
-                <CreditCard size={13} color={theme.colors.text.primary} />
-                <Typography variant="price" weight="bold" color="primary" numberOfLines={1} style={{ marginLeft: 5, fontSize: 13 }}>
-                  ₹{walletBalance}
-                </Typography>
-             </BlurView>
+             <TouchableOpacity activeOpacity={0.8} onPress={() => router.push({ pathname: '/(tabs)/profile', params: { openWallet: 'true' } } as any)}>
+               <BlurView intensity={30} tint="light" style={styles.walletCapsule}>
+                  <CreditCard size={13} color={theme.colors.text.primary} />
+                  <Typography variant="price" weight="bold" color="primary" numberOfLines={1} style={{ marginLeft: 5, fontSize: 13 }}>
+                    ₹{walletBalance}
+                  </Typography>
+               </BlurView>
+             </TouchableOpacity>
              
              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/cart' as any)} activeOpacity={0.8} hitSlop={8}>
                <BlurView intensity={40} tint="light" style={styles.cartBtnBlur}>
@@ -247,10 +249,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   logo: {
-    flexShrink: 1,
-    fontSize: 20,
-    letterSpacing: 2,
-    color: theme.colors.text.primary,
+    fontFamily: 'CormorantGaramond_700Bold',
+    fontSize: 30,
+    letterSpacing: 0.5,
+    color: '#1A1918',
   },
   headerIcons: {
     flexDirection: 'row',
@@ -375,11 +377,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 4,
+    borderWidth: 2.5,
+    borderColor: 'transparent',
   },
   categoryImg: {
     width: '100%',
     height: '100%',
-    opacity: 0.9,
   },
   circleBorder: {
     ...(StyleSheet.absoluteFill as any),
@@ -389,7 +392,6 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   categoryActiveCircle: {
-    borderWidth: 2.5,
     borderColor: theme.colors.primary.dark,
   },
   feedGrid: {

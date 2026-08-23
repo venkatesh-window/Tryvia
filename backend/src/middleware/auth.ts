@@ -45,3 +45,17 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     res.status(401).json({ detail: 'Invalid or expired token' });
   }
 };
+
+export const requireVendor = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+  
+  if (req.user.role !== 'VENDOR' && req.user.role !== 'ADMIN') {
+    res.status(403).json({ detail: 'Access denied: Vendor privileges required' });
+    return;
+  }
+  
+  next();
+};

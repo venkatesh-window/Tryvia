@@ -61,7 +61,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ visible, onClose }) =>
             <GlassCard intensity={40} style={styles.balanceCard}>
               <View style={styles.balanceHeader}>
                 <Sparkles size={20} color="#B8860B" />
-                <Typography variant="caption" weight="bold" style={{ color: '#B8860B', letterSpacing: 1.5, marginLeft: 8 }}>
+                <Typography variant="caption" weight="bold" style={{ color: '#B8860B', letterSpacing: 1.5, marginLeft: 8, paddingHorizontal: 2 }}>
                   AVAILABLE BALANCE
                 </Typography>
               </View>
@@ -69,7 +69,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ visible, onClose }) =>
                 ₹{summary?.total_balance?.toFixed(2) || '0.00'}
               </Typography>
               <Typography variant="body" color="secondary" style={styles.balanceDesc}>
-                Earn 100% of your tester purchase amount as credit towards the full-size product!
+                Earn 100% of your mini purchase amount as credit towards the full-size product!
               </Typography>
             </GlassCard>
 
@@ -85,7 +85,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ visible, onClose }) =>
                 
                 {summary?.active_credits.length === 0 ? (
                   <Typography variant="body" color="secondary" style={styles.emptyText}>
-                    You have no active credits. Buy a tester &gt; ₹200 to earn credits!
+                    You have no active credits. Buy a mini &gt; ₹200 to earn credits!
                   </Typography>
                 ) : (
                   summary?.active_credits.map((credit, idx) => (
@@ -195,9 +195,12 @@ const styles = StyleSheet.create({
     fontSize: 40,
     color: theme.colors.text.primary,
     marginBottom: 12,
+    fontFamily: 'Inter_700Bold',
+    paddingHorizontal: 2,
   },
   balanceDesc: {
     lineHeight: 20,
+    paddingHorizontal: 2,
   },
   historySection: {
     marginBottom: 24,

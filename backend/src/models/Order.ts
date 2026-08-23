@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus = 'PENDING' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
 export type ItemType = 'full' | 'tester';
 
 export interface IOrderItem {
@@ -9,6 +9,16 @@ export interface IOrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  platformFee: number;
+  vendorEarnings: number;
+}
+
+export interface IVendorStatus {
+  vendor: mongoose.Types.ObjectId;
+  status: OrderStatus;
+  history: { status: OrderStatus; changedAt: Date }[];
+  trackingNumber?: string;
+  shippingPartner?: string;
 }
 
 export interface IOrder extends Document {
@@ -20,6 +30,7 @@ export interface IOrder extends Document {
   platformFee: number;
   totalAmount: number;
   status: OrderStatus;
+  vendorStatuses: IVendorStatus[];
   appliedCreditId?: number;
   shippingAddress?: string;
   createdAt: Date;
@@ -32,6 +43,24 @@ const OrderItemSchema = new Schema<IOrderItem>(
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true },
     totalPrice: { type: Number, required: true },
+    platformFee: { type: Number, default: 0 },
+    vendorEarnings: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
+const VendorStatusSchema = new Schema<IVendorStatus>(
+  {
+    vendor: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+    status: { type: String, enum: ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'], default: 'PENDING' },
+    history: [
+      {
+        status: { type: String, required: true },
+        changedAt: { type: Date, default: Date.now },
+      },
+    ],
+    trackingNumber: { type: String },
+    shippingPartner: { type: String },
   },
   { _id: false }
 );
@@ -46,6 +75,7 @@ const OrderSchema = new Schema<IOrder>(
     platformFee: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'], default: 'PAID' },
+    vendorStatuses: [VendorStatusSchema],
     appliedCreditId: { type: Number },
     shippingAddress: { type: String },
   },
@@ -57,6 +87,7 @@ const OrderSchema = new Schema<IOrder>(
         ret.wallet_discount = ret.walletDiscount;
         ret.platform_fee = ret.platformFee;
         ret.total_amount = ret.totalAmount;
+        ret.vendor_statuses = ret.vendorStatuses;
         ret.created_at = ret.createdAt;
         delete ret.__v;
         return ret;

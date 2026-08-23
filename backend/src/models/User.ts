@@ -11,6 +11,7 @@ export interface IUser extends Document {
   walletBalance: number;
   loyaltyTier: string;
   stars: number;
+  role: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -22,6 +23,7 @@ const UserSchema = new Schema<IUser>(
     fullName: { type: String, required: true, trim: true },
     isActive: { type: Boolean, default: true },
     isSuperuser: { type: Boolean, default: false },
+    role: { type: String, enum: ['CUSTOMER', 'VENDOR', 'ADMIN'], default: 'CUSTOMER' },
     walletBalance: { type: Number, default: 350 },
     loyaltyTier: { type: String, default: 'BRONZE' },
     stars: { type: Number, default: 0 },
@@ -36,6 +38,7 @@ const UserSchema = new Schema<IUser>(
         ret.loyalty_tier = ret.loyaltyTier;
         ret.is_active = ret.isActive;
         ret.is_superuser = ret.isSuperuser;
+        ret.role = ret.role;
         delete ret.passwordHash;
         delete ret.__v;
         return ret;

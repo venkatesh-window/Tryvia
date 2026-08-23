@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
@@ -7,13 +7,18 @@ import { useQuery } from '@tanstack/react-query';
 import { productService } from '../../src/api/services/productService';
 import { ProductCard } from '../../src/components/ui/ProductCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sparkles, ArrowUpRight } from 'lucide-react-native';
+import { useCartStore } from '../../src/store/useCartStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
+import { Sparkles, ArrowUpRight, CreditCard, ShoppingBag } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 export default function OffersScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { totalItems } = useCartStore();
+  const { user } = useAuthStore();
+  const walletBalance = user?.walletBalance || 350;
 
   const { data: products } = useQuery({
     queryKey: ['offerProducts'],
@@ -25,7 +30,23 @@ export default function OffersScreen() {
   return (
     <ScreenContainer>
       <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-        <Typography variant="h2" weight="bold" style={styles.title}>Special Offers & Testers</Typography>
+        <View style={styles.headerTopRow}>
+          <Typography style={styles.title}>Minis</Typography>
+          <View style={styles.headerRightActions}>
+            <TouchableOpacity style={styles.walletPill} activeOpacity={0.8} onPress={() => router.push({ pathname: '/(tabs)/profile', params: { openWallet: 'true' } } as any)}>
+              <CreditCard size={14} color="#1A1918" strokeWidth={2} />
+              <Typography style={styles.walletText}>₹{walletBalance}</Typography>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bagBtn} activeOpacity={0.8} onPress={() => router.push('/cart' as any)}>
+              <ShoppingBag size={18} color="#1A1918" strokeWidth={1.75} />
+              {totalItems > 0 && (
+                <View style={styles.cartBadge}>
+                  <Typography style={styles.cartBadgeText}>{totalItems}</Typography>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
         <Typography variant="body" color="secondary" style={styles.subtitle}>Try samples for ₹200-₹350 and unlock 90% wallet upgrade credits</Typography>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -35,15 +56,15 @@ export default function OffersScreen() {
               <Sparkles size={20} color="#CB6D73" />
               <Typography variant="caption" weight="bold" style={styles.promoTag}>TRYVIA SMART UPGRADE</Typography>
             </View>
-            <Typography variant="h3" weight="bold" style={styles.promoHeading}>Try for ₹250 → Get ₹225 Credit</Typography>
-            <Typography variant="body" style={styles.promoBody}>
-              Order any tester today. 90% of your tester spend is credited directly to your Tryvia Wallet when you upgrade to full size!
+            <Typography variant="h3" weight="bold" style={styles.promoHeading}>
+              Try for <Text style={{ fontFamily: 'Inter_700Bold' }}>₹250</Text> → Get <Text style={{ fontFamily: 'Inter_700Bold' }}>₹225</Text> Credit
             </Typography>
+            <Typography style={styles.promoText}>Order any mini today. 90% of your mini spend is credited to your TryVia Wallet to upgrade to full size later!</Typography>
           </Animated.View>
 
           {/* Grid */}
           <Animated.View entering={FadeInUp.duration(500).delay(200)}>
-            <Typography variant="h3" weight="bold" style={styles.sectionHeading}>Trending Tester Offers</Typography>
+            <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Trending Minis</Typography>
           </Animated.View>
 
           <View style={styles.grid}>
@@ -80,10 +101,78 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#FAF8F5',
   },
-  title: {
-    fontSize: 26,
-    color: '#1A1918',
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  title: {
+    fontFamily: 'CormorantGaramond_700Bold',
+    fontSize: 30,
+    color: '#1A1918',
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  walletPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  walletText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1918',
+    fontFamily: 'Inter_700Bold',
+  },
+  bagBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#CB6D73',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  cartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
   },
   subtitle: {
     fontSize: 13,

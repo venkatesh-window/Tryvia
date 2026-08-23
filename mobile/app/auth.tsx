@@ -557,7 +557,7 @@ export default function AuthScreen() {
           <View style={styles.benefitsContent}>
             <Typography style={styles.benefitsTitle}>TryVia Membership Perks</Typography>
             <Typography style={styles.benefitsSub}>
-              90% tester upgrade credit • Luxury authentic formulations • Complimentary shipping
+              90% mini upgrade credit • Luxury authentic formulations • Complimentary shipping
             </Typography>
           </View>
         </Animated.View>

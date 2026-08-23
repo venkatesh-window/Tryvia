@@ -11,10 +11,9 @@ dotenv.config();
 
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tryvia';
 
-async function seed() {
+export async function seed() {
   try {
-    await mongoose.connect(mongoURI);
-    console.log('🌱 Connected to MongoDB for seeding...');
+    console.log('🌱 Starting seed process...');
 
     // Clear existing collections
     await Brand.deleteMany({});
@@ -207,11 +206,7 @@ async function seed() {
     console.log('💳 Seeded 90% smart upgrade wallet rules.');
 
     console.log('✨ Seeding completed successfully!');
-    process.exit(0);
   } catch (error: any) {
     console.error('❌ Seeding failed:', error);
-    process.exit(1);
   }
 }
-
-seed();

@@ -202,7 +202,7 @@ export default function ProductDetailsScreen() {
               style={[styles.sizeOption, selectedSize === 'tester' && styles.sizeOptionActive]}
             >
               <Typography style={[styles.sizeOptionText, selectedSize === 'tester' && styles.sizeOptionTextActive]}>
-                TESTER (TRY FIRST)
+                MINI (TRY FIRST)
               </Typography>
             </TouchableOpacity>
           </View>

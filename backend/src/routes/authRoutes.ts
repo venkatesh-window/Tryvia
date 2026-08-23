@@ -102,4 +102,35 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise
   res.json(req.user?.toJSON());
 });
 
+// PUT /api/v1/auth/vendor/password
+router.put('/vendor/password', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ detail: 'Current password and new password are required' });
+      return;
+    }
+    
+    if (!req.user) {
+      res.status(401).json({ detail: 'Not authenticated' });
+      return;
+    }
+    
+    const isMatch = await req.user.comparePassword(currentPassword);
+    if (!isMatch) {
+      res.status(400).json({ detail: 'Incorrect current password' });
+      return;
+    }
+    
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    req.user.passwordHash = passwordHash;
+    await req.user.save();
+    
+    res.json({ detail: 'Password updated successfully' });
+  } catch (error: any) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
 export default router;

@@ -132,7 +132,7 @@ export default function CartScreen() {
 
                       <View style={styles.typeBadge}>
                         <Typography style={styles.typeBadgeText}>
-                          {item.type === 'tester' ? 'TESTER' : 'FULL SIZE'}
+                          {item.type === 'tester' ? 'MINI' : 'FULL SIZE'}
                         </Typography>
                       </View>
                     </View>

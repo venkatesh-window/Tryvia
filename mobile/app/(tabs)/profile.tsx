@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { ScreenContainer } from '../../src/components/ui/ScreenContainer';
 import { Typography } from '../../src/components/ui/Typography';
 import { useAuthStore } from '../../src/store/useAuthStore';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
   Bell, 
   Settings, 
@@ -39,6 +39,15 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState<ProfileModalKey | null>(null);
+  const params = useLocalSearchParams();
+
+  useEffect(() => {
+    if (params.openWallet === 'true') {
+      setActiveModal('wallet');
+      // Reset the param so it doesn't re-trigger unintentionally if the user navigates back
+      router.setParams({ openWallet: '' });
+    }
+  }, [params.openWallet]);
 
   const handleLogout = async () => {
     if (Platform.OS === 'ios') {
@@ -161,7 +170,7 @@ export default function ProfileScreen() {
             </View>
             <Typography style={styles.guestTitle}>Welcome to TryVia</Typography>
             <Typography style={styles.guestSub}>
-              Sign in to unlock exclusive luxury tester perks, 90% upgrade credits, and tracked shipments.
+              Sign in to unlock exclusive luxury mini perks, 90% upgrade credits, and tracked shipments.
             </Typography>
             <TouchableOpacity
               style={styles.guestSignInBtn}

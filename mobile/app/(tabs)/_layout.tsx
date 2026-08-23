@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Platform } from 'react-native';
-import { Home, LayoutGrid, Tag, Package, User } from 'lucide-react-native';
+import { Home, LayoutGrid, Sparkles, Package, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -50,20 +50,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="categories"
+        name="products"
         options={{
-          tabBarLabel: 'Categories',
+          tabBarLabel: 'Products',
           tabBarIcon: ({ color, focused }) => (
             <LayoutGrid size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
           ),
         }}
       />
       <Tabs.Screen
-        name="offers"
+        name="minis"
         options={{
-          tabBarLabel: 'Offers',
+          tabBarLabel: 'Minis',
           tabBarIcon: ({ color, focused }) => (
-            <Tag size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
+            <Sparkles size={21} color={color} strokeWidth={focused ? 2 : 1.5} />
           ),
         }}
       />
@@ -86,12 +86,6 @@ export default function TabLayout() {
         }}
       />
       {/* Hidden secondary tab routes if needed */}
-      <Tabs.Screen
-        name="products"
-        options={{
-          href: null,
-        }}
-      />
       <Tabs.Screen
         name="testers"
         options={{

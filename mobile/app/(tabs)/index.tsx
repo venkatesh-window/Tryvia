@@ -28,7 +28,7 @@ const HERO_BANNERS = [
     heading: 'Love Beauty',
     desc: 'Curated picks for your\nunique glow',
     btnText: 'Explore Now',
-    route: '/(tabs)/offers',
+    route: '/(tabs)/minis',
     image: require('../../assets/banner_hero.jpg'),
   },
   {
@@ -37,7 +37,7 @@ const HERO_BANNERS = [
     heading: 'Haute Parfum',
     desc: 'Rare floral extracts\nand golden sillage',
     btnText: 'Discover',
-    route: '/(tabs)/categories',
+    route: '/(tabs)/products',
     image: require('../../assets/banner_hero_2.jpg'),
   },
   {
@@ -55,7 +55,7 @@ const HERO_BANNERS = [
     heading: 'Gift Sets',
     desc: 'Try miniature samples\n& get 90% credit',
     btnText: 'Explore Sets',
-    route: '/(tabs)/offers',
+    route: '/(tabs)/minis',
     image: require('../../assets/banner_hero_4.jpg'),
   },
 ];
@@ -216,7 +216,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.walletPill}
               activeOpacity={0.8}
-              onPress={() => router.push('/(tabs)/profile' as any)}
+              onPress={() => router.push({ pathname: '/(tabs)/profile', params: { openWallet: 'true' } } as any)}
             >
               <CreditCard size={14} color="#1A1918" strokeWidth={2} />
               <Typography style={styles.walletText}>₹{walletBalance}</Typography>
@@ -252,7 +252,7 @@ export default function HomeScreen() {
             <TouchableOpacity 
               style={styles.filterBtn} 
               activeOpacity={0.7} 
-              onPress={() => router.push('/(tabs)/categories' as any)}
+              onPress={() => router.push('/(tabs)/products' as any)}
             >
               <SlidersHorizontal size={18} color="#1A1918" strokeWidth={1.75} />
             </TouchableOpacity>
@@ -326,6 +326,29 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
+        {/* Quick Links Section */}
+        <Animated.View entering={FadeInUp.duration(600).delay(150)} style={styles.quickLinksContainer}>
+          {/* Products Pill */}
+          <TouchableOpacity
+            style={styles.quickLinkBtn}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(tabs)/products' as any)}
+          >
+            <ShoppingBag size={18} color="#1A1918" strokeWidth={1.75} style={styles.quickLinkIcon} />
+            <Typography style={styles.quickLinkTitle}>Products</Typography>
+          </TouchableOpacity>
+
+          {/* Minis Pill */}
+          <TouchableOpacity
+            style={styles.quickLinkBtn}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(tabs)/minis' as any)}
+          >
+            <Sparkles size={18} color="#1A1918" strokeWidth={1.75} style={styles.quickLinkIcon} />
+            <Typography style={styles.quickLinkTitle}>Minis</Typography>
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* Shop by Category Section */}
         <Animated.View entering={FadeInUp.duration(600).delay(220)} style={styles.sectionContainer}>
           <View style={styles.sectionHeaderRow}>
@@ -333,7 +356,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.viewAllBtn}
               activeOpacity={0.7}
-              onPress={() => router.push('/(tabs)/categories' as any)}
+              onPress={() => router.push('/(tabs)/products' as any)}
             >
               <Typography style={styles.viewAllText}>View all</Typography>
               <ChevronRight size={15} color="#8E8A85" />
@@ -645,6 +668,36 @@ const styles = StyleSheet.create({
   inactiveDot: {
     width: 5,
     backgroundColor: '#DCD6CF',
+  },
+  quickLinksContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  quickLinkBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  quickLinkIcon: {
+    marginRight: 8,
+  },
+  quickLinkTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1918',
+    fontFamily: 'Inter_600SemiBold',
   },
   sectionContainer: {
     marginBottom: 26,

@@ -5,22 +5,17 @@ export function useVideoPreload(source: VideoSource) {
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  let player: any = null;
-  try {
-    player = useVideoPlayer(source, (p) => {
-      try {
-        if (p) {
-          p.loop = false;
-          p.muted = true;
-          p.pause();
-        }
-      } catch (e) {
-        console.log('Video player setup error:', e);
+  const player = useVideoPlayer(source, (p) => {
+    try {
+      if (p) {
+        p.loop = false;
+        p.muted = true;
+        p.pause();
       }
-    });
-  } catch (err) {
-    console.log('useVideoPlayer init error:', err);
-  }
+    } catch (e) {
+      console.log('Video player setup error:', e);
+    }
+  });
 
   useEffect(() => {
     if (!player) {
