@@ -32,6 +32,7 @@ export default function CheckoutScreen() {
 
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [checkoutAddress, setCheckoutAddress] = useState<string>('');
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -45,20 +46,23 @@ export default function CheckoutScreen() {
   });
 
   const onSubmit = (data: FormData) => {
-    // If user hasn't saved an address, save it to their profile for future use
-    if (user && (!user.address || !user.address.street)) {
-      updateProfile({
-        phone: data.phone,
-        address: {
-          fullName: data.fullName,
-          street: data.address,
-          city: data.city,
-          state: user.address?.state || 'Maharashtra',
-          pincode: data.pincode,
-          phone: data.phone,
-        },
-      });
-    }
+    const formatted = `${data.address.trim()}, ${data.city.trim()} - ${data.pincode.trim()}`;
+    setCheckoutAddress(formatted);
+
+    // Save profile and address
+    updateProfile({
+      fullName: data.fullName.trim(),
+      phone: data.phone.trim(),
+      address: {
+        fullName: data.fullName.trim(),
+        street: data.address.trim(),
+        city: data.city.trim(),
+        state: user?.address?.state || 'Maharashtra',
+        pincode: data.pincode.trim(),
+        phone: data.phone.trim(),
+      },
+    });
+
     setIsPaymentModalVisible(true);
   };
 
@@ -69,7 +73,7 @@ export default function CheckoutScreen() {
 
   const handleViewOrders = () => {
     setCompletedOrder(null);
-    router.replace('/(tabs)/profile' as any);
+    router.replace('/(tabs)/orders' as any);
   };
 
   const handleContinueShopping = () => {
@@ -214,6 +218,7 @@ export default function CheckoutScreen() {
 
       <MockPaymentGatewayModal
         visible={isPaymentModalVisible}
+        deliveryAddress={checkoutAddress}
         onClose={() => setIsPaymentModalVisible(false)}
         onSuccess={handlePaymentSuccess}
       />

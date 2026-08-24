@@ -55,6 +55,10 @@ export default function ProfileScreen() {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    if (key === 'orders') {
+      router.push('/(tabs)/orders' as any);
+      return;
+    }
     setActiveModal(key);
   };
 

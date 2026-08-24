@@ -20,6 +20,7 @@ export interface IOrder extends Document {
   platformFee: number;
   totalAmount: number;
   status: OrderStatus;
+  paymentMethod?: string;
   appliedCreditId?: number;
   shippingAddress?: string;
   createdAt: Date;
@@ -46,6 +47,7 @@ const OrderSchema = new Schema<IOrder>(
     platformFee: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'], default: 'PAID' },
+    paymentMethod: { type: String },
     appliedCreditId: { type: Number },
     shippingAddress: { type: String },
   },
@@ -57,6 +59,8 @@ const OrderSchema = new Schema<IOrder>(
         ret.wallet_discount = ret.walletDiscount;
         ret.platform_fee = ret.platformFee;
         ret.total_amount = ret.totalAmount;
+        ret.payment_method = ret.paymentMethod;
+        ret.shipping_address = ret.shippingAddress;
         ret.created_at = ret.createdAt;
         delete ret.__v;
         return ret;

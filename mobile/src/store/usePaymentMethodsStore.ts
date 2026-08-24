@@ -4,8 +4,8 @@ export interface SavedCard {
   id: string;
   type: 'card';
   cardholderName: string;
-  cardNumberMasked: string; // e.g. "•••• 4242"
-  expiry: string; // e.g. "09/28"
+  cardNumberMasked: string;
+  expiry: string;
   cardBrand: 'visa' | 'mastercard' | 'amex';
   isDefault: boolean;
 }
@@ -13,8 +13,8 @@ export interface SavedCard {
 export interface SavedUpi {
   id: string;
   type: 'upi';
-  upiId: string; // e.g. "luxury.member@okhdfcbank"
-  appLabel: string; // e.g. "Google Pay"
+  upiId: string;
+  appLabel: string;
   isDefault: boolean;
 }
 
@@ -28,36 +28,8 @@ interface PaymentMethodsState {
   setDefaultMethod: (id: string) => void;
 }
 
-const INITIAL_METHODS: PaymentMethodItem[] = [
-  {
-    id: 'pm-card-1',
-    type: 'card',
-    cardholderName: 'Venkatesh S',
-    cardNumberMasked: '•••• 4242',
-    expiry: '11/29',
-    cardBrand: 'visa',
-    isDefault: true,
-  },
-  {
-    id: 'pm-card-2',
-    type: 'card',
-    cardholderName: 'Venkatesh S',
-    cardNumberMasked: '•••• 8800',
-    expiry: '04/28',
-    cardBrand: 'amex',
-    isDefault: false,
-  },
-  {
-    id: 'pm-upi-1',
-    type: 'upi',
-    upiId: 'venkatesh@okhdfcbank',
-    appLabel: 'Google Pay',
-    isDefault: false,
-  },
-];
-
 export const usePaymentMethodsStore = create<PaymentMethodsState>((set) => ({
-  methods: INITIAL_METHODS,
+  methods: [],
 
   addCard: (card) => {
     const newCard: SavedCard = {

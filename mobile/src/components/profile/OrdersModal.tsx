@@ -13,6 +13,7 @@ import { Typography } from '../ui/Typography';
 import { PremiumButton } from '../ui/PremiumButton';
 import { useOrderStore, OrderStatus } from '../../store/useOrderStore';
 import { useCartStore } from '../../store/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { Image } from 'expo-image';
 import {
   X,
@@ -20,6 +21,7 @@ import {
   CheckCircle2,
   RotateCcw,
   Sparkles,
+  MapPin,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme/theme';
@@ -36,6 +38,7 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({ visible, onClose }) =>
   const insets = useSafeAreaInsets();
   const { orders, fetchOrders } = useOrderStore();
   const { addItem } = useCartStore();
+  const { user } = useAuthStore();
 
   React.useEffect(() => {
     if (visible) {
@@ -215,6 +218,21 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({ visible, onClose }) =>
                         </Typography>
                       </View>
                     ))}
+
+                    {/* Delivery Address Details */}
+                    <View style={styles.addressContainer}>
+                      <View style={styles.addressHeaderRow}>
+                        <MapPin size={13} color="#CB6D73" />
+                        <Typography variant="caption" weight="bold" style={styles.addressTitle}>
+                          DELIVERY DESTINATION
+                        </Typography>
+                      </View>
+                      <Typography variant="caption" color="secondary" style={styles.addressText}>
+                        {order.shippingAddress || (user?.address?.street 
+                          ? `${user.address.fullName ? user.address.fullName + ' • ' : ''}${user.address.street}, ${user.address.city} - ${user.address.pincode}` 
+                          : (user?.fullName ? `${user.fullName} • Standard Delivery Address` : 'Address pending confirmation'))}
+                      </Typography>
+                    </View>
 
                     <View style={styles.cardDivider} />
 
@@ -433,5 +451,29 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#121212',
     borderRadius: 12,
+  },
+  addressContainer: {
+    backgroundColor: '#FAFAF8',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  addressHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 5,
+  },
+  addressTitle: {
+    fontSize: 10,
+    letterSpacing: 1,
+    color: '#CB6D73',
+  },
+  addressText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: theme.colors.text.primary,
   },
 });

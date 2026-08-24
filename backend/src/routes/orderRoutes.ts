@@ -6,6 +6,8 @@ import { Product } from '../models/Product';
 import { WalletCredit } from '../models/WalletCredit';
 import { WalletRule } from '../models/WalletRule';
 import { User } from '../models/User';
+import { Category } from '../models/Category';
+import { Brand } from '../models/Brand';
 
 const router = Router();
 
@@ -32,13 +34,34 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
         productDoc = await Product.findById(item.product_id);
       }
 
+      // Auto-provision product in MongoDB if not existing yet
       if (!productDoc) {
-        res.status(400).json({ detail: `Product ${item.product_id} not found` });
-        return;
+        let defaultBrand = await Brand.findOne();
+        if (!defaultBrand) {
+          defaultBrand = await Brand.create({ numericId: 1, name: 'Chanel', description: 'Haute Parfumerie' });
+        }
+        let defaultCat = await Category.findOne();
+        if (!defaultCat) {
+          defaultCat = await Category.create({ numericId: 1, name: 'Fragrance', description: 'Fine Perfumes' });
+        }
+
+        const count = await Product.countDocuments();
+        productDoc = await Product.create({
+          numericId: !isNaN(Number(item.product_id)) ? Number(item.product_id) : count + 1,
+          name: item.product_name || `Luxury Formulation #${item.product_id}`,
+          description: 'Authentic luxury beauty formulation.',
+          fullPrice: item.unit_price || 5200,
+          testerPrice: item.unit_price || 350,
+          stockFull: 50,
+          stockTester: 50,
+          imageUrl: item.image_url || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800',
+          category: defaultCat._id,
+          brand: defaultBrand._id,
+        });
       }
 
       const itemType = item.item_type === 'full' ? 'full' : 'tester';
-      const unitPrice = itemType === 'full' ? productDoc.fullPrice : productDoc.testerPrice;
+      const unitPrice = item.unit_price || (itemType === 'full' ? productDoc.fullPrice : productDoc.testerPrice);
       const totalPrice = unitPrice * (item.quantity || 1);
 
       subtotal += totalPrice;
@@ -60,13 +83,16 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
     let platformFee = 0;
     let totalAmount = subtotal;
 
-    // Process Wallet Credit Redemption
+    // Process Wallet Credit Redemption safely without Mongoose CastError
     if (apply_wallet_credit_id) {
-      const credit = await WalletCredit.findOne({
-        user: user._id,
-        $or: [{ numericId: apply_wallet_credit_id }, { _id: apply_wallet_credit_id }],
-        status: 'ACTIVE',
-      });
+      let creditQuery: any = { user: user._id, status: 'ACTIVE' };
+      if (!isNaN(Number(apply_wallet_credit_id))) {
+        creditQuery.numericId = Number(apply_wallet_credit_id);
+      } else if (mongoose.Types.ObjectId.isValid(apply_wallet_credit_id)) {
+        creditQuery._id = apply_wallet_credit_id;
+      }
+
+      const credit = await WalletCredit.findOne(creditQuery);
 
       if (credit) {
         walletDiscount = credit.redeemableAmount;
@@ -80,6 +106,11 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
 
     const orderCount = await Order.countDocuments();
     const numericId = 8920 + orderCount + 1;
+    const shippingAddress = req.body.shipping_address || req.body.shippingAddress || undefined;
+
+    const paymentMethod = req.body.payment_method || req.body.paymentMethod || '';
+    const isCod = paymentMethod.toLowerCase().includes('cash') || paymentMethod.toLowerCase().includes('cod');
+    const orderStatus = isCod ? 'PENDING' : 'PAID';
 
     const order = new Order({
       numericId,
@@ -89,8 +120,10 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       walletDiscount,
       platformFee,
       totalAmount,
-      status: 'PAID',
+      status: orderStatus,
+      paymentMethod: paymentMethod || (isCod ? 'Cash on Delivery' : 'Tryvia Pay'),
       appliedCreditId: apply_wallet_credit_id,
+      shippingAddress,
     });
 
     await order.save();
@@ -141,20 +174,23 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       populate: { path: 'brand' },
     });
 
-    const responseJSON: any = populatedOrder?.toJSON();
-    responseJSON.items = responseJSON.items.map((i: any) => ({
-      product_id: i.product?.numericId || i.product?._id,
-      product_name: i.product?.name,
-      product_image_url: i.product?.imageUrl,
-      product_brand: i.product?.brand?.name || 'TRYVIA',
-      item_type: i.itemType,
-      quantity: i.quantity,
-      unit_price: i.unitPrice,
-      total_price: i.totalPrice,
-    }));
+    const responseJSON: any = populatedOrder?.toJSON() || order.toJSON();
+    if (responseJSON.items && Array.isArray(responseJSON.items)) {
+      responseJSON.items = responseJSON.items.map((i: any) => ({
+        product_id: i.product?.numericId || i.product?._id || i.product,
+        product_name: i.product?.name || 'Luxury Formulation',
+        product_image_url: i.product?.imageUrl || '',
+        product_brand: i.product?.brand?.name || 'TRYVIA',
+        item_type: i.itemType,
+        quantity: i.quantity,
+        unit_price: i.unitPrice,
+        total_price: i.totalPrice,
+      }));
+    }
 
     res.json(responseJSON);
   } catch (error: any) {
+    console.error('Order creation error in backend:', error);
     res.status(500).json({ detail: error.message });
   }
 });
@@ -170,22 +206,66 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
       })
       .sort({ createdAt: -1 });
 
-    const formattedOrders = orders.map((order) => {
-      const orderJSON: any = order.toJSON();
-      orderJSON.items = order.items.map((i: any) => ({
-        product_id: i.product?.numericId || i.product?._id,
+    const result = orders.map(order => {
+      const json: any = order.toJSON();
+      json.items = (json.items || []).map((i: any) => ({
+        product_id: i.product?.numericId || i.product?._id || i.product,
         product_name: i.product?.name || 'Luxury Formulation',
-        product_image_url: i.product?.imageUrl,
+        product_image_url: i.product?.imageUrl || '',
         product_brand: i.product?.brand?.name || 'TRYVIA',
         item_type: i.itemType,
         quantity: i.quantity,
         unit_price: i.unitPrice,
         total_price: i.totalPrice,
       }));
-      return orderJSON;
+      return json;
     });
 
-    res.json(formattedOrders);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// GET /api/v1/orders/:id
+router.get('/:id', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = req.user!;
+    const idParam = typeof req.params.id === 'string' ? req.params.id : String(req.params.id || '');
+
+    let query: any = { user: user._id };
+    if (!isNaN(Number(idParam))) {
+      query.numericId = Number(idParam);
+    } else if (mongoose.Types.ObjectId.isValid(idParam)) {
+      query._id = idParam;
+    } else {
+      res.status(404).json({ detail: 'Order not found' });
+      return;
+    }
+
+    const order = await Order.findOne(query).populate({
+      path: 'items.product',
+      populate: { path: 'brand' },
+    });
+
+    if (!order) {
+      res.status(404).json({ detail: 'Order not found' });
+      return;
+    }
+
+    const responseJSON: any = order.toJSON();
+    responseJSON.items = (responseJSON.items || []).map((i: any) => ({
+      product_id: i.product?.numericId || i.product?._id || i.product,
+      product_name: i.product?.name || 'Luxury Formulation',
+      product_image_url: i.product?.imageUrl || '',
+      product_brand: i.product?.brand?.name || 'TRYVIA',
+      item_type: i.itemType,
+      quantity: i.quantity,
+      unit_price: i.unitPrice,
+      total_price: i.totalPrice,
+    }));
+
+    res.json(responseJSON);
   } catch (error: any) {
     res.status(500).json({ detail: error.message });
   }
