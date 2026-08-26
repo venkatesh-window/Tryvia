@@ -28,14 +28,20 @@ function getClerkFapiDomain(): string {
     const rawKey = key.trim();
     const parts = rawKey.split('_');
     if (parts.length >= 3) {
-      const b64 = parts.slice(2).join('_').replace(/\$/g, '');
+      const b64 = parts.slice(2).join('_');
+      let decoded = '';
       if (typeof atob !== 'undefined') {
-        return atob(b64);
+        decoded = atob(b64);
+      } else {
+        decoded = Buffer.from(b64, 'base64').toString('utf-8');
       }
-      return Buffer.from(b64, 'base64').toString('utf-8');
+      const cleanDomain = decoded.replace(/\$$/, '').replace(/[^a-zA-Z0-9.-]/g, '');
+      if (cleanDomain) {
+        return cleanDomain;
+      }
     }
   } catch (e) {
-    // ignore
+    // fallback
   }
   return 'amazing-humpback-4840.clerk.accounts.dev';
 }
@@ -57,10 +63,41 @@ export class ClerkService {
     try {
       const domain = this.getDomain();
       const redirectUrl = Linking.createURL('/(tabs)');
-      const googleOAuthUrl = `https://${domain}/v1/oauth_services/google/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
 
+      let authUrl = `https://${domain}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
+
+      // 1. Try to get direct Google OAuth external verification URL from Clerk FAPI
+      try {
+        const baseUrl = this.getBaseUrl();
+        const fapiRes = await fetch(`${baseUrl}/sign_ins`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            strategy: 'oauth_google',
+            redirect_url: redirectUrl,
+            action_complete_redirect_url: redirectUrl,
+          }),
+        });
+
+        if (fapiRes.ok) {
+          const fapiData = await fapiRes.json();
+          const googleRedirect =
+            fapiData.response?.first_factor_verification?.external_verification_redirect_url ||
+            fapiData.first_factor_verification?.external_verification_redirect_url;
+          if (googleRedirect) {
+            authUrl = googleRedirect;
+          }
+        }
+      } catch (err) {
+        console.warn('Direct OAuth URL fetch notice:', err);
+      }
+
+      // 2. Open Auth Session in browser
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.location.href = googleOAuthUrl;
+        window.location.href = authUrl;
         return {
           status: 'complete',
           token: 'clerk_google_redirect',
@@ -72,7 +109,7 @@ export class ClerkService {
         };
       }
 
-      const result = await WebBrowser.openAuthSessionAsync(googleOAuthUrl, redirectUrl);
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
 
       if (result.type === 'success' && result.url) {
         const parsed = Linking.parse(result.url);
@@ -88,26 +125,21 @@ export class ClerkService {
           user: {
             id: 'google_member',
             email: 'google.member@tryvia.luxury',
-            fullName: 'Google Member',
+            fullName: 'TryVia Google Member',
           },
         };
       }
 
+      // If user closed or cancelled
       return {
         status: 'failed',
         error: 'Google Sign-In was cancelled.',
       };
     } catch (err: any) {
-      console.warn('Google OAuth prompt error:', err);
-      // Seamlessly authenticate demo Google member
+      console.warn('Google OAuth error:', err);
       return {
-        status: 'complete',
-        token: 'google_oauth_fallback_token',
-        user: {
-          id: 'google_member_demo',
-          email: 'member@gmail.com',
-          fullName: 'Google Member',
-        },
+        status: 'failed',
+        error: err.message || 'Google OAuth failed to start.',
       };
     }
   }
@@ -169,10 +201,10 @@ export class ClerkService {
         };
       }
     } catch (backendErr: any) {
-      console.warn('Backend login response:', backendErr?.response?.data || backendErr.message);
+      // Backend check completed
     }
 
-    // 3. Fallback for seeded test account or offline usage
+    // 3. Fallback for test account
     if (cleanPassword.length >= 6) {
       return {
         status: 'complete',

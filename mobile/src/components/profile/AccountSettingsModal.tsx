@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,6 +17,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import {
   X,
   CheckCircle2,
+  MapPin,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme/theme';
@@ -34,40 +35,58 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   const insets = useSafeAreaInsets();
   const { user, updateProfile } = useAuthStore();
 
-  const [fullName, setFullName] = useState(user?.fullName || 'Venkatesh S');
-  const [email, setEmail] = useState(user?.email || 'venkatesh@tryvia.luxury');
-  const [phone, setPhone] = useState(user?.phone || '+91 98401 23456');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-  // Address
-  const [street, setStreet] = useState(user?.address?.street || '42 Altamount Road, Penthouse B');
-  const [city, setCity] = useState(user?.address?.city || 'Mumbai');
-  const [state, setState] = useState(user?.address?.state || 'Maharashtra');
-  const [pincode, setPincode] = useState(user?.address?.pincode || '400026');
+  // Address fields - empty by default for user to fill
+  const [street, setStreet] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
 
   // Preferences
-  const [whatsappUpdates, setWhatsappUpdates] = useState(user?.preferences?.whatsappUpdates ?? true);
-  const [exclusiveInvites, setExclusiveInvites] = useState(user?.preferences?.exclusiveInvites ?? true);
-  const [biometrics, setBiometrics] = useState(user?.preferences?.biometrics ?? false);
+  const [whatsappUpdates, setWhatsappUpdates] = useState(true);
+  const [exclusiveInvites, setExclusiveInvites] = useState(true);
+  const [biometrics, setBiometrics] = useState(false);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Sync state whenever modal opens with current user profile
+  useEffect(() => {
+    if (visible && user) {
+      setFullName(user.fullName || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+      setStreet(user.address?.street || '');
+      setCity(user.address?.city || '');
+      setState(user.address?.state || '');
+      setPincode(user.address?.pincode || '');
+      setWhatsappUpdates(user.preferences?.whatsappUpdates ?? true);
+      setExclusiveInvites(user.preferences?.exclusiveInvites ?? true);
+      setBiometrics(user.preferences?.biometrics ?? false);
+    }
+  }, [visible, user]);
 
   const handleSave = () => {
     if (Platform.OS === 'ios') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
 
+    const hasAddress = street.trim() || city.trim() || pincode.trim();
+
     updateProfile({
-      fullName,
-      email,
-      phone,
-      address: {
-        fullName,
-        street,
-        city,
-        state,
-        pincode,
-        phone,
-      },
+      fullName: fullName.trim() || user?.fullName || 'Member',
+      email: email.trim() || user?.email || '',
+      phone: phone.trim(),
+      address: hasAddress ? {
+        fullName: fullName.trim() || user?.fullName || 'Member',
+        street: street.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
+        phone: phone.trim(),
+      } : null,
       preferences: {
         whatsappUpdates,
         exclusiveInvites,
@@ -81,6 +100,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
       onClose();
     }, 1200);
   };
+
+  const isAddressFilled = user?.address && (user.address.street || user.address.city);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -132,7 +153,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   style={styles.textInput}
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="Your Full Name"
+                  placeholder="e.g. Christian Dior"
                   placeholderTextColor="rgba(0,0,0,0.35)"
                 />
               </View>
@@ -147,7 +168,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   style={styles.textInput}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Your Email"
+                  placeholder="name@example.com"
                   placeholderTextColor="rgba(0,0,0,0.35)"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -164,7 +185,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   style={styles.textInput}
                   value={phone}
                   onChangeText={setPhone}
-                  placeholder="Your Phone Number"
+                  placeholder="+91 98765 43210"
                   placeholderTextColor="rgba(0,0,0,0.35)"
                   keyboardType="phone-pad"
                 />
@@ -172,20 +193,28 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
             </View>
 
             {/* Delivery Address */}
-            <Typography variant="caption" color="secondary" style={[styles.sectionTitle, { marginTop: 24 }]}>
-              DEFAULT DELIVERY ADDRESS
-            </Typography>
+            <View style={styles.addressHeaderRow}>
+              <Typography variant="caption" color="secondary" style={styles.sectionTitle}>
+                DEFAULT DELIVERY ADDRESS
+              </Typography>
+              {!isAddressFilled && (
+                <View style={styles.notSetBadge}>
+                  <MapPin size={11} color="#CB6D73" />
+                  <Typography style={styles.notSetBadgeText}>Not set yet</Typography>
+                </View>
+              )}
+            </View>
 
             <View style={styles.card}>
               <View style={styles.inputGroup}>
                 <Typography variant="caption" color="secondary" style={styles.inputLabel}>
-                  STREET / APARTMENT
+                  STREET / APARTMENT / SUITE
                 </Typography>
                 <TextInput
                   style={styles.textInput}
                   value={street}
                   onChangeText={setStreet}
-                  placeholder="Street Address"
+                  placeholder="Enter house, flat number, street name"
                   placeholderTextColor="rgba(0,0,0,0.35)"
                 />
               </View>
@@ -201,7 +230,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     style={styles.textInput}
                     value={city}
                     onChangeText={setCity}
-                    placeholder="City"
+                    placeholder="e.g. Mumbai"
                     placeholderTextColor="rgba(0,0,0,0.35)"
                   />
                 </View>
@@ -214,7 +243,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     style={styles.textInput}
                     value={pincode}
                     onChangeText={setPincode}
-                    placeholder="Pincode"
+                    placeholder="e.g. 400001"
                     placeholderTextColor="rgba(0,0,0,0.35)"
                     keyboardType="numeric"
                   />
@@ -231,7 +260,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   style={styles.textInput}
                   value={state}
                   onChangeText={setState}
-                  placeholder="State"
+                  placeholder="e.g. Maharashtra"
                   placeholderTextColor="rgba(0,0,0,0.35)"
                 />
               </View>
@@ -353,7 +382,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0, 0, 0, 0.06)',
   },
   subHeader: {
-    color: '#B8860B',
+    color: '#CB6D73',
     fontSize: 10,
     letterSpacing: 2,
     marginBottom: 2,
@@ -373,6 +402,27 @@ const styles = StyleSheet.create({
   scrollBody: {
     paddingHorizontal: 24,
     paddingTop: 16,
+  },
+  addressHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 6,
+  },
+  notSetBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF0F1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  notSetBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    color: '#CB6D73',
   },
   sectionTitle: {
     letterSpacing: 1.5,

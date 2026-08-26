@@ -11,6 +11,7 @@ import adminRoutes from './routes/adminRoutes';
 import payoutRoutes from './routes/payoutRoutes';
 import returnRoutes from './routes/returnRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -49,6 +50,7 @@ app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/payouts`, payoutRoutes);
 app.use(`${API_PREFIX}/returns`, returnRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
+app.use(`${API_PREFIX}/payments`, paymentRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

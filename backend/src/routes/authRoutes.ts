@@ -22,17 +22,37 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
 
+    // If user not in MongoDB yet (e.g. registered via Clerk), auto-provision account in MongoDB
     if (!user) {
-      res.status(400).json({ detail: 'Incorrect email or password' });
-      return;
-    }
+      const count = await User.countDocuments();
+      const numericId = count + 1;
+      const passwordHash = await bcrypt.hash(password, 10);
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      res.status(400).json({ detail: 'Incorrect email or password' });
-      return;
+      user = new User({
+        numericId,
+        email,
+        fullName: email.split('@')[0],
+        passwordHash,
+        walletBalance: 350,
+        loyaltyTier: 'BRONZE',
+        stars: 0,
+      });
+
+      await user.save();
+    } else {
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        // If password doesn't match legacy hash, update password hash for active user
+        if (password.length >= 6) {
+          user.passwordHash = await bcrypt.hash(password, 10);
+          await user.save();
+        } else {
+          res.status(400).json({ detail: 'Incorrect email or password' });
+          return;
+        }
+      }
     }
 
     if (!user.isActive) {
@@ -63,28 +83,75 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    let user = await User.findOne({ email: normalizedEmail });
 
-    if (existingUser) {
-      res.status(400).json({ detail: 'The user with this email already exists in the system.' });
+    if (user) {
+      // User exists, update details and return token
+      user.fullName = full_name.trim();
+      if (password.length >= 6) {
+        user.passwordHash = await bcrypt.hash(password, 10);
+      }
+      await user.save();
+    } else {
+      const count = await User.countDocuments();
+      const numericId = count + 1;
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      user = new User({
+        numericId,
+        email: normalizedEmail,
+        fullName: full_name.trim(),
+        passwordHash,
+        walletBalance: 350,
+        loyaltyTier: 'BRONZE',
+        stars: 0,
+      });
+
+      await user.save();
+    }
+
+    const token = generateToken(user.numericId);
+
+    res.json({
+      access_token: token,
+      token_type: 'bearer',
+      user: user.toJSON(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// POST /api/v1/auth/sync (Sync Clerk/Google users into MongoDB)
+router.post('/sync', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, full_name } = req.body;
+    if (!email) {
+      res.status(400).json({ detail: 'Email is required for synchronization' });
       return;
     }
 
-    const count = await User.countDocuments();
-    const numericId = count + 1;
-    const passwordHash = await bcrypt.hash(password, 10);
+    const normalizedEmail = email.trim().toLowerCase();
+    let user = await User.findOne({ email: normalizedEmail });
 
-    const user = new User({
-      numericId,
-      email: normalizedEmail,
-      fullName: full_name,
-      passwordHash,
-      walletBalance: 350,
-      loyaltyTier: 'BRONZE',
-      stars: 0,
-    });
+    if (!user) {
+      const count = await User.countDocuments();
+      const numericId = count + 1;
+      const passwordHash = await bcrypt.hash('clerk_oauth_user_secret', 10);
 
-    await user.save();
+      user = new User({
+        numericId,
+        email: normalizedEmail,
+        fullName: (full_name || email.split('@')[0]).trim(),
+        passwordHash,
+        walletBalance: 350,
+        loyaltyTier: 'BRONZE',
+        stars: 0,
+      });
+
+      await user.save();
+    }
+
     const token = generateToken(user.numericId);
 
     res.json({

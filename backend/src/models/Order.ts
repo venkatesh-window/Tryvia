@@ -31,8 +31,12 @@ export interface IOrder extends Document {
   totalAmount: number;
   status: OrderStatus;
   vendorStatuses: IVendorStatus[];
+  paymentMethod?: string;
   appliedCreditId?: number;
   shippingAddress?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   createdAt: Date;
 }
 
@@ -76,8 +80,12 @@ const OrderSchema = new Schema<IOrder>(
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'], default: 'PAID' },
     vendorStatuses: [VendorStatusSchema],
+    paymentMethod: { type: String },
     appliedCreditId: { type: Number },
     shippingAddress: { type: String },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String },
+    razorpaySignature: { type: String },
   },
   {
     timestamps: true,
@@ -88,6 +96,11 @@ const OrderSchema = new Schema<IOrder>(
         ret.platform_fee = ret.platformFee;
         ret.total_amount = ret.totalAmount;
         ret.vendor_statuses = ret.vendorStatuses;
+        ret.payment_method = ret.paymentMethod;
+        ret.shipping_address = ret.shippingAddress;
+        ret.razorpay_order_id = ret.razorpayOrderId;
+        ret.razorpay_payment_id = ret.razorpayPaymentId;
+        ret.razorpay_signature = ret.razorpaySignature;
         ret.created_at = ret.createdAt;
         delete ret.__v;
         return ret;

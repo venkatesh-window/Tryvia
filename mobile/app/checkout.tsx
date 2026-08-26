@@ -5,11 +5,12 @@ import { ScreenContainer } from '../src/components/ui/ScreenContainer';
 import { Typography } from '../src/components/ui/Typography';
 import { PremiumButton } from '../src/components/ui/PremiumButton';
 import { useCartStore } from '../src/store/useCartStore';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { ChevronLeft } from 'lucide-react-native';
 import { theme } from '../src/theme/theme';
 import { useForm, Controller } from 'react-hook-form';
 
-import { MockPaymentGatewayModal } from '../src/components/payment/MockPaymentGatewayModal';
+import { RazorpayCheckoutModal } from '../src/components/payment/RazorpayCheckoutModal';
 import { OrderSuccessModal } from '../src/components/payment/OrderSuccessModal';
 import { Order } from '../src/store/useOrderStore';
 import { useResponsive } from '../src/hooks/useResponsive';
@@ -27,22 +28,41 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { safeTopPadding, insets, isSmallDevice } = useResponsive();
   const { subtotal, walletDeduction, platformFee, total } = useCartStore();
+  const { user, updateProfile } = useAuthStore();
 
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [checkoutAddress, setCheckoutAddress] = useState<string>('');
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
-      fullName: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      pincode: ''
-    }
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      address: user?.address?.street || '',
+      city: user?.address?.city || '',
+      pincode: user?.address?.pincode || '',
+    },
   });
 
-  const onSubmit = () => {
+  const onSubmit = (data: FormData) => {
+    const formatted = `${data.address.trim()}, ${data.city.trim()} - ${data.pincode.trim()}`;
+    setCheckoutAddress(formatted);
+
+    // Save profile and address
+    updateProfile({
+      fullName: data.fullName.trim(),
+      phone: data.phone.trim(),
+      address: {
+        fullName: data.fullName.trim(),
+        street: data.address.trim(),
+        city: data.city.trim(),
+        state: user?.address?.state || 'Maharashtra',
+        pincode: data.pincode.trim(),
+        phone: data.phone.trim(),
+      },
+    });
+
     setIsPaymentModalVisible(true);
   };
 
@@ -53,7 +73,7 @@ export default function CheckoutScreen() {
 
   const handleViewOrders = () => {
     setCompletedOrder(null);
-    router.replace('/(tabs)/profile' as any);
+    router.replace('/(tabs)/orders' as any);
   };
 
   const handleContinueShopping = () => {
@@ -196,8 +216,9 @@ export default function CheckoutScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <MockPaymentGatewayModal
+      <RazorpayCheckoutModal
         visible={isPaymentModalVisible}
+        deliveryAddress={checkoutAddress}
         onClose={() => setIsPaymentModalVisible(false)}
         onSuccess={handlePaymentSuccess}
       />

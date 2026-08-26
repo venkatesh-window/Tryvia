@@ -9,7 +9,9 @@ export interface OrderItemInput {
 
 export interface CreateOrderInput {
   items: OrderItemInput[];
+  payment_method?: string;
   apply_wallet_credit_id?: number | null;
+  shipping_address?: string | null;
 }
 
 export interface OrderResponse {
@@ -19,6 +21,8 @@ export interface OrderResponse {
   platform_fee: number;
   total_amount: number;
   status: string;
+  payment_method?: string;
+  shipping_address?: string;
   created_at: string;
   items: any[];
 }

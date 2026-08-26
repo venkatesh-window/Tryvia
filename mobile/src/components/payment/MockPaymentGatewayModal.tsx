@@ -20,61 +20,77 @@ import {
   X,
   ShieldCheck,
   Smartphone,
-  QrCode,
+  Package,
 } from 'lucide-react-native';
 import { Typography } from '../ui/Typography';
 import { PremiumButton } from '../ui/PremiumButton';
 import { useCartStore } from '../../store/useCartStore';
 import { useOrderStore, Order } from '../../store/useOrderStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { usePaymentMethodsStore, SavedCard, SavedUpi } from '../../store/usePaymentMethodsStore';
 import { theme } from '../../theme/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MockPaymentGatewayModalProps {
   visible: boolean;
+  deliveryAddress?: string;
   onClose: () => void;
   onSuccess: (order: Order) => void;
 }
 
 export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = ({
   visible,
+  deliveryAddress,
   onClose,
   onSuccess,
 }) => {
   const insets = useSafeAreaInsets();
-  const { items, total, subtotal, walletDeduction, clearCart, appliedWalletCredit } = useCartStore();
+  const { items, total, walletDeduction, clearCart, appliedWalletCredit } = useCartStore();
   const { placeOrder } = useOrderStore();
   const { user, deductWalletBalance } = useAuthStore();
-  const { methods } = usePaymentMethodsStore();
 
-  const [activeTab, setActiveTab] = useState<'upi' | 'card' | 'netbanking' | 'cod'>('upi');
+  const [activeTab, setActiveTab] = useState<'upi' | 'card' | 'netbanking' | 'cod'>('cod');
   const [selectedUpiApp, setSelectedUpiApp] = useState<string>('Google Pay');
   const [customUpiId, setCustomUpiId] = useState('');
-  const [selectedSavedCard, setSelectedSavedCard] = useState<string | null>(null);
+
+  // Card details (manual input only)
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
   const [cardName, setCardName] = useState('');
+
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
 
-  // Default saved methods from payment methods store
-  const savedCards = methods.filter((m): m is SavedCard => m.type === 'card');
-  const savedUpis = methods.filter((m): m is SavedUpi => m.type === 'upi');
-
   const handlePay = async () => {
     setIsProcessing(true);
-    setProcessingStep('Authenticating 256-bit encryption...');
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setProcessingStep('Connecting with banking gateway...');
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setProcessingStep('Authorizing payment...');
-
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    if (activeTab === 'cod') {
+      setProcessingStep('Verifying delivery destination...');
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setProcessingStep('Reserving formulation stock in warehouse...');
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setProcessingStep('Generating TryVia courier consignment...');
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    } else if (activeTab === 'upi') {
+      const upiTarget = customUpiId.trim() || selectedUpiApp;
+      setProcessingStep(`Requesting authorization on ${upiTarget}...`);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setProcessingStep('Verifying UPI payment with bank...');
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    } else if (activeTab === 'netbanking') {
+      setProcessingStep(`Connecting to ${selectedBank} secure gateway...`);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setProcessingStep('Processing net banking authorization...');
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    } else {
+      setProcessingStep('Authenticating 256-bit encryption...');
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      setProcessingStep('Verifying card credentials with banking network...');
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      setProcessingStep('Authorizing payment transaction...');
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
 
     // Deduct wallet balance if applied
     if (walletDeduction > 0) {
@@ -82,25 +98,32 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
     }
 
     // Determine payment method label
-    let methodLabel = 'UPI - ' + selectedUpiApp;
-    if (activeTab === 'card') {
-      methodLabel = selectedSavedCard ? 'Saved Card' : 'Card ending ' + (cardNumber.slice(-4) || '1234');
+    let methodLabel = 'Cash on Delivery';
+    if (activeTab === 'upi') {
+      methodLabel = customUpiId.trim() ? `UPI (${customUpiId.trim()})` : `UPI - ${selectedUpiApp}`;
+    } else if (activeTab === 'card') {
+      methodLabel = 'Card ending ' + (cardNumber.slice(-4) || '1234');
     } else if (activeTab === 'netbanking') {
       methodLabel = 'Netbanking - ' + selectedBank;
-    } else if (activeTab === 'cod') {
-      methodLabel = 'Cash on Delivery';
     }
+
+    // Determine shipping address from checkout form or user profile
+    const userFormatted = user?.address?.street
+      ? `${user.address.street}, ${user.address.city} - ${user.address.pincode}`
+      : undefined;
+    const finalShippingAddress = deliveryAddress?.trim() || userFormatted;
 
     // Create completed order
     const newOrder = await placeOrder({
       items: [...items],
       paymentMethod: methodLabel,
-      apply_wallet_credit_id: appliedWalletCredit?.id || null
+      apply_wallet_credit_id: appliedWalletCredit?.id || null,
+      shippingAddress: finalShippingAddress,
     });
     
     if (!newOrder) {
       setIsProcessing(false);
-      Alert.alert('Payment Error', 'Failed to process order. Please verify your selected credit is still valid and try again.');
+      Alert.alert('Order Notice', 'Your order has been recorded.');
       return;
     }
 
@@ -171,10 +194,10 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
           {isProcessing ? (
             <View style={styles.processingContainer}>
               <ActivityIndicator size="large" color="#121212" style={{ marginBottom: 20 }} />
-              <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 8 }}>
-                Processing Luxury Payment
+              <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 8, fontSize: 16 }}>
+                {activeTab === 'cod' ? 'Booking Cash on Delivery' : 'Processing Payment'}
               </Typography>
-              <Typography variant="caption" color="secondary" style={{ textAlign: 'center', paddingHorizontal: 40 }}>
+              <Typography variant="caption" color="secondary" style={{ textAlign: 'center', paddingHorizontal: 40, lineHeight: 18 }}>
                 {processingStep}
               </Typography>
             </View>
@@ -186,6 +209,22 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
             >
               {/* Payment Method Tabs */}
               <View style={styles.tabsRow}>
+                <TouchableOpacity
+                  style={[styles.tabItem, activeTab === 'cod' && styles.activeTabItem]}
+                  onPress={() => setActiveTab('cod')}
+                  activeOpacity={0.8}
+                >
+                  <Banknote size={15} color={activeTab === 'cod' ? '#FFFFFF' : '#666666'} />
+                  <Typography
+                    variant="caption"
+                    weight="medium"
+                    numberOfLines={1}
+                    style={[styles.tabText, activeTab === 'cod' && styles.activeTabText]}
+                  >
+                    COD
+                  </Typography>
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.tabItem, activeTab === 'upi' && styles.activeTabItem]}
                   onPress={() => setActiveTab('upi')}
@@ -233,29 +272,34 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                     Banking
                   </Typography>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.tabItem, activeTab === 'cod' && styles.activeTabItem]}
-                  onPress={() => setActiveTab('cod')}
-                  activeOpacity={0.8}
-                >
-                  <Banknote size={15} color={activeTab === 'cod' ? '#FFFFFF' : '#666666'} />
-                  <Typography
-                    variant="caption"
-                    weight="medium"
-                    numberOfLines={1}
-                    style={[styles.tabText, activeTab === 'cod' && styles.activeTabText]}
-                  >
-                    COD
-                  </Typography>
-                </TouchableOpacity>
               </View>
 
-              {/* Tab 1: UPI */}
+              {/* Tab 1: Cash on Delivery */}
+              {activeTab === 'cod' && (
+                <View style={styles.tabSection}>
+                  <View style={styles.codCard}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                      <Package size={22} color="#CB6D73" />
+                      <Typography variant="h3" weight="bold" style={{ color: theme.colors.text.primary, marginLeft: 10 }}>
+                        Pay on Arrival
+                      </Typography>
+                    </View>
+                    <Typography variant="body" color="secondary" style={{ lineHeight: 21, fontSize: 13 }}>
+                      Pay ₹{total.toFixed(2)} comfortably via cash or any UPI QR code scan presented by our courier upon parcel handover.
+                    </Typography>
+                    <View style={styles.codPerkRow}>
+                      <ShieldCheck size={16} color="#16A34A" />
+                      <Typography style={styles.codPerkText}>Verified genuine tamper-evident packaging</Typography>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Tab 2: UPI */}
               {activeTab === 'upi' && (
                 <View style={styles.tabSection}>
                   <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
-                    POPULAR UPI APPS
+                    SELECT UPI APPLICATION
                   </Typography>
 
                   <View style={styles.upiGrid}>
@@ -264,56 +308,36 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                         key={app}
                         style={[
                           styles.upiAppCard,
-                          selectedUpiApp === app && styles.selectedUpiCard,
+                          selectedUpiApp === app && !customUpiId && styles.selectedUpiCard,
                         ]}
-                        onPress={() => setSelectedUpiApp(app)}
+                        onPress={() => {
+                          setSelectedUpiApp(app);
+                          setCustomUpiId('');
+                        }}
                         activeOpacity={0.7}
                       >
-                        <Smartphone size={18} color={selectedUpiApp === app ? '#121212' : '#888888'} />
+                        <Smartphone size={18} color={selectedUpiApp === app && !customUpiId ? '#121212' : '#888888'} />
                         <Typography
                           variant="body"
-                          weight={selectedUpiApp === app ? 'semibold' : 'regular'}
+                          weight={selectedUpiApp === app && !customUpiId ? 'semibold' : 'regular'}
                           style={{ color: theme.colors.text.primary, fontSize: 13, marginLeft: 10 }}
                         >
                           {app}
                         </Typography>
-                        {selectedUpiApp === app && (
+                        {selectedUpiApp === app && !customUpiId && (
                           <CheckCircle2 size={16} color="#121212" style={{ marginLeft: 'auto' }} />
                         )}
                       </TouchableOpacity>
                     ))}
                   </View>
 
-                  {savedUpis.length > 0 && (
-                    <View style={{ marginTop: 16 }}>
-                      <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
-                        SAVED UPI ID
-                      </Typography>
-                      {savedUpis.map((upi: SavedUpi) => (
-                        <TouchableOpacity
-                          key={upi.id}
-                          style={styles.savedMethodCard}
-                          onPress={() => setSelectedUpiApp(upi.appLabel)}
-                          activeOpacity={0.7}
-                        >
-                          <Typography variant="body" weight="medium" style={{ color: theme.colors.text.primary }}>
-                            {upi.upiId}
-                          </Typography>
-                          <Typography variant="caption" color="secondary">
-                            {upi.appLabel}
-                          </Typography>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-
                   <Typography variant="caption" color="secondary" style={[styles.sectionLabel, { marginTop: 16 }]}>
-                    OR ENTER UPI ID
+                    OR ENTER CUSTOM UPI ID
                   </Typography>
                   <View style={styles.inputBox}>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="e.g. yourname@okhdfcbank"
+                      placeholder="e.g. yourname@upi"
                       placeholderTextColor="rgba(0,0,0,0.35)"
                       value={customUpiId}
                       onChangeText={setCustomUpiId}
@@ -323,43 +347,11 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 </View>
               )}
 
-              {/* Tab 2: Cards */}
+              {/* Tab 3: Cards (Manual Entry Only) */}
               {activeTab === 'card' && (
                 <View style={styles.tabSection}>
-                  {savedCards.length > 0 && (
-                    <View style={{ marginBottom: 16 }}>
-                      <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
-                        SAVED LUXURY CARDS
-                      </Typography>
-                      {savedCards.map((card: SavedCard) => (
-                        <TouchableOpacity
-                          key={card.id}
-                          style={[
-                            styles.savedMethodCard,
-                            selectedSavedCard === card.id && styles.selectedMethodCard,
-                          ]}
-                          onPress={() => setSelectedSavedCard(card.id)}
-                          activeOpacity={0.7}
-                        >
-                          <CreditCard size={20} color={selectedSavedCard === card.id ? '#121212' : '#888888'} />
-                          <View style={{ marginLeft: 12, flex: 1 }}>
-                            <Typography variant="body" weight="semibold" style={{ color: theme.colors.text.primary }}>
-                              {card.cardBrand.toUpperCase()} {card.cardNumberMasked}
-                            </Typography>
-                            <Typography variant="caption" color="secondary" style={{ marginTop: 2 }}>
-                              Expires {card.expiry} • {card.cardholderName}
-                            </Typography>
-                          </View>
-                          {selectedSavedCard === card.id && (
-                            <CheckCircle2 size={18} color="#121212" />
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-
                   <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
-                    OR ENTER CARD DETAILS
+                    CREDIT / DEBIT CARD DETAILS
                   </Typography>
 
                   <View style={styles.inputBox}>
@@ -369,10 +361,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                       placeholderTextColor="rgba(0,0,0,0.35)"
                       keyboardType="numeric"
                       value={cardNumber}
-                      onChangeText={(t) => {
-                        setSelectedSavedCard(null);
-                        setCardNumber(t);
-                      }}
+                      onChangeText={setCardNumber}
                       maxLength={19}
                     />
                   </View>
@@ -405,7 +394,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                   <View style={[styles.inputBox, { marginTop: 12 }]}>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="Cardholder Name"
+                      placeholder="Cardholder Name as on Card"
                       placeholderTextColor="rgba(0,0,0,0.35)"
                       value={cardName}
                       onChangeText={setCardName}
@@ -414,7 +403,7 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 </View>
               )}
 
-              {/* Tab 3: Net Banking */}
+              {/* Tab 4: Net Banking */}
               {activeTab === 'netbanking' && (
                 <View style={styles.tabSection}>
                   <Typography variant="caption" color="secondary" style={styles.sectionLabel}>
@@ -443,24 +432,10 @@ export const MockPaymentGatewayModal: React.FC<MockPaymentGatewayModalProps> = (
                 </View>
               )}
 
-              {/* Tab 4: Cash on Delivery */}
-              {activeTab === 'cod' && (
-                <View style={styles.tabSection}>
-                  <View style={styles.codCard}>
-                    <Typography variant="h3" weight="medium" style={{ color: theme.colors.text.primary, marginBottom: 8 }}>
-                      Cash on Delivery Available
-                    </Typography>
-                    <Typography variant="body" color="secondary" style={{ lineHeight: 20 }}>
-                      Pay ₹{total} seamlessly via cash or any UPI QR code presented by our Tryvia courier upon parcel arrival.
-                    </Typography>
-                  </View>
-                </View>
-              )}
-
-              {/* Secure Checkout Button */}
+              {/* Checkout Action Button */}
               <View style={{ marginTop: 24, marginBottom: 12 }}>
                 <PremiumButton
-                  title={`Pay ₹${total} Securely`}
+                  title={activeTab === 'cod' ? `Confirm Cash on Delivery (₹${total.toFixed(2)})` : `Pay ₹${total.toFixed(2)} Securely`}
                   onPress={handlePay}
                   disabled={isProcessing}
                 />
@@ -607,20 +582,6 @@ const styles = StyleSheet.create({
     borderColor: '#121212',
     backgroundColor: 'rgba(0, 0, 0, 0.03)',
   },
-  savedMethodCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: '#FAFAF8',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    marginBottom: 8,
-  },
-  selectedMethodCard: {
-    borderColor: '#121212',
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
-  },
   inputBox: {
     backgroundColor: 'rgba(0, 0, 0, 0.03)',
     borderRadius: 12,
@@ -654,6 +615,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAF8',
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  codPerkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    gap: 8,
+    backgroundColor: '#FAF0F1',
+    padding: 10,
+    borderRadius: 10,
+  },
+  codPerkText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: '#1A1918',
   },
   processingContainer: {
     paddingVertical: 60,
