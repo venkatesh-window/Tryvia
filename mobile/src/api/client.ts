@@ -4,7 +4,12 @@ import Constants from 'expo-constants';
 import { getItemAsync, deleteItemAsync } from '../utils/storage';
 
 export const getBaseUrl = () => {
-  // Extract host IP from Expo Go / Metro bundler
+  if (Platform.OS === 'web') {
+    const hostname = typeof window !== 'undefined' && window.location?.hostname ? window.location.hostname : 'localhost';
+    return `http://${hostname}:8000/api/v1`;
+  }
+
+  // Extract host IP from Expo Go / Metro bundler on mobile
   const hostUri =
     Constants.expoConfig?.hostUri ||
     (Constants as any).manifest?.debuggerHost ||
@@ -18,17 +23,12 @@ export const getBaseUrl = () => {
     }
   }
 
-  if (process.env.EXPO_PUBLIC_API_URL) {
+  if (process.env.EXPO_PUBLIC_API_URL && !process.env.EXPO_PUBLIC_API_URL.includes('localhost')) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
-  if (Platform.OS === 'web') {
-    const hostname = typeof window !== 'undefined' && window.location?.hostname ? window.location.hostname : 'localhost';
-    return `http://${hostname}:8000/api/v1`;
-  }
-
   // Default LAN machine IP for physical mobile devices running Expo Go
-  return 'http://10.10.197.77:8000/api/v1';
+  return 'http://172.20.10.10:8000/api/v1';
 };
 
 const BASE_URL = getBaseUrl();

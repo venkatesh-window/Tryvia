@@ -8,7 +8,7 @@ import { useCartStore } from '../../src/store/useCartStore';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Image } from 'expo-image';
 import { GlassCard } from '../../src/components/ui/GlassCard';
-import { MockPaymentGatewayModal } from '../../src/components/payment/MockPaymentGatewayModal';
+import { RazorpayCheckoutModal } from '../../src/components/payment/RazorpayCheckoutModal';
 import { OrderSuccessModal } from '../../src/components/payment/OrderSuccessModal';
 import { Order } from '../../src/store/useOrderStore';
 
@@ -118,8 +118,8 @@ export default function CartModal() {
         />
       </View>
 
-      {/* Mock Payment Gateway Modal */}
-      <MockPaymentGatewayModal
+      {/* Razorpay Checkout Modal */}
+      <RazorpayCheckoutModal
         visible={isPaymentModalVisible}
         onClose={() => setIsPaymentModalVisible(false)}
         onSuccess={handlePaymentSuccess}

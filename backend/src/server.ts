@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes';
 import productRoutes from './routes/productRoutes';
 import orderRoutes from './routes/orderRoutes';
 import walletRoutes from './routes/walletRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/products`, productRoutes);
 app.use(`${API_PREFIX}/orders`, orderRoutes);
 app.use(`${API_PREFIX}/wallet`, walletRoutes);
+app.use(`${API_PREFIX}/payments`, paymentRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

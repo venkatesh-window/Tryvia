@@ -10,7 +10,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { theme } from '../src/theme/theme';
 import { useForm, Controller } from 'react-hook-form';
 
-import { MockPaymentGatewayModal } from '../src/components/payment/MockPaymentGatewayModal';
+import { RazorpayCheckoutModal } from '../src/components/payment/RazorpayCheckoutModal';
 import { OrderSuccessModal } from '../src/components/payment/OrderSuccessModal';
 import { Order } from '../src/store/useOrderStore';
 import { useResponsive } from '../src/hooks/useResponsive';
@@ -216,7 +216,7 @@ export default function CheckoutScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <MockPaymentGatewayModal
+      <RazorpayCheckoutModal
         visible={isPaymentModalVisible}
         deliveryAddress={checkoutAddress}
         onClose={() => setIsPaymentModalVisible(false)}
