@@ -12,6 +12,7 @@ export interface ClerkUser {
   firstName?: string;
   lastName?: string;
   fullName?: string;
+  role?: string;
 }
 
 export interface ClerkAuthResult {
@@ -197,6 +198,7 @@ export class ClerkService {
             id: String(loginRes.user.id),
             email: loginRes.user.email,
             fullName: loginRes.user.full_name || cleanEmail.split('@')[0],
+            role: loginRes.user.role,
           },
         };
       }
@@ -293,6 +295,7 @@ export class ClerkService {
             id: String(regRes.user.id),
             email: regRes.user.email,
             fullName: regRes.user.full_name || cleanName,
+            role: regRes.user.role,
           },
         };
       }

@@ -3,14 +3,15 @@ import { z } from 'zod';
 // Define schemas that strictly mirror our FastAPI Pydantic models
 
 export const UserSchema = z.object({
-  id: z.number(),
+  id: z.number().or(z.string()),
   email: z.string().email(),
   full_name: z.string().nullable().optional(),
-  is_active: z.boolean(),
-  is_superuser: z.boolean(),
+  is_active: z.boolean().optional(),
+  is_superuser: z.boolean().optional(),
   wallet_balance: z.number().default(0),
   loyalty_tier: z.string().default('BRONZE'),
   points: z.number().default(0),
+  role: z.string().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;

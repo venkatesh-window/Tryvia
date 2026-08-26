@@ -20,6 +20,7 @@ export interface User {
   id: number | string;
   email: string;
   fullName: string;
+  role?: string;
   phone?: string;
   loyaltyTier: string;
   walletBalance: number;
@@ -91,6 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           id: user.id || 1,
           email: user.email || '',
           fullName: user.full_name || user.email?.split('@')[0] || 'Member',
+          role: user.role || 'CUSTOMER',
           phone: user.phone || '',
           loyaltyTier: user.loyalty_tier || 'TRYVIA MEMBER',
           walletBalance: user.wallet_balance ?? 350,

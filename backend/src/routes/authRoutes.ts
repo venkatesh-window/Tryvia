@@ -75,7 +75,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 // POST /api/v1/auth/register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, full_name } = req.body;
+    const { email, password, full_name, role } = req.body;
 
     if (!email || !password || !full_name) {
       res.status(400).json({ detail: 'Email, password, and full name are required' });
@@ -105,6 +105,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         walletBalance: 350,
         loyaltyTier: 'BRONZE',
         stars: 0,
+        role: role || 'CUSTOMER'
       });
 
       await user.save();

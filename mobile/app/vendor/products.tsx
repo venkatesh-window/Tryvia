@@ -118,7 +118,7 @@ export default function VendorProductsScreen() {
             
             {filteredProducts.map((product, idx) => (
               <View key={idx} style={styles.tableRow}>
-                <View style={[styles.tableCell, { flex: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+                <View style={{ flex: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   {product.imageUrl ? (
                     <Image source={{ uri: product.imageUrl }} style={styles.productImagePlaceholder} />
                   ) : (
@@ -131,7 +131,7 @@ export default function VendorProductsScreen() {
                 </Typography>
                 <Typography style={[styles.tableCell, { flex: 2 }]}>${product.fullPrice.toFixed(2)}</Typography>
                 <Typography style={[styles.tableCell, { flex: 2 }]}>{product.stockFull}</Typography>
-                <View style={[styles.tableCell, { flex: 2 }]}>
+                <View style={{ flex: 2, justifyContent: 'center' }}>
                   <View style={[
                     styles.statusBadge,
                     product.status === 'ACTIVE' ? styles.statusActive : 
@@ -147,7 +147,7 @@ export default function VendorProductsScreen() {
                   </View>
                 </View>
                 <TouchableOpacity 
-                  style={[styles.tableCell, { flex: 1, alignItems: 'flex-end' }]}
+                  style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}
                   onPress={() => router.push(`/vendor/products/${product._id}` as any)}
                 >
                   <Typography style={styles.editText}>Edit</Typography>

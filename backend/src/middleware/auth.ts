@@ -69,6 +69,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       return;
     }
 
+    // console.log('DEBUG AUTH:', { sub, userRole: user?.role, userEmail: user?.email });
     req.user = user;
     next();
   } catch (error: any) {

@@ -20,8 +20,8 @@ export default function CartModal() {
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
-  const isMinimumMet = total >= 400; // Mock minimum order value
-  const minOrderValue = 400;
+  const isMinimumMet = total > 0;
+  const minOrderValue = 1;
 
   const handleCheckout = () => {
     setIsPaymentModalVisible(true);

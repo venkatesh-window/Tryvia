@@ -115,7 +115,7 @@ export default function VendorOrdersScreen() {
                 <Typography style={[styles.tableCell, { flex: 3 }]}>{order.customer}</Typography>
                 <Typography style={[styles.tableCell, { flex: 1 }]}>{order.products}</Typography>
                 <Typography style={[styles.tableCell, { flex: 2 }]}>${order.total.toFixed(2)}</Typography>
-                <View style={[styles.tableCell, { flex: 2 }]}>
+                <View style={{ flex: 2, justifyContent: 'center' }}>
                   <View style={[
                     styles.statusBadge,
                     order.status === 'PENDING' || order.status === 'PAID' ? styles.statusPending : 
@@ -137,7 +137,7 @@ export default function VendorOrdersScreen() {
                   </View>
                 </View>
                 <TouchableOpacity 
-                  style={[styles.tableCell, { flex: 1, alignItems: 'flex-end' }]}
+                  style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}
                   onPress={() => router.push(`/vendor/orders/${order._id}` as any)}
                 >
                   <Typography style={styles.viewText}>View</Typography>

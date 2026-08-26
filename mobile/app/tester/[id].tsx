@@ -7,6 +7,7 @@ import { Typography } from '../../src/components/ui/Typography';
 import { productService } from '../../src/api/services/productService';
 import { useCartStore } from '../../src/store/useCartStore';
 import { useWishlistStore } from '../../src/store/useWishlistStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { Image } from 'expo-image';
 import { 
   ChevronLeft, 
@@ -22,7 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-import { getFallbackProduct } from '../../src/constants/products';
+
 
 export default function TesterDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,15 +33,10 @@ export default function TesterDetailsScreen() {
   const { addItem, totalItems } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
 
-  const fallback = getFallbackProduct(id);
-
-  const { data: fetchedProduct } = useQuery({
+  const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
-    queryFn: () => productService.getProductById(id || 1),
-    initialData: fallback,
+    queryFn: () => productService.getProductById(id as string),
   });
-
-  const product = fetchedProduct || fallback;
 
   const isFavorited = product ? isInWishlist(product.id) : false;
 

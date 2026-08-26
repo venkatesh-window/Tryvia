@@ -52,19 +52,19 @@ export default function OffersScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Smart Upgrade Promo Card */}
           <Animated.View entering={FadeInUp.duration(500).delay(100)} style={styles.promoCard}>
-            <View style={styles.promoIconRow}>
+            <View style={styles.promoTextContainer}>
               <Sparkles size={20} color="#CB6D73" />
               <Typography variant="caption" weight="bold" style={styles.promoTag}>TRYVIA SMART UPGRADE</Typography>
             </View>
             <Typography variant="h3" weight="bold" style={styles.promoHeading}>
               Try for <Text style={{ fontFamily: 'Inter_700Bold' }}>₹250</Text> → Get <Text style={{ fontFamily: 'Inter_700Bold' }}>₹225</Text> Credit
             </Typography>
-            <Typography style={styles.promoText}>Order any mini today. 90% of your mini spend is credited to your TryVia Wallet to upgrade to full size later!</Typography>
+            <Typography variant="body" color="secondary">Order any mini today. 90% of your mini spend is credited to your TryVia Wallet to upgrade to full size later!</Typography>
           </Animated.View>
 
           {/* Grid */}
           <Animated.View entering={FadeInUp.duration(500).delay(200)}>
-            <Typography variant="h3" weight="medium" style={styles.sectionTitle}>Trending Minis</Typography>
+            <Typography variant="h3" weight="medium" style={styles.sectionTitleStyle}>Trending Perfume Testers</Typography>
           </Animated.View>
 
           <View style={styles.grid}>
@@ -138,6 +138,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1918',
     fontFamily: 'Inter_700Bold',
+  },
+  promoTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  sectionTitleStyle: {
+    paddingHorizontal: 0,
+    marginTop: 24,
+    marginBottom: 16,
   },
   bagBtn: {
     width: 38,

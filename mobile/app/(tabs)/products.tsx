@@ -22,7 +22,6 @@ const CATEGORIES = [
   { id: 4, name: 'Makeup', img: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=300&auto=format&fit=crop' }
 ];
 
-import { INITIAL_PRODUCTS } from '../../src/constants/products';
 
 export default function ProductsScreen() {
   const router = useRouter();
@@ -38,7 +37,7 @@ export default function ProductsScreen() {
     queryFn: () => productService.getProducts(20, searchQuery, activeCategory || undefined),
   });
 
-  const products = (allProducts && allProducts.length > 0) ? allProducts : INITIAL_PRODUCTS;
+  const products = allProducts || [];
 
   const gridCardWidth = (width - 40 - 12) / 2;
 

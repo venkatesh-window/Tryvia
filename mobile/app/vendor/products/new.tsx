@@ -4,6 +4,8 @@ import { Typography } from '../../../src/components/ui/Typography';
 import { ArrowLeft, Save, Image as ImageIcon } from 'lucide-react-native';
 import { useAuthStore } from '../../../src/store/useAuthStore';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 
 export default function AddProductScreen() {
   const router = useRouter();
@@ -21,8 +23,29 @@ export default function AddProductScreen() {
     stockFull: '',
     stockTester: '',
     imageUrl: '',
+    imageUri: '',
     status: 'ACTIVE'
   });
+
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      setError("You've refused to allow this app to access your photos!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setForm({ ...form, imageUri: result.assets[0].uri, imageUrl: '' });
+    }
+  };
 
   const handleSave = async () => {
     if (!form.name || !form.fullPrice) {
@@ -38,27 +61,42 @@ export default function AddProductScreen() {
       // For this test, we might get an error if they are invalid ObjectIds 
       // but we will send them as is or omit them if empty.
       
-      const payload: any = {
-        name: form.name,
-        description: form.description,
-        fullPrice: Number(form.fullPrice) || 0,
-        testerPrice: Number(form.testerPrice) || 0,
-        stockFull: Number(form.stockFull) || 0,
-        stockTester: Number(form.stockTester) || 0,
-        imageUrl: form.imageUrl,
-        status: form.status,
-      };
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('description', form.description);
+      formData.append('fullPrice', String(Number(form.fullPrice) || 0));
+      formData.append('testerPrice', String(Number(form.testerPrice) || 0));
+      formData.append('stockFull', String(Number(form.stockFull) || 0));
+      formData.append('stockTester', String(Number(form.stockTester) || 0));
+      formData.append('status', form.status);
+      
+      if (form.imageUrl) {
+        formData.append('imageUrl', form.imageUrl);
+      }
+      
+      if (form.imageUri) {
+        const localUri = form.imageUri;
+        const filename = localUri.split('/').pop() || 'upload.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image`;
+        
+        formData.append('image', {
+          uri: localUri,
+          name: filename,
+          type
+        } as any);
+      }
 
-      if (form.category) payload.category = form.category;
-      if (form.brand) payload.brand = form.brand;
+      if (form.category) formData.append('category', form.category);
+      if (form.brand) formData.append('brand', form.brand);
 
       const response = await fetch('http://localhost:8000/api/v1/vendor/products', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
+          // Don't set Content-Type to multipart/form-data manually, fetch will set it with the boundary
         },
-        body: JSON.stringify(payload)
+        body: formData
       });
       
       if (!response.ok) {
@@ -137,10 +175,16 @@ export default function AddProductScreen() {
 
         <View style={styles.card}>
           <Typography style={styles.cardTitle}>Media</Typography>
-          <View style={styles.imageUploadBox}>
-            <ImageIcon size={32} color="#B0AAA2" />
-            <Typography style={{ color: '#8E8A85', marginTop: 8, fontFamily: 'Inter_500Medium' }}>Upload Image</Typography>
-          </View>
+          <TouchableOpacity style={styles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
+            {form.imageUri ? (
+              <Image source={{ uri: form.imageUri }} style={{ width: '100%', height: '100%', borderRadius: 12 }} contentFit="cover" />
+            ) : (
+              <>
+                <ImageIcon size={32} color="#B0AAA2" />
+                <Typography style={{ color: '#8E8A85', marginTop: 8, fontFamily: 'Inter_500Medium' }}>Tap to Upload Image</Typography>
+              </>
+            )}
+          </TouchableOpacity>
           <View style={[styles.inputGroup, { marginTop: 16 }]}>
             <Typography style={styles.inputLabel}>IMAGE URL (Fallback)</Typography>
             <View style={styles.inputWrapper}>

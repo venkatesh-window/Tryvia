@@ -26,6 +26,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
     let subtotal = 0;
     const orderItems: IOrderItem[] = [];
     const testerProductIds: mongoose.Types.ObjectId[] = [];
+    const uniqueVendors = new Set<string>();
     
     // Fetch global commission rate
     const systemConfig = await SystemConfig.findOne() || { platformCommissionRate: 0.15 };
@@ -39,37 +40,16 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
         productDoc = await Product.findById(item.product_id);
       }
 
-      // Auto-provision product in MongoDB if not existing yet
       if (!productDoc) {
-        let defaultBrand = await Brand.findOne();
-        if (!defaultBrand) {
-          defaultBrand = await Brand.create({ numericId: 1, name: 'Chanel', description: 'Haute Parfumerie' });
-        }
-        let defaultCat = await Category.findOne();
-        if (!defaultCat) {
-          defaultCat = await Category.create({ numericId: 1, name: 'Fragrance', description: 'Fine Perfumes' });
-        }
-
-        const count = await Product.countDocuments();
-        productDoc = await Product.create({
-          numericId: !isNaN(Number(item.product_id)) ? Number(item.product_id) : count + 1,
-          name: item.product_name || `Luxury Formulation #${item.product_id}`,
-          description: 'Authentic luxury beauty formulation.',
-          fullPrice: item.unit_price || 5200,
-          testerPrice: item.unit_price || 350,
-          stockFull: 50,
-          stockTester: 50,
-          imageUrl: item.image_url || 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800',
-          category: defaultCat._id,
-          brand: defaultBrand._id,
-        });
+        res.status(404).json({ detail: `Product not found: ${item.product_id}` });
+        return;
       }
 
       const itemType = item.item_type === 'full' ? 'full' : 'tester';
-      const unitPrice = item.unit_price || (itemType === 'full' ? productDoc.fullPrice : productDoc.testerPrice);
-      const totalPrice = unitPrice * (item.quantity || 1);
-      
+      const unitPrice = itemType === 'full' ? productDoc.fullPrice : productDoc.testerPrice;
       const qty = item.quantity || 1;
+      const totalPrice = unitPrice * qty;
+      
       if (itemType === 'full' && productDoc.stockFull < qty) {
         res.status(400).json({ detail: `Insufficient stock for full size of ${productDoc.name}` });
         return;
@@ -83,6 +63,10 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       const vendorEarnings = totalPrice - itemPlatformFee;
 
       subtotal += totalPrice;
+
+      if (productDoc.vendor) {
+        uniqueVendors.add(productDoc.vendor.toString());
+      }
 
       orderItems.push({
         product: productDoc._id,
@@ -141,6 +125,12 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
     const isCod = paymentMethod.toLowerCase().includes('cash') || paymentMethod.toLowerCase().includes('cod');
     const orderStatus = isCod ? 'PENDING' : 'PAID';
 
+    const vendorStatuses = Array.from(uniqueVendors).map(vId => ({
+      vendor: new mongoose.Types.ObjectId(vId),
+      status: orderStatus,
+      history: [{ status: orderStatus, changedAt: new Date() }]
+    }));
+
     const order = new Order({
       numericId,
       user: user._id,
@@ -153,6 +143,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       paymentMethod: paymentMethod || (isCod ? 'Cash on Delivery' : 'Tryvia Pay'),
       appliedCreditId: credit ? credit.numericId : apply_wallet_credit_id,
       shippingAddress,
+      vendorStatuses
     });
 
     await order.save();

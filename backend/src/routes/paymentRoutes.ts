@@ -116,6 +116,8 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
         quantity,
         unitPrice,
         totalPrice,
+        platformFee: 0,
+        vendorEarnings: 0
       });
     }
 
@@ -259,7 +261,7 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
       customer: {
         name: user.fullName || 'TryVia Member',
         email: user.email || '',
-        contact: user.phone || '',
+        contact: (user as any).phone || '',
       },
     });
   } catch (error: any) {
@@ -384,7 +386,7 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response): Pr
 // GET /api/v1/payments/checkout-session/:orderId - Hosted Live Razorpay Checkout Page for Native Mobile
 router.get('/checkout-session/:orderId', async (req: Request, res: Response): Promise<void> => {
   try {
-    const orderId = req.params.orderId;
+    const orderId = String(req.params.orderId);
     let query: any = {};
     if (!isNaN(Number(orderId))) {
       query.numericId = Number(orderId);

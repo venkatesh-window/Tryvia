@@ -10,19 +10,7 @@ interface WishlistState {
 }
 
 // Initial sample luxury wishlisted item
-const INITIAL_WISHLIST: Product[] = [
-  {
-    id: 3,
-    name: 'Advanced Night Repair',
-    full_price: 8900,
-    tester_price: 450,
-    stock_full: 80,
-    stock_tester: 200,
-    image_url: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?q=80&w=600&auto=format&fit=crop',
-    description: 'The #1 serum in the US. Experience the power of 7 serums in 1: line reduction, firmness, even tone, strengthening, hydration, radiance, and antioxidants.',
-    brand: { id: 3, name: 'Estee Lauder' },
-  },
-];
+const INITIAL_WISHLIST: Product[] = [];
 
 export const useWishlistStore = create<WishlistState>((set, get) => ({
   items: INITIAL_WISHLIST,

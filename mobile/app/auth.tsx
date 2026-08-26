@@ -120,9 +120,10 @@ export default function AuthScreen() {
       }
 
       await setAuthUser(result.token || 'clerk_token', {
-        id: 1,
+        id: result.user?.id || 1,
         email: email.trim(),
         fullName: result.user?.fullName || email.split('@')[0] || 'Member',
+        role: result.user?.role || 'CUSTOMER',
         phone: '',
         loyaltyTier: 'TRYVIA MEMBER',
         walletBalance: 350,
@@ -136,7 +137,9 @@ export default function AuthScreen() {
         },
       });
 
-      if (router.canGoBack()) {
+      if (result.user?.role === 'VENDOR') {
+        router.replace('/vendor' as any);
+      } else if (router.canGoBack()) {
         router.back();
       } else {
         router.replace('/(tabs)');
@@ -189,9 +192,10 @@ export default function AuthScreen() {
       }
 
       await setAuthUser(result.token || 'clerk_token', {
-        id: 1,
+        id: result.user?.id || 1,
         email: email.trim(),
         fullName: fullName.trim(),
+        role: result.user?.role || 'CUSTOMER',
         phone: '',
         loyaltyTier: 'TRYVIA MEMBER',
         walletBalance: 350,
@@ -205,7 +209,9 @@ export default function AuthScreen() {
         },
       });
 
-      if (router.canGoBack()) {
+      if (result.user?.role === 'VENDOR') {
+        router.replace('/vendor' as any);
+      } else if (router.canGoBack()) {
         router.back();
       } else {
         router.replace('/(tabs)');
@@ -236,9 +242,10 @@ export default function AuthScreen() {
 
       if (result.user) {
         await setAuthUser(result.token || 'google_oauth_token', {
-          id: 1,
+          id: result.user?.id || 1,
           email: result.user.email,
           fullName: result.user.fullName || 'Google Member',
+          role: result.user?.role || 'CUSTOMER',
           phone: '',
           loyaltyTier: 'TRYVIA MEMBER',
           walletBalance: 350,
@@ -248,11 +255,13 @@ export default function AuthScreen() {
           preferences: {
             whatsappUpdates: true,
             exclusiveInvites: true,
-            biometrics: true,
+            biometrics: false,
           },
         });
 
-        if (router.canGoBack()) {
+        if (result.user?.role === 'VENDOR') {
+          router.replace('/vendor' as any);
+        } else if (router.canGoBack()) {
           router.back();
         } else {
           router.replace('/(tabs)');

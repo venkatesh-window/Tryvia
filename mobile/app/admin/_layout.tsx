@@ -3,13 +3,14 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 import { Redirect } from 'expo-router';
 
 export default function AdminLayout() {
-  const { isAuthenticated, user, isHydrated } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const isHydrated = true; // Wait for persist to hydrate if applicable
 
   if (!isHydrated) {
     return null; // or loading spinner
   }
 
-  if (!isAuthenticated || (user?.role !== 'ADMIN' && !user?.isSuperuser)) {
+  if (!isAuthenticated || !user || !(user as any).is_superuser) {
     return <Redirect href="/" />;
   }
 

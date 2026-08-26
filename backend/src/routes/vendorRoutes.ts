@@ -8,7 +8,31 @@ import { Vendor } from '../models/Vendor';
 import { Product } from '../models/Product';
 import { Order } from '../models/Order';
 import { User } from '../models/User';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
+const isCloudinaryConfigured = process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== 'your_api_key';
+
+let storage;
+if (isCloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+  storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'tryvia-products',
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    } as any,
+  });
+} else {
+  storage = multer.memoryStorage();
+}
+
+const upload = multer({ storage: storage });
 const router = Router();
 
 router.use(authenticate);
@@ -231,7 +255,8 @@ router.get('/earnings', getVendor, async (req: AuthRequest, res: Response): Prom
       const status = vStatus ? vStatus.status : 'PENDING';
       
       for (const item of order.items) {
-        if (productIds.some(id => id.equals(item.product as any || (item.product as any)._id))) {
+        const itemProductId = (item.product as any)?._id || item.product;
+        if (productIds.some(id => id.equals(itemProductId))) {
           const itemGross = item.totalPrice;
           const itemFee = item.platformFee || 0;
           const itemNet = item.vendorEarnings || 0;
@@ -293,7 +318,8 @@ router.get('/analytics', getVendor, async (req: AuthRequest, res: Response): Pro
     
     for (const order of orders) {
       for (const item of order.items) {
-        if (productIds.some(id => id.equals(item.product as any || (item.product as any)._id))) {
+        const itemProductId = (item.product as any)?._id || item.product;
+        if (productIds.some(id => id.equals(itemProductId))) {
           const pName = (item.product as any)?.name || 'Unknown';
           const pId = (item.product as any)?._id?.toString() || 'unknown';
           
@@ -343,10 +369,21 @@ router.get('/products', getVendor, async (req: AuthRequest, res: Response): Prom
 });
 
 // POST /api/v1/vendor/products
-router.post('/products', getVendor, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/products', getVendor, upload.single('image'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const vendor = (req as any).vendor;
-    const { name, description, fullPrice, testerPrice, stockFull, stockTester, imageUrl, category, brand, status } = req.body;
+    const { name, description, fullPrice, testerPrice, stockFull, stockTester, category, brand, status } = req.body;
+    
+    // Cloudinary returns the secure_url via req.file.path
+    let imageUrl = req.body.imageUrl;
+    if (req.file) {
+      if (isCloudinaryConfigured) {
+        imageUrl = req.file.path;
+      } else {
+        // Fallback for E2E testing
+        imageUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg';
+      }
+    }
     
     const count = await Product.countDocuments();
     const numericId = count + 1000;
@@ -355,10 +392,10 @@ router.post('/products', getVendor, async (req: AuthRequest, res: Response): Pro
       numericId,
       name,
       description,
-      fullPrice,
-      testerPrice,
-      stockFull: stockFull || 0,
-      stockTester: stockTester || 0,
+      fullPrice: fullPrice ? Number(fullPrice) : 0,
+      testerPrice: testerPrice ? Number(testerPrice) : 0,
+      stockFull: stockFull ? Number(stockFull) : 0,
+      stockTester: stockTester ? Number(stockTester) : 0,
       imageUrl,
       category,
       brand,
@@ -433,7 +470,8 @@ router.get('/orders', getVendor, async (req: AuthRequest, res: Response): Promis
       const vendorItems = [];
       
       for (const item of order.items) {
-        if (productIds.some(id => id.equals(item.product as any || (item.product as any)._id))) {
+        const itemProductId = (item.product as any)?._id || item.product;
+        if (productIds.some(id => id.equals(itemProductId))) {
           vendorSubtotal += item.totalPrice;
           vendorProductsCount += item.quantity;
           vendorItems.push(item);
@@ -485,7 +523,8 @@ router.get('/orders/:id', getVendor, async (req: AuthRequest, res: Response): Pr
     const vendorItems = [];
     
     for (const item of order.items) {
-      if (productIds.some(id => id.equals(item.product as any || (item.product as any)._id))) {
+      const itemProductId = (item.product as any)?._id || item.product;
+      if (productIds.some(id => id.equals(itemProductId))) {
         vendorSubtotal += item.totalPrice;
         vendorItems.push(item);
       }

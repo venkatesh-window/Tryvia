@@ -27,7 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-import { getFallbackProduct } from '../../src/constants/products';
+
 
 export default function ProductDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,16 +41,10 @@ export default function ProductDetailsScreen() {
   const [selectedSize, setSelectedSize] = useState<'full' | 'tester'>('full');
   const [eligibleCredit, setEligibleCredit] = useState<WalletCredit | null>(null);
 
-  const fallback = getFallbackProduct(id);
-
-  const { data: fetchedProduct } = useQuery({
+  const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
-    queryFn: () => productService.getProductById(id || 1),
-    initialData: fallback,
-    enabled: !!id,
+    queryFn: () => productService.getProductById(id as string),
   });
-
-  const product = fetchedProduct || fallback;
 
   useEffect(() => {
     if (product?.id && isAuthenticated) {

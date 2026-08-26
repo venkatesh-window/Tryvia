@@ -34,41 +34,29 @@ export default function VendorLoginScreen() {
     setLoading(true);
 
     try {
-      // Mock Authentication for Phase 1
-      setTimeout(async () => {
-        if (email.trim().toLowerCase() === 'vendor@tryvia.com' && password === 'password') {
-          await setAuthUser('mock_vendor_token', {
-            id: 2,
-            email: 'vendor@tryvia.com',
-            fullName: 'Luxury Beauty Vendor',
-            phone: '+91 98401 23456',
-            loyaltyTier: 'BRONZE',
-            walletBalance: 0,
-            points: 0,
-            tryviaStars: 0,
-            address: {
-              fullName: 'Vendor Store',
-              street: '123 Beauty Lane',
-              city: 'Mumbai',
-              state: 'Maharashtra',
-              pincode: '400001',
-              phone: '+91 98401 23456',
-            },
-            preferences: {
-              whatsappUpdates: false,
-              exclusiveInvites: false,
-              biometrics: false,
-            },
-          });
-          
-          router.replace('/vendor/dashboard');
-        } else {
-          setError('Invalid vendor credentials. (Use vendor@tryvia.com / password)');
-          setLoading(false);
-        }
-      }, 1000);
+      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Invalid credentials');
+      }
+
+      if (data.user?.role !== 'VENDOR') {
+        throw new Error('This account is not authorized as a vendor.');
+      }
+
+      await setAuthUser(data.token, data.user);
+      router.replace('/vendor/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Unable to sign in.');
+    } finally {
       setLoading(false);
     }
   };

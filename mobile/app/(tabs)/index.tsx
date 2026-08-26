@@ -60,7 +60,6 @@ const HERO_BANNERS = [
   },
 ];
 
-import { INITIAL_PRODUCTS } from '../../src/constants/products';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -80,7 +79,7 @@ export default function HomeScreen() {
     queryFn: () => productService.getProducts(14),
   });
 
-  const products = (fetchedProducts && fetchedProducts.length > 0) ? fetchedProducts : INITIAL_PRODUCTS;
+  const products = fetchedProducts || [];
 
   const horizontalPadding = 20;
   const gap = 12;
