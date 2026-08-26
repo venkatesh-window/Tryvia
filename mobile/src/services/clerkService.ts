@@ -208,13 +208,15 @@ export class ClerkService {
 
     // 3. Fallback for test account
     if (cleanPassword.length >= 6) {
+      const isVendor = cleanEmail.includes('vendor');
       return {
         status: 'complete',
         token: 'tryvia_member_token',
         user: {
-          id: 'member_1',
+          id: isVendor ? 'vendor_1' : 'member_1',
           email: cleanEmail,
           fullName: cleanEmail.split('@')[0].toUpperCase(),
+          role: isVendor ? 'VENDOR' : 'CUSTOMER',
         },
       };
     }
@@ -228,7 +230,7 @@ export class ClerkService {
   /**
    * Custom Sign Up with Email & Password
    */
-  static async signUp(email: string, password: string, fullName: string): Promise<ClerkAuthResult> {
+  static async signUp(email: string, password: string, fullName: string, role: 'CUSTOMER' | 'VENDOR' = 'CUSTOMER'): Promise<ClerkAuthResult> {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
     const cleanName = fullName.trim();
@@ -250,6 +252,7 @@ export class ClerkService {
           password: cleanPassword,
           first_name: firstName,
           last_name: lastName,
+          public_metadata: { role } // Store role in Clerk if using Clerk
         }),
       });
 
@@ -272,7 +275,7 @@ export class ClerkService {
         return {
           status: 'complete',
           token: 'clerk_session_token',
-          user: { id: signUpId, email: cleanEmail, fullName: cleanName },
+          user: { id: signUpId, email: cleanEmail, fullName: cleanName, role },
         };
       }
     } catch (clerkErr) {
@@ -285,6 +288,7 @@ export class ClerkService {
         email: cleanEmail,
         password: cleanPassword,
         full_name: cleanName,
+        role: role
       });
 
       if (regRes.access_token) {
@@ -311,6 +315,7 @@ export class ClerkService {
         id: 'user_new_' + Date.now(),
         email: cleanEmail,
         fullName: cleanName,
+        role: role
       },
     };
   }

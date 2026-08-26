@@ -34,10 +34,20 @@ app.use(express.urlencoded({ extended: true }));
 import { setup } from './test_setup';
 import { seed } from './seed';
 
+import { User } from './models/User';
+
 // Connect to MongoDB
 connectDB().then(async () => {
-  await seed();
-  await setup();
+  const userCount = await User.countDocuments();
+  if (userCount === 0) {
+    console.log('Database is empty. Running initial seed and setup...');
+    await seed();
+    await setup();
+  } else {
+    console.log(`Database already has data (${userCount} users). Skipping initial seed.`);
+    // Still run setup to ensure test users exist (setup uses upsert, which is safe)
+    await setup();
+  }
 });
 
 // API Routes

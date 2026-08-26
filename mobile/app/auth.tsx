@@ -55,6 +55,7 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signUpRole, setSignUpRole] = useState<'CUSTOMER' | 'VENDOR'>('CUSTOMER');
 
   // Verification modal state
   const [isVerifying, setIsVerifying] = useState(false);
@@ -176,7 +177,7 @@ export default function AuthScreen() {
     setLoading(true);
 
     try {
-      const result = await ClerkService.signUp(email.trim(), password.trim(), fullName.trim());
+      const result = await ClerkService.signUp(email.trim(), password.trim(), fullName.trim(), signUpRole);
 
       if (result.status === 'failed') {
         setError(result.error || 'Unable to create account');
@@ -486,6 +487,37 @@ export default function AuthScreen() {
             </View>
           </Animated.View>
 
+          {/* Role Selection (Smooth Slide Open / Collapse) */}
+          <Animated.View style={[styles.inputGroup, signupFieldStyle, { height: signupFieldsProgress.value * 70 }]}>
+            <Typography style={styles.inputLabel}>ACCOUNT TYPE</Typography>
+            <View style={styles.roleSwitcherTrack}>
+              <TouchableOpacity
+                style={[styles.roleTab, signUpRole === 'CUSTOMER' && styles.roleTabActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  setSignUpRole('CUSTOMER');
+                }}
+              >
+                <Typography style={[styles.roleText, signUpRole === 'CUSTOMER' && styles.roleTextActive]}>
+                  Shopper
+                </Typography>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.roleTab, signUpRole === 'VENDOR' && styles.roleTabActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  setSignUpRole('VENDOR');
+                }}
+              >
+                <Typography style={[styles.roleText, signUpRole === 'VENDOR' && styles.roleTextActive]}>
+                  Vendor
+                </Typography>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
           {/* Primary Action Button */}
           <TouchableOpacity
             style={styles.submitBtn}
@@ -743,6 +775,40 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Inter_500Medium',
     fontSize: 14,
+    color: '#1A1918',
+  },
+  roleSwitcherTrack: {
+    flexDirection: 'row',
+    backgroundColor: '#FAF8F5',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+    height: 48,
+  },
+  roleTab: {
+    flex: 1,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roleTabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#ECE7E1',
+  },
+  roleText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#8E8A85',
+  },
+  roleTextActive: {
+    fontFamily: 'Inter_700Bold',
     color: '#1A1918',
   },
   eyeBtn: {

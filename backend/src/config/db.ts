@@ -5,11 +5,19 @@ let mongoServer: MongoMemoryServer | null = null;
 
 export const connectDB = async (): Promise<void> => {
   try {
-    mongoServer = await MongoMemoryServer.create();
-    const mongoURI = mongoServer.getUri();
-
-    const conn = await mongoose.connect(mongoURI);
-    console.log(`✅ MongoDB Connected (In-Memory): ${conn.connection.host}/${conn.connection.name}`);
+    let mongoURI = process.env.MONGODB_URI;
+    
+    if (mongoURI && !mongoURI.includes('localhost')) {
+      // Connect to Atlas or external DB
+      const conn = await mongoose.connect(mongoURI);
+      console.log(`✅ MongoDB Connected (Atlas): ${conn.connection.host}/${conn.connection.name}`);
+    } else {
+      // Fallback to in-memory for pure local testing without credentials
+      mongoServer = await MongoMemoryServer.create();
+      mongoURI = mongoServer.getUri();
+      const conn = await mongoose.connect(mongoURI);
+      console.log(`✅ MongoDB Connected (In-Memory Fallback): ${conn.connection.host}/${conn.connection.name}`);
+    }
   } catch (error: any) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
   }
