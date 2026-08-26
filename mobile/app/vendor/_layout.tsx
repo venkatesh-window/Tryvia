@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, usePathname, Redirect } from 'expo-router';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { Typography } from '../../src/components/ui/Typography';
 import { LayoutDashboard, Package, ShoppingBag, Store, Settings, LogOut, User } from 'lucide-react-native';
@@ -8,28 +8,22 @@ import { LayoutDashboard, Package, ShoppingBag, Store, Settings, LogOut, User } 
 export default function VendorLayout() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
-  const segments = useSegments();
+  const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isLoginRoute = pathname.includes('/vendor/login');
 
   // In a real implementation, we would check if the user is a vendor
   // For Phase 1, we just ensure they are logged in or redirect to /vendor/login
-  useEffect(() => {
-    if (!isAuthenticated && segments[1] !== 'login') {
-      router.replace('/vendor/login');
-    }
-  }, [isAuthenticated, segments]);
+  if (!isAuthenticated && !isLoginRoute) {
+    return <Redirect href="/vendor/login" />;
+  }
 
-  if (!isAuthenticated && segments[1] !== 'login') {
+  if (!isAuthenticated && !isLoginRoute) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#CB6D73" />
       </View>
     );
-  }
-
-  // If on login page, don't show the sidebar layout
-  if (segments[1] === 'login') {
-    return <Stack screenOptions={{ headerShown: false }} />;
   }
 
   const navigateTo = (path: string) => {
@@ -43,53 +37,55 @@ export default function VendorLayout() {
     { name: 'Store Profile', icon: Store, path: '/vendor/store' },
   ];
 
-  const currentRoute = `/vendor/${segments[1]}`;
+  const currentRoute = pathname;
 
   return (
     <View style={styles.container}>
       {/* Sidebar for Desktop / Tablet */}
-      <View style={styles.sidebar}>
-        <View style={styles.sidebarHeader}>
-          <Typography style={styles.brandTitle}>TryVia</Typography>
-          <Typography style={styles.brandSubtitle}>VENDOR PORTAL</Typography>
-        </View>
+      {!isLoginRoute && (
+        <View style={styles.sidebar}>
+          <View style={styles.sidebarHeader}>
+            <Typography style={styles.brandTitle}>TryVia</Typography>
+            <Typography style={styles.brandSubtitle}>VENDOR PORTAL</Typography>
+          </View>
 
-        <View style={styles.navMenu}>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentRoute === item.path;
-            return (
-              <TouchableOpacity
-                key={item.name}
-                style={[styles.navItem, isActive && styles.navItemActive]}
-                onPress={() => navigateTo(item.path)}
-              >
-                <Icon size={20} color={isActive ? '#CB6D73' : '#8E8A85'} />
-                <Typography style={[styles.navText, isActive && styles.navTextActive]}>
-                  {item.name}
-                </Typography>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+          <View style={styles.navMenu}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentRoute === item.path;
+              return (
+                <TouchableOpacity
+                  key={item.name}
+                  style={[styles.navItem, isActive && styles.navItemActive]}
+                  onPress={() => navigateTo(item.path)}
+                >
+                  <Icon size={20} color={isActive ? '#CB6D73' : '#8E8A85'} />
+                  <Typography style={[styles.navText, isActive && styles.navTextActive]}>
+                    {item.name}
+                  </Typography>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        <View style={styles.sidebarFooter}>
-          <TouchableOpacity style={styles.navItem}>
-            <Settings size={20} color="#8E8A85" />
-            <Typography style={styles.navText}>Settings</Typography>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => {
-            // implement logout in Phase 2
-            router.replace('/');
-          }}>
-            <LogOut size={20} color="#8E8A85" />
-            <Typography style={styles.navText}>Logout</Typography>
-          </TouchableOpacity>
+          <View style={styles.sidebarFooter}>
+            <TouchableOpacity style={styles.navItem}>
+              <Settings size={20} color="#8E8A85" />
+              <Typography style={styles.navText}>Settings</Typography>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} onPress={() => {
+              // implement logout in Phase 2
+              router.replace('/');
+            }}>
+              <LogOut size={20} color="#8E8A85" />
+              <Typography style={styles.navText}>Logout</Typography>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Main Content Area */}
-      <View style={styles.mainContent}>
+      <View style={[styles.mainContent, isLoginRoute && { backgroundColor: '#FAF8F5' }]}>
         <Stack screenOptions={{ headerShown: false }} />
       </View>
     </View>

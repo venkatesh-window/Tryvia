@@ -9,7 +9,7 @@ import {
   Settings, 
   Package, 
   Heart, 
-  CreditCard, 
+  CreditCard,
   ChevronRight, 
   LogOut,
   Sparkles,
