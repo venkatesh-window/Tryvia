@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Stack, useRootNavigationState, ErrorBoundary } from 'expo-router';
+import { useEffect, useState, useRef } from 'react';
+import { Stack, ErrorBoundary } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,11 +18,12 @@ import {
   Inter_300Light,
   Inter_400Regular, 
   Inter_500Medium, 
-  Inter_600SemiBold,
+  Inter_600SemiBold, 
   Inter_700Bold,
   Inter_800ExtraBold
 } from '@expo-google-fonts/inter';
 
+// Prevent native splash screen from auto-hiding during initial JS bundle evaluation
 SplashScreen.preventAutoHideAsync().catch(() => {});
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
@@ -37,8 +38,10 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { isLoading, restoreToken } = useAuthStore();
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const isSplashHidden = useRef(false);
 
-  let [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     CormorantGaramond_300Light,
     CormorantGaramond_400Regular,
     CormorantGaramond_500Medium,
@@ -54,18 +57,39 @@ function RootLayoutNav() {
     Inter_800ExtraBold,
   });
 
+  // Restore authentication token once on initial mount
   useEffect(() => {
-    restoreToken();
+    let isMounted = true;
+    restoreToken().finally(() => {
+      if (isMounted) {
+        setAuthInitialized(true);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Instantly dismiss splash screen as soon as fonts are loaded so video/landing starts immediately
-  useEffect(() => {
-    if (fontsLoaded && !isLoading) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [fontsLoaded, isLoading]);
+  const appIsReady = (fontsLoaded || fontError != null) && authInitialized && !isLoading;
 
-  if (!fontsLoaded || isLoading) {
+  // Single controlled, idempotent splash screen dismissal owned exclusively by root layout
+  useEffect(() => {
+    if (!appIsReady || isSplashHidden.current) return;
+
+    isSplashHidden.current = true;
+
+    async function hideSplash() {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (err) {
+        // Native splash screen may already be dismissed or unavailable on current view controller
+      }
+    }
+
+    hideSplash();
+  }, [appIsReady]);
+
+  if (!appIsReady) {
     return <View style={styles.loadingContainer} />;
   }
 

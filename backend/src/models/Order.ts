@@ -23,6 +23,9 @@ export interface IOrder extends Document {
   paymentMethod?: string;
   appliedCreditId?: number;
   shippingAddress?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   createdAt: Date;
 }
 
@@ -50,6 +53,9 @@ const OrderSchema = new Schema<IOrder>(
     paymentMethod: { type: String },
     appliedCreditId: { type: Number },
     shippingAddress: { type: String },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String },
+    razorpaySignature: { type: String },
   },
   {
     timestamps: true,
@@ -61,6 +67,9 @@ const OrderSchema = new Schema<IOrder>(
         ret.total_amount = ret.totalAmount;
         ret.payment_method = ret.paymentMethod;
         ret.shipping_address = ret.shippingAddress;
+        ret.razorpay_order_id = ret.razorpayOrderId;
+        ret.razorpay_payment_id = ret.razorpayPaymentId;
+        ret.razorpay_signature = ret.razorpaySignature;
         ret.created_at = ret.createdAt;
         delete ret.__v;
         return ret;
