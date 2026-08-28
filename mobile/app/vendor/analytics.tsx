@@ -1,30 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { TrendingUp, PackageSearch, Award, Droplets } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 export default function VendorAnalyticsScreen() {
-  const { token } = useAuthStore();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/analytics', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await response.json();
-        setData(json);
-      } catch (e) {
+        const response = await apiClient.get('/vendor/analytics');
+        setData(response.data);
+      } catch (e: any) {
+        if (e.response?.status === 404 && (e.response?.data?.detail?.includes('Vendor account not found') || e.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
     fetchAnalytics();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return (
@@ -116,15 +118,15 @@ export default function VendorAnalyticsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { padding: 24, paddingBottom: 16 },
+  header: { padding: 16, paddingBottom: 16 },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 28, color: '#1A1918', marginBottom: 4 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85' },
-  metricsGrid: { flexDirection: 'row', paddingHorizontal: 24, gap: 16, marginBottom: 24 },
-  metricCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#ECE7E1' },
-  metricIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FAF8F5', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  metricsGrid: { flexDirection: 'column', paddingHorizontal: 16, gap: 12, marginBottom: 24 },
+  metricCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#ECE7E1' },
+  metricIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FAF8F5', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   metricLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, color: '#8E8A85', letterSpacing: 1.2, marginBottom: 8 },
-  metricValue: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 24, color: '#1A1918' },
-  card: { backgroundColor: '#FFFFFF', marginHorizontal: 24, borderRadius: 16, borderWidth: 1, borderColor: '#ECE7E1', padding: 24, marginBottom: 24 },
+  metricValue: { fontFamily: 'Inter_700Bold', fontSize: 24, color: '#1A1918' },
+  card: { backgroundColor: '#FFFFFF', marginHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: '#ECE7E1', padding: 16, marginBottom: 24 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
   cardTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#1A1918' },
   productRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F8F6F3' },

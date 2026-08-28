@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
 import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
 
 export default function VendorApplyScreen() {
   const router = useRouter();
-  const { token, user } = useAuthStore();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -25,23 +26,18 @@ export default function VendorApplyScreen() {
     // Check if already applied
     const checkStatus = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/application', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setStatus(data.status);
-          if (data.status === 'APPROVED') {
-            router.replace('/vendor/dashboard');
-          }
+        const response = await apiClient.get('/vendor/application');
+        const data = response.data;
+        setStatus(data.status);
+        if (data.status === 'APPROVED' || data.status === 'PENDING') {
+          router.replace('/vendor/dashboard');
         }
       } catch (e) {
         // Expected to fail if vendor doesn't exist yet
       }
     };
     checkStatus();
-  }, [token]);
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.storeName || !form.email || !form.slug) {
@@ -53,24 +49,10 @@ export default function VendorApplyScreen() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/vendor/apply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(form)
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to submit application');
-      }
-      
+      await apiClient.post('/vendor/apply', form);
       setStatus('PENDING');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -211,8 +193,8 @@ const styles = StyleSheet.create({
   header: { marginBottom: 24 },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 28, color: '#1A1918', marginBottom: 8 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85', lineHeight: 20 },
-  scrollContent: { padding: 24, paddingBottom: 40, gap: 20 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: '#ECE7E1' },
+  scrollContent: { padding: 16, paddingBottom: 40, gap: 16 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#ECE7E1' },
   inputGroup: { marginBottom: 16 },
   inputLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, color: '#8E8A85', letterSpacing: 1.2, marginBottom: 8 },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF8F5', borderRadius: 12, borderWidth: 1, borderColor: '#ECE7E1', paddingHorizontal: 14, height: 48 },

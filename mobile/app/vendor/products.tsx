@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, TextInput } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { Search, Plus, Filter } from 'lucide-react-native';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { Search, Plus, Filter, MoreVertical } from 'lucide-react-native';
+import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 
 export default function VendorProductsScreen() {
   const router = useRouter();
-  const { token } = useAuthStore();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -17,27 +16,21 @@ export default function VendorProductsScreen() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/products', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
-        
-        const json = await response.json();
-        setProducts(json);
+        const response = await apiClient.get('/vendor/products');
+        setProducts(response.data);
       } catch (err: any) {
-        setError(err.message);
+        if (err.response?.status === 404 && (err.response?.data?.detail?.includes('Vendor account not found') || err.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
+        setError(err.response?.data?.detail || err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     };
     
     fetchProducts();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return (
@@ -106,53 +99,50 @@ export default function VendorProductsScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.tableCard}>
-            <View style={styles.tableHeaderRow}>
-              <Typography style={[styles.tableHeaderCell, { flex: 4 }]}>Product</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Category</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Price</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Stock</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Status</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 1, textAlign: 'right' }]}>Action</Typography>
-            </View>
-            
+          <View style={styles.productsList}>
             {filteredProducts.map((product, idx) => (
-              <View key={idx} style={styles.tableRow}>
-                <View style={{ flex: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.productCard}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/vendor/products/${product._id}` as any)}
+              >
+                <View style={styles.productImageContainer}>
                   {product.imageUrl ? (
-                    <Image source={{ uri: product.imageUrl }} style={styles.productImagePlaceholder} />
+                    <Image source={{ uri: product.imageUrl }} style={styles.productImage} />
                   ) : (
                     <View style={styles.productImagePlaceholder} />
                   )}
-                  <Typography style={styles.productName}>{product.name}</Typography>
                 </View>
-                <Typography style={[styles.tableCell, { flex: 2, color: '#8E8A85' }]}>
-                  {product.category?.name || 'Uncategorized'}
-                </Typography>
-                <Typography style={[styles.tableCell, { flex: 2 }]}>${product.fullPrice.toFixed(2)}</Typography>
-                <Typography style={[styles.tableCell, { flex: 2 }]}>{product.stockFull}</Typography>
-                <View style={{ flex: 2, justifyContent: 'center' }}>
-                  <View style={[
-                    styles.statusBadge,
-                    product.status === 'ACTIVE' ? styles.statusActive : 
-                    product.status === 'OUT_OF_STOCK' ? styles.statusOutOfStock : styles.statusInactive
-                  ]}>
-                    <Typography style={[
-                      styles.statusText,
-                      product.status === 'ACTIVE' ? styles.statusTextActive : 
-                      product.status === 'OUT_OF_STOCK' ? styles.statusTextOutOfStock : styles.statusTextInactive
+                
+                <View style={styles.productInfo}>
+                  <View style={styles.productHeader}>
+                    <Typography style={styles.productName} numberOfLines={2}>{product.name}</Typography>
+                    <View style={[
+                      styles.statusBadge,
+                      product.status === 'ACTIVE' ? styles.statusActive : 
+                      product.status === 'OUT_OF_STOCK' ? styles.statusOutOfStock : styles.statusInactive
                     ]}>
-                      {product.status || 'ACTIVE'}
-                    </Typography>
+                      <Typography style={[
+                        styles.statusText,
+                        product.status === 'ACTIVE' ? styles.statusTextActive : 
+                        product.status === 'OUT_OF_STOCK' ? styles.statusTextOutOfStock : styles.statusTextInactive
+                      ]}>
+                        {product.status || 'ACTIVE'}
+                      </Typography>
+                    </View>
+                  </View>
+                  
+                  <Typography style={styles.productCategory}>
+                    {product.category?.name || 'Uncategorized'}
+                  </Typography>
+                  
+                  <View style={styles.productFooter}>
+                    <Typography style={styles.productPrice}>${product.fullPrice.toFixed(2)}</Typography>
+                    <Typography style={styles.productStock}>Stock: {product.stockFull}</Typography>
                   </View>
                 </View>
-                <TouchableOpacity 
-                  style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}
-                  onPress={() => router.push(`/vendor/products/${product._id}` as any)}
-                >
-                  <Typography style={styles.editText}>Edit</Typography>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -169,7 +159,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 24,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
@@ -266,51 +256,73 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  tableCard: {
+  productsList: {
+    gap: 16,
+  },
+  productCard: {
+    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#ECE7E1',
     overflow: 'hidden',
+    padding: 12,
+    gap: 16,
   },
-  tableHeaderRow: {
-    flexDirection: 'row',
+  productImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
     backgroundColor: '#F8F6F3',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE7E1',
+    overflow: 'hidden',
   },
-  tableHeaderCell: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-    color: '#8E8A85',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE7E1',
-  },
-  tableCell: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: '#1A1918',
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   productImagePlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 6,
-    backgroundColor: '#F0ECE6',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#ECE7E1',
+  },
+  productInfo: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
   },
   productName: {
+    flex: 1,
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
+    fontSize: 15,
     color: '#1A1918',
+    lineHeight: 20,
+  },
+  productCategory: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#8E8A85',
+    marginTop: 4,
+  },
+  productFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  productPrice: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: '#1A1918',
+  },
+  productStock: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#8E8A85',
   },
   statusBadge: {
     paddingHorizontal: 10,

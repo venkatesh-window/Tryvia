@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, TextInput } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { Search, Filter, Download, ShoppingBag } from 'lucide-react-native';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { Search, Filter, Download, ShoppingBag, ChevronRight } from 'lucide-react-native';
+import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
 
 export default function VendorOrdersScreen() {
   const router = useRouter();
-  const { token } = useAuthStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -16,27 +15,21 @@ export default function VendorOrdersScreen() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch orders');
-        }
-        
-        const json = await response.json();
-        setOrders(json);
+        const response = await apiClient.get('/vendor/orders');
+        setOrders(response.data);
       } catch (err: any) {
-        setError(err.message);
+        if (err.response?.status === 404 && (err.response?.data?.detail?.includes('Vendor account not found') || err.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
+        setError(err.response?.data?.detail || err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     };
     
     fetchOrders();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return (
@@ -95,27 +88,19 @@ export default function VendorOrdersScreen() {
             <Typography style={styles.emptySubtext}>Orders containing your products will appear here.</Typography>
           </View>
         ) : (
-          <View style={styles.tableCard}>
-            <View style={styles.tableHeaderRow}>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Order ID</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Date</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 3 }]}>Customer</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 1 }]}>Items</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Total</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Status</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 1, textAlign: 'right' }]}>Action</Typography>
-            </View>
-            
+          <View style={styles.ordersList}>
             {filteredOrders.map((order, idx) => (
-              <View key={idx} style={styles.tableRow}>
-                <Typography style={[styles.tableCell, { flex: 2, fontFamily: 'Inter_600SemiBold' }]}>{order.id}</Typography>
-                <Typography style={[styles.tableCell, { flex: 2, color: '#8E8A85' }]}>
-                  {new Date(order.date).toLocaleDateString()}
-                </Typography>
-                <Typography style={[styles.tableCell, { flex: 3 }]}>{order.customer}</Typography>
-                <Typography style={[styles.tableCell, { flex: 1 }]}>{order.products}</Typography>
-                <Typography style={[styles.tableCell, { flex: 2 }]}>${order.total.toFixed(2)}</Typography>
-                <View style={{ flex: 2, justifyContent: 'center' }}>
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.orderCard}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/vendor/orders/${order._id}` as any)}
+              >
+                <View style={styles.orderHeader}>
+                  <View>
+                    <Typography style={styles.orderId}>Order #{order.id}</Typography>
+                    <Typography style={styles.orderDate}>{new Date(order.date).toLocaleDateString()}</Typography>
+                  </View>
                   <View style={[
                     styles.statusBadge,
                     order.status === 'PENDING' || order.status === 'PAID' ? styles.statusPending : 
@@ -136,13 +121,24 @@ export default function VendorOrdersScreen() {
                     </Typography>
                   </View>
                 </View>
-                <TouchableOpacity 
-                  style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}
-                  onPress={() => router.push(`/vendor/orders/${order._id}` as any)}
-                >
-                  <Typography style={styles.viewText}>View</Typography>
-                </TouchableOpacity>
-              </View>
+                
+                <View style={styles.orderDivider} />
+                
+                <View style={styles.orderBody}>
+                  <View style={styles.orderDetail}>
+                    <Typography style={styles.orderLabel}>Customer</Typography>
+                    <Typography style={styles.orderValue}>{order.customer}</Typography>
+                  </View>
+                  <View style={styles.orderDetail}>
+                    <Typography style={styles.orderLabel}>Items</Typography>
+                    <Typography style={styles.orderValue}>{order.products}</Typography>
+                  </View>
+                  <View style={styles.orderDetail}>
+                    <Typography style={styles.orderLabel}>Total</Typography>
+                    <Typography style={styles.orderAmount}>${order.total.toFixed(2)}</Typography>
+                  </View>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -159,7 +155,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 24,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
@@ -259,40 +255,61 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  tableCard: {
+  ordersList: {
+    gap: 12,
+  },
+  orderCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#ECE7E1',
-    overflow: 'hidden',
+    padding: 16,
   },
-  tableHeaderRow: {
+  orderHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8F6F3',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE7E1',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  tableHeaderCell: {
+  orderId: {
     fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+    color: '#1A1918',
+    marginBottom: 2,
+  },
+  orderDate: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: '#8E8A85',
+  },
+  orderDivider: {
+    height: 1,
+    backgroundColor: '#ECE7E1',
+    marginBottom: 12,
+  },
+  orderBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  orderDetail: {
+    gap: 4,
+  },
+  orderLabel: {
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     color: '#8E8A85',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE7E1',
-  },
-  tableCell: {
+  orderValue: {
     fontFamily: 'Inter_500Medium',
     fontSize: 14,
     color: '#1A1918',
+  },
+  orderAmount: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    color: '#CB6D73',
   },
   statusBadge: {
     paddingHorizontal: 10,

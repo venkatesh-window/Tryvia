@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { Bell, Package, Wallet, ArrowLeftRight, CheckCircle2 } from 'lucide-react-native';
 
 export default function VendorNotificationsScreen() {
-  const { token } = useAuthStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/notifications', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const json = await response.json();
-      setNotifications(json);
+      const response = await apiClient.get('/notifications');
+      setNotifications(response.data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -25,14 +21,11 @@ export default function VendorNotificationsScreen() {
 
   useEffect(() => {
     fetchNotifications();
-  }, [token]);
+  }, []);
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/notifications/${id}/read`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await apiClient.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
     } catch (e) {
       console.error(e);
@@ -41,10 +34,7 @@ export default function VendorNotificationsScreen() {
 
   const markAllRead = async () => {
     try {
-      await fetch('http://localhost:8000/api/v1/notifications/mark-all-read', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await apiClient.post('/notifications/mark-all-read');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (e) {
       console.error(e);
@@ -114,12 +104,12 @@ export default function VendorNotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 24, paddingBottom: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 16, paddingBottom: 16 },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 28, color: '#1A1918', marginBottom: 4 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85' },
   markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#EBE6E0', borderRadius: 20 },
   markAllText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#8E8A85' },
-  list: { paddingHorizontal: 24, paddingBottom: 40 },
+  list: { paddingHorizontal: 16, paddingBottom: 40 },
   notificationCard: { flexDirection: 'row', gap: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: '#ECE7E1' },
   unreadCard: { backgroundColor: '#FFFAF0', borderColor: '#F5E4C3' },
   iconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FAF8F5', alignItems: 'center', justifyContent: 'center' },

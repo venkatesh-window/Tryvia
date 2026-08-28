@@ -3,6 +3,7 @@ import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Typography } from '../src/components/ui/Typography';
+import { useAuthStore } from '../src/store/useAuthStore';
 import Animated, { 
   FadeIn, 
   FadeInUp, 
@@ -19,6 +20,7 @@ import { Sparkles, Crown } from 'lucide-react-native';
 
 export default function Index() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
   const logoScale = useSharedValue(0.8);
   const auraOpacity = useSharedValue(0);
 
@@ -33,7 +35,15 @@ export default function Index() {
 
     // Seamless cinematic dissolve into Home
     const timer = setTimeout(() => {
-      router.replace('/(tabs)');
+      if (isAuthenticated) {
+        if (user?.role === 'VENDOR') {
+          router.replace('/vendor' as any);
+        } else {
+          router.replace('/(tabs)');
+        }
+      } else {
+        router.replace('/(tabs)');
+      }
     }, 2000);
 
     return () => clearTimeout(timer);

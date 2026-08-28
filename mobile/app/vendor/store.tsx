@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { Save, Store, Lock, User, FileText, Wallet } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 export default function VendorStoreScreen() {
-  const { token } = useAuthStore();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +39,8 @@ export default function VendorStoreScreen() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/profile', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const response = await apiClient.get('/vendor/profile');
+        const data = response.data;
         setForm({
           storeName: data.storeName || '',
           description: data.description || '',
@@ -57,14 +56,18 @@ export default function VendorStoreScreen() {
             ifsc: data.payoutAccount?.ifsc || ''
           }
         });
-      } catch (e) {
+      } catch (e: any) {
+        if (e.response?.status === 404 && (e.response?.data?.detail?.includes('Vendor account not found') || e.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
     fetchProfile();
-  }, [token]);
+  }, []);
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -72,22 +75,12 @@ export default function VendorStoreScreen() {
     setSuccessMsg(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/vendor/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(form)
-      });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Failed to update profile');
+      await apiClient.put('/vendor/profile', form);
       
       setSuccessMsg('Profile updated successfully');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -104,26 +97,16 @@ export default function VendorStoreScreen() {
     setSuccessMsg(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/vendor/password', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
-        })
+      await apiClient.put('/auth/vendor/password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
       });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Failed to update password');
       
       setSuccessMsg('Password updated successfully');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -144,23 +127,25 @@ export default function VendorStoreScreen() {
         <Typography style={styles.subtitle}>Manage your vendor profile and security.</Typography>
       </View>
 
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'profile' && styles.tabActive]} onPress={() => setActiveTab('profile')}>
-          <Store size={16} color={activeTab === 'profile' ? '#1A1918' : '#8E8A85'} />
-          <Typography style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>Profile</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'business' && styles.tabActive]} onPress={() => setActiveTab('business')}>
-          <FileText size={16} color={activeTab === 'business' ? '#1A1918' : '#8E8A85'} />
-          <Typography style={[styles.tabText, activeTab === 'business' && styles.tabTextActive]}>Business Info</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'bank' && styles.tabActive]} onPress={() => setActiveTab('bank')}>
-          <Wallet size={16} color={activeTab === 'bank' ? '#1A1918' : '#8E8A85'} />
-          <Typography style={[styles.tabText, activeTab === 'bank' && styles.tabTextActive]}>Bank Details</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'security' && styles.tabActive]} onPress={() => setActiveTab('security')}>
-          <Lock size={16} color={activeTab === 'security' ? '#1A1918' : '#8E8A85'} />
-          <Typography style={[styles.tabText, activeTab === 'security' && styles.tabTextActive]}>Security</Typography>
-        </TouchableOpacity>
+      <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer}>
+          <TouchableOpacity style={[styles.tab, activeTab === 'profile' && styles.tabActive]} onPress={() => setActiveTab('profile')}>
+            <Store size={16} color={activeTab === 'profile' ? '#1A1918' : '#8E8A85'} />
+            <Typography style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>Profile</Typography>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, activeTab === 'business' && styles.tabActive]} onPress={() => setActiveTab('business')}>
+            <FileText size={16} color={activeTab === 'business' ? '#1A1918' : '#8E8A85'} />
+            <Typography style={[styles.tabText, activeTab === 'business' && styles.tabTextActive]}>Business Info</Typography>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, activeTab === 'bank' && styles.tabActive]} onPress={() => setActiveTab('bank')}>
+            <Wallet size={16} color={activeTab === 'bank' ? '#1A1918' : '#8E8A85'} />
+            <Typography style={[styles.tabText, activeTab === 'bank' && styles.tabTextActive]}>Bank Details</Typography>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, activeTab === 'security' && styles.tabActive]} onPress={() => setActiveTab('security')}>
+            <Lock size={16} color={activeTab === 'security' ? '#1A1918' : '#8E8A85'} />
+            <Typography style={[styles.tabText, activeTab === 'security' && styles.tabTextActive]}>Security</Typography>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -344,16 +329,16 @@ export default function VendorStoreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { padding: 24, paddingBottom: 16 },
+  header: { padding: 16, paddingBottom: 16 },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 28, color: '#1A1918', marginBottom: 4 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85' },
-  tabsContainer: { flexDirection: 'row', paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: '#ECE7E1', marginBottom: 20 },
-  tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, marginRight: 24, gap: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabsContainer: { flexDirection: 'row', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#ECE7E1', marginBottom: 20 },
+  tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, marginRight: 20, gap: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: '#1A1918' },
   tabText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#8E8A85' },
   tabTextActive: { color: '#1A1918' },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: '#ECE7E1' },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#ECE7E1' },
   inputGroup: { marginBottom: 16 },
   inputLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, color: '#8E8A85', letterSpacing: 1.2, marginBottom: 8 },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF8F5', borderRadius: 12, borderWidth: 1, borderColor: '#ECE7E1', paddingHorizontal: 14, height: 48 },

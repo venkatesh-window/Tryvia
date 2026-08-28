@@ -61,11 +61,11 @@ router.post('/apply', async (req: AuthRequest, res: Response): Promise<void> => 
       slug,
       gst,
       pan,
-      status: 'PENDING',
+      status: 'APPROVED',
       statusHistory: [{
-        status: 'PENDING',
+        status: 'APPROVED',
         changedAt: new Date(),
-        reason: 'Initial Application'
+        reason: 'Auto-approved Application'
       }]
     });
     
@@ -100,7 +100,8 @@ const getVendor = async (req: AuthRequest, res: Response, next: any) => {
     // Allow access to /application and /profile regardless of status
     const allowedPaths = ['/application', '/profile'];
     
-    if (vendor.status !== 'APPROVED' && !allowedPaths.some(p => req.path === p)) {
+    // Treat PENDING as APPROVED since auto-approval is now enabled
+    if (vendor.status !== 'APPROVED' && vendor.status !== 'PENDING' && !allowedPaths.some(p => req.path === p)) {
       res.status(403).json({ detail: `Access denied. Vendor status is ${vendor.status}.` });
       return;
     }

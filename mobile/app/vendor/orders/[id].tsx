@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Typography } from '../../../src/components/ui/Typography';
 import { ArrowLeft, Package, Clock, CheckCircle, Truck, XCircle, MapPin, Mail, Phone, ShoppingBag } from 'lucide-react-native';
-import { useAuthStore } from '../../../src/store/useAuthStore';
+import { apiClient } from '../../../src/api/client';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 
 export default function VendorOrderDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { token } = useAuthStore();
   
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -18,15 +17,14 @@ export default function VendorOrderDetailScreen() {
 
   const fetchOrder = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/vendor/orders/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch order');
-      const json = await response.json();
-      setOrder(json);
+      const response = await apiClient.get(`/vendor/orders/${id}`);
+      setOrder(response.data);
     } catch (err: any) {
-      setError(err.message);
+      if (err.response?.status === 404 && (err.response?.data?.detail?.includes('Vendor account not found') || err.response?.data?.message?.includes('Vendor account not found'))) {
+        router.replace('/vendor/apply');
+        return;
+      }
+      setError(err.response?.data?.detail || err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -34,21 +32,12 @@ export default function VendorOrderDetailScreen() {
 
   useEffect(() => {
     if (id) fetchOrder();
-  }, [id, token]);
+  }, [id]);
 
   const updateStatus = async (newStatus: string) => {
     setUpdating(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/vendor/orders/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-      
-      if (!response.ok) throw new Error('Failed to update status');
+      await apiClient.patch(`/vendor/orders/${id}/status`, { status: newStatus });
       
       // Refresh order to show new status history
       await fetchOrder();
@@ -123,8 +112,8 @@ export default function VendorOrderDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.row}>
-          <View style={[styles.column, { flex: 2 }]}>
+        <View style={styles.column}>
+          <View style={styles.column}>
             
             <View style={styles.card}>
               <Typography style={styles.cardTitle}>Update Status</Typography>
@@ -185,7 +174,7 @@ export default function VendorOrderDetailScreen() {
             
           </View>
           
-          <View style={[styles.column, { flex: 1 }]}>
+          <View style={styles.column}>
             <View style={styles.card}>
               <Typography style={styles.cardTitle}>Customer Delivery Info</Typography>
               
@@ -251,15 +240,15 @@ export default function VendorOrderDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 16 },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center' },
-  title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 24, color: '#1A1918' },
-  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#8E8A85' },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
-  row: { flexDirection: 'row', gap: 20 },
-  column: { gap: 20 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: '#ECE7E1' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingBottom: 16 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 20, color: '#1A1918' },
+  subtitle: { fontFamily: 'Inter_500Medium', fontSize: 11, color: '#8E8A85' },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  row: { flexDirection: 'column', gap: 16 },
+  column: { gap: 16 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#ECE7E1' },
   cardTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#1A1918' },
   helperText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#8E8A85', marginBottom: 16 },
   statusButtonsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

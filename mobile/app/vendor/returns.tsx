@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { ArrowLeftRight, PackageOpen, Check, X } from 'lucide-react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 
 export default function VendorReturnsScreen() {
-  const { token } = useAuthStore();
+  const router = useRouter();
   
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,12 +15,13 @@ export default function VendorReturnsScreen() {
 
   const fetchReturns = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/returns/vendor', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const json = await response.json();
-      setReturns(json);
-    } catch (e) {
+      const response = await apiClient.get('/returns/vendor');
+      setReturns(response.data);
+    } catch (e: any) {
+      if (e.response?.status === 404 && (e.response?.data?.detail?.includes('Vendor account not found') || e.response?.data?.message?.includes('Vendor account not found'))) {
+        router.replace('/vendor/apply');
+        return;
+      }
       console.error(e);
     } finally {
       setLoading(false);
@@ -28,24 +30,15 @@ export default function VendorReturnsScreen() {
 
   useEffect(() => {
     fetchReturns();
-  }, [token]);
+  }, []);
 
   const handleAction = async (id: string, status: string) => {
     setActioning(id);
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/returns/vendor/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-      
-      if (!response.ok) throw new Error('Failed to update return');
+      await apiClient.patch(`/returns/vendor/${id}/status`, { status });
       await fetchReturns();
     } catch (err: any) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     } finally {
       setActioning(null);
     }
@@ -146,10 +139,10 @@ export default function VendorReturnsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { padding: 24, paddingBottom: 16 },
+  header: { padding: 16, paddingBottom: 16 },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 28, color: '#1A1918', marginBottom: 4 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85' },
-  listCard: { paddingHorizontal: 24, paddingBottom: 40 },
+  listCard: { paddingHorizontal: 16, paddingBottom: 40 },
   returnCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#ECE7E1', padding: 20, marginBottom: 16 },
   returnHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F8F6F3' },
   returnId: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#1A1918', marginBottom: 2 },

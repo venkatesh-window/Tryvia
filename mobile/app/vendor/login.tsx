@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Typography } from '../../src/components/ui/Typography';
 import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { ArrowLeft, Mail, Lock, Sparkles, AlertCircle } from 'lucide-react-native';
 
 export default function VendorLoginScreen() {
@@ -34,19 +35,12 @@ export default function VendorLoginScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: email.trim(), password }),
+      const response = await apiClient.post('/auth/login', {
+        email: email.trim(),
+        password
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Invalid credentials');
-      }
+      const data = response.data;
 
       if (data.user?.role !== 'VENDOR') {
         throw new Error('This account is not authorized as a vendor.');
@@ -55,7 +49,7 @@ export default function VendorLoginScreen() {
       await setAuthUser(data.token, data.user);
       router.replace('/vendor/dashboard');
     } catch (err: any) {
-      setError(err?.message || 'Unable to sign in.');
+      setError(err.response?.data?.detail || err.response?.data?.message || err?.message || 'Unable to sign in.');
     } finally {
       setLoading(false);
     }

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { Package, ShoppingBag, CreditCard, Clock } from 'lucide-react-native';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { Package, ShoppingBag, CreditCard, Clock, ChevronRight } from 'lucide-react-native';
+import { apiClient } from '../../src/api/client';
+import { useRouter } from 'expo-router';
 
 export default function VendorDashboardScreen() {
-  const { token } = useAuthStore();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,27 +14,21 @@ export default function VendorDashboardScreen() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/dashboard', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboard data');
-        }
-        
-        const json = await response.json();
-        setData(json);
+        const response = await apiClient.get('/vendor/dashboard');
+        setData(response.data);
       } catch (err: any) {
-        setError(err.message);
+        if (err.response?.status === 404 && (err.response?.data?.detail?.includes('Vendor account not found') || err.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
+        setError(err.response?.data?.detail || err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     };
     
     fetchDashboardData();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return (
@@ -52,10 +47,10 @@ export default function VendorDashboardScreen() {
   }
 
   const statCards = [
-    { title: 'Total Revenue', value: `$${data.revenue.toLocaleString()}`, icon: CreditCard, color: '#CB6D73' },
-    { title: 'Pending Payout', value: `$${data.pending_payout.toLocaleString()}`, icon: Clock, color: '#D9985F' },
-    { title: 'Active Products', value: data.active_products.toString(), icon: Package, color: '#6A8A7A' },
-    { title: 'Pending Orders', value: data.pending_orders.toString(), icon: ShoppingBag, color: '#5B799E' },
+    { title: 'Total Revenue', value: `$${data?.revenue?.toLocaleString() || '0'}`, icon: CreditCard, color: '#CB6D73' },
+    { title: 'Pending Payout', value: `$${data?.pending_payout?.toLocaleString() || '0'}`, icon: Clock, color: '#D9985F' },
+    { title: 'Active Products', value: data?.active_products?.toString() || '0', icon: Package, color: '#6A8A7A' },
+    { title: 'Pending Orders', value: data?.pending_orders?.toString() || '0', icon: ShoppingBag, color: '#5B799E' },
   ];
 
   return (
@@ -82,29 +77,18 @@ export default function VendorDashboardScreen() {
 
       <View style={styles.section}>
         <Typography style={styles.sectionTitle}>Recent Orders</Typography>
-        {data.recent_orders.length === 0 ? (
+        {!data?.recent_orders || data.recent_orders.length === 0 ? (
           <View style={styles.emptyState}>
             <ShoppingBag size={48} color="#ECE7E1" />
             <Typography style={styles.emptyText}>No orders yet</Typography>
             <Typography style={styles.emptySubtext}>Orders containing your products will appear here.</Typography>
           </View>
         ) : (
-          <View style={styles.tableCard}>
-            <View style={styles.tableHeaderRow}>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Order ID</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 3 }]}>Customer</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Amount</Typography>
-              <Typography style={[styles.tableHeaderCell, { flex: 2 }]}>Status</Typography>
-            </View>
-            
+          <View style={styles.ordersList}>
             {data.recent_orders.map((order: any, idx: number) => (
-              <View key={idx} style={styles.tableRow}>
-                <Typography style={[styles.tableCell, { flex: 2, fontFamily: 'Inter_600SemiBold' }]}>
-                  {order.id}
-                </Typography>
-                <Typography style={[styles.tableCell, { flex: 3 }]}>{order.customer}</Typography>
-                <Typography style={[styles.tableCell, { flex: 2 }]}>${order.total}</Typography>
-                <View style={{ flex: 2, justifyContent: 'center' }}>
+              <View key={idx} style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <Typography style={styles.orderId}>Order #{order.id}</Typography>
                   <View style={[
                     styles.statusBadge,
                     order.status === 'PENDING' ? styles.statusPending : 
@@ -123,6 +107,19 @@ export default function VendorDashboardScreen() {
                     </Typography>
                   </View>
                 </View>
+                
+                <View style={styles.orderDivider} />
+                
+                <View style={styles.orderBody}>
+                  <View style={styles.orderDetail}>
+                    <Typography style={styles.orderLabel}>Customer</Typography>
+                    <Typography style={styles.orderValue}>{order.customer}</Typography>
+                  </View>
+                  <View style={styles.orderDetail}>
+                    <Typography style={styles.orderLabel}>Amount</Typography>
+                    <Typography style={styles.orderAmount}>${order.total}</Typography>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
@@ -139,10 +136,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   container: {
-    padding: 24,
+    padding: 16,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
     fontFamily: 'CormorantGaramond_700Bold',
@@ -158,15 +155,14 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 32,
+    gap: 12,
+    marginBottom: 24,
   },
   statCard: {
-    flex: 1,
-    minWidth: 200,
+    width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#ECE7E1',
     shadowColor: '#000000',
@@ -176,12 +172,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   iconBox: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   statTitle: {
     fontFamily: 'Inter_500Medium',
@@ -191,7 +187,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 24,
+    fontSize: 20,
     color: '#1A1918',
   },
   section: {
@@ -208,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#ECE7E1',
-    padding: 40,
+    padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -225,40 +221,55 @@ const styles = StyleSheet.create({
     color: '#8E8A85',
     textAlign: 'center',
   },
-  tableCard: {
+  ordersList: {
+    gap: 12,
+  },
+  orderCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#ECE7E1',
-    overflow: 'hidden',
+    padding: 16,
   },
-  tableHeaderRow: {
+  orderHeader: {
     flexDirection: 'row',
-    backgroundColor: '#F8F6F3',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE7E1',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  tableHeaderCell: {
+  orderId: {
     fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    color: '#1A1918',
+  },
+  orderDivider: {
+    height: 1,
+    backgroundColor: '#ECE7E1',
+    marginBottom: 12,
+  },
+  orderBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  orderDetail: {
+    gap: 4,
+  },
+  orderLabel: {
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     color: '#8E8A85',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECE7E1',
-  },
-  tableCell: {
+  orderValue: {
     fontFamily: 'Inter_500Medium',
     fontSize: 14,
     color: '#1A1918',
+  },
+  orderAmount: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    color: '#CB6D73',
   },
   statusBadge: {
     paddingHorizontal: 10,

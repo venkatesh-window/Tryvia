@@ -1,30 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
 import { Typography } from '../../src/components/ui/Typography';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { apiClient } from '../../src/api/client';
 import { DollarSign, Wallet, ArrowRight, Activity, Percent } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 export default function VendorEarningsScreen() {
-  const { token } = useAuthStore();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEarnings = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/v1/vendor/earnings', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await response.json();
-        setData(json);
-      } catch (e) {
+        const response = await apiClient.get('/vendor/earnings');
+        setData(response.data);
+      } catch (e: any) {
+        if (e.response?.status === 404 && (e.response?.data?.detail?.includes('Vendor account not found') || e.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
     fetchEarnings();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return (
@@ -85,53 +87,50 @@ export default function VendorEarningsScreen() {
       <View style={styles.listCard}>
         <Typography style={styles.listTitle}>Recent Transactions</Typography>
         
-        <View style={styles.tableHeader}>
-          <Text style={[styles.th, { flex: 2 }]}>DATE & ORDER</Text>
-          <Text style={[styles.th, { flex: 3 }]}>PRODUCT</Text>
-          <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>GROSS</Text>
-          <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>FEE</Text>
-          <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>NET</Text>
-          <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>STATUS</Text>
-        </View>
-
-        {transactions.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Typography style={styles.emptyText}>No transactions yet.</Typography>
-          </View>
-        ) : (
-          transactions.map((tx: any, idx: number) => (
-            <View key={idx} style={styles.tr}>
-              <View style={{ flex: 2 }}>
-                <Typography style={styles.tdDate}>{new Date(tx.date).toLocaleDateString()}</Typography>
-                <Typography style={styles.tdId}>#{tx.orderId}</Typography>
-              </View>
-              <View style={{ flex: 3, justifyContent: 'center' }}>
-                <Typography style={styles.tdName} numberOfLines={1}>{tx.productName}</Typography>
-                <Typography style={styles.tdType}>{tx.type.toUpperCase()}</Typography>
-              </View>
-              <Typography style={[styles.tdValue, { flex: 1, textAlign: 'right' }]}>${tx.grossAmount.toFixed(2)}</Typography>
-              <Typography style={[styles.tdValue, { flex: 1, textAlign: 'right', color: '#D9383A' }]}>-${tx.tryviaFee.toFixed(2)}</Typography>
-              <Typography style={[styles.tdValue, { flex: 1, textAlign: 'right', fontFamily: 'Inter_700Bold' }]}>${tx.netAmount.toFixed(2)}</Typography>
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <View style={[
-                  styles.statusBadge,
-                  tx.status === 'DELIVERED' ? styles.statusDelivered :
-                  tx.status === 'CANCELLED' ? styles.statusCancelled :
-                  styles.statusPending
-                ]}>
-                  <Typography style={[
-                    styles.statusText,
-                    tx.status === 'DELIVERED' ? styles.statusTextDelivered :
-                    tx.status === 'CANCELLED' ? styles.statusTextCancelled :
-                    styles.statusTextPending
+        <View style={styles.listContainer}>
+          {transactions.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Typography style={styles.emptyText}>No transactions yet.</Typography>
+            </View>
+          ) : (
+            transactions.map((tx: any, idx: number) => (
+              <View key={idx} style={styles.listItem}>
+                <View style={styles.listItemHeader}>
+                  <View>
+                    <Typography style={styles.tdId}>#{tx.orderId}</Typography>
+                    <Typography style={styles.tdDate}>{new Date(tx.date).toLocaleDateString()}</Typography>
+                  </View>
+                  <View style={[
+                    styles.statusBadge,
+                    tx.status === 'DELIVERED' ? styles.statusDelivered :
+                    tx.status === 'CANCELLED' ? styles.statusCancelled :
+                    styles.statusPending
                   ]}>
-                    {tx.status}
-                  </Typography>
+                    <Typography style={[
+                      styles.statusText,
+                      tx.status === 'DELIVERED' ? styles.statusTextDelivered :
+                      tx.status === 'CANCELLED' ? styles.statusTextCancelled :
+                      styles.statusTextPending
+                    ]}>
+                      {tx.status}
+                    </Typography>
+                  </View>
+                </View>
+                <View style={styles.listItemBody}>
+                  <View style={{ flex: 1 }}>
+                    <Typography style={styles.tdName} numberOfLines={1}>{tx.productName}</Typography>
+                    <Typography style={styles.tdType}>{tx.type.toUpperCase()}</Typography>
+                  </View>
+                  <View style={styles.txAmounts}>
+                    <Typography style={styles.tdValue}>Gross: ${tx.grossAmount.toFixed(2)}</Typography>
+                    <Typography style={[styles.tdValue, { color: '#D9383A' }]}>Fee: -${tx.tryviaFee.toFixed(2)}</Typography>
+                    <Typography style={[styles.tdValue, { fontFamily: 'Inter_700Bold' }]}>Net: ${tx.netAmount.toFixed(2)}</Typography>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))
-        )}
+            ))
+          )}
+        </View>
       </View>
     </ScrollView>
   );
@@ -139,30 +138,32 @@ export default function VendorEarningsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { padding: 24, paddingBottom: 16 },
+  header: { padding: 16, paddingBottom: 16 },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 28, color: '#1A1918', marginBottom: 4 },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85' },
-  metricsGrid: { flexDirection: 'row', paddingHorizontal: 24, gap: 16, marginBottom: 16 },
-  metricCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#ECE7E1' },
-  metricIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FAF8F5', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  metricsGrid: { flexDirection: 'column', paddingHorizontal: 16, gap: 12, marginBottom: 16 },
+  metricCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#ECE7E1' },
+  metricIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FAF8F5', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   metricLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, color: '#8E8A85', letterSpacing: 1.2, marginBottom: 8 },
-  metricValue: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 32, color: '#1A1918' },
-  splitRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 16, marginBottom: 24 },
-  splitCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#ECE7E1' },
+  metricValue: { fontFamily: 'Inter_700Bold', fontSize: 28, color: '#1A1918' },
+  splitRow: { flexDirection: 'column', paddingHorizontal: 16, gap: 12, marginBottom: 24 },
+  splitCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#ECE7E1' },
   helpText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#B0AAA2', marginTop: 8 },
-  listCard: { backgroundColor: '#FFFFFF', marginHorizontal: 24, borderRadius: 16, borderWidth: 1, borderColor: '#ECE7E1', padding: 24, marginBottom: 40 },
-  listTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#1A1918', marginBottom: 20 },
-  tableHeader: { flexDirection: 'row', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#ECE7E1' },
-  th: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: '#8E8A85', letterSpacing: 1 },
-  tr: { flexDirection: 'row', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8F6F3' },
-  tdDate: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#8E8A85', marginBottom: 4 },
-  tdId: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#1A1918' },
-  tdName: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1A1918', marginBottom: 4 },
-  tdType: { fontFamily: 'Inter_600SemiBold', fontSize: 10, color: '#8E8A85', letterSpacing: 0.5 },
-  tdValue: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#1A1918', paddingTop: 8 },
+  listCard: { backgroundColor: '#FFFFFF', marginHorizontal: 16, borderRadius: 16, borderWidth: 1, borderColor: '#ECE7E1', padding: 16, marginBottom: 40 },
+  listTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#1A1918', marginBottom: 16 },
+  listContainer: { flexDirection: 'column', gap: 12 },
+  listItem: { backgroundColor: '#FAF8F5', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ECE7E1' },
+  listItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  listItemBody: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderTopWidth: 1, borderTopColor: '#ECE7E1', paddingTop: 12 },
+  tdDate: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#8E8A85', marginTop: 2 },
+  tdId: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#1A1918' },
+  tdName: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#1A1918', marginBottom: 4 },
+  tdType: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#8E8A85', letterSpacing: 0.5 },
+  txAmounts: { alignItems: 'flex-end', gap: 4 },
+  tdValue: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1A1918' },
   emptyState: { padding: 40, alignItems: 'center' },
   emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#8E8A85' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginTop: 8 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 10 },
   statusPending: { backgroundColor: '#FEF0DB' },
   statusTextPending: { color: '#D9985F' },

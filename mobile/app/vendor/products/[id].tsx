@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Typography } from '../../../src/components/ui/Typography';
 import { ArrowLeft, Save, Image as ImageIcon } from 'lucide-react-native';
-import { useAuthStore } from '../../../src/store/useAuthStore';
+import { apiClient } from '../../../src/api/client';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function EditProductScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { token } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,17 +26,9 @@ export default function EditProductScreen() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/vendor/products/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await apiClient.get(`/vendor/products/${id}`);
+        const json = response.data;
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch product');
-        }
-        
-        const json = await response.json();
         setForm({
           name: json.name || '',
           description: json.description || '',
@@ -49,14 +40,18 @@ export default function EditProductScreen() {
           status: json.status || 'ACTIVE'
         });
       } catch (err: any) {
-        setError(err.message);
+        if (err.response?.status === 404 && (err.response?.data?.detail?.includes('Vendor account not found') || err.response?.data?.message?.includes('Vendor account not found'))) {
+          router.replace('/vendor/apply');
+          return;
+        }
+        setError(err.response?.data?.detail || err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     };
     
     if (id) fetchProduct();
-  }, [id, token]);
+  }, [id]);
 
   const handleSave = async () => {
     if (!form.name || !form.fullPrice) {
@@ -79,23 +74,11 @@ export default function EditProductScreen() {
         status: form.status,
       };
 
-      const response = await fetch(`http://localhost:8000/api/v1/vendor/products/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update product');
-      }
+      await apiClient.put(`/vendor/products/${id}`, payload);
       
       router.back();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -176,7 +159,7 @@ export default function EditProductScreen() {
           </View>
         </View>
 
-        <View style={styles.row}>
+        <View style={styles.stack}>
           <View style={[styles.card, { flex: 1 }]}>
             <Typography style={styles.cardTitle}>Pricing</Typography>
             <View style={styles.inputGroup}>
@@ -233,17 +216,17 @@ export default function EditProductScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingBottom: 16 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#ECE7E1', alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 24, color: '#1A1918' },
   subtitle: { fontFamily: 'Inter_500Medium', fontSize: 13, color: '#8E8A85' },
   saveBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1918', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 8 },
   saveBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#FFFFFF' },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 40, gap: 20 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: '#ECE7E1' },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 40, gap: 16 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#ECE7E1' },
   cardTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: '#1A1918', marginBottom: 20 },
-  row: { flexDirection: 'row', gap: 20 },
+  stack: { flexDirection: 'column', gap: 16 },
   inputGroup: { marginBottom: 16 },
   inputLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, color: '#8E8A85', letterSpacing: 1.2, marginBottom: 8 },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF8F5', borderRadius: 12, borderWidth: 1, borderColor: '#ECE7E1', paddingHorizontal: 14, height: 48 },
