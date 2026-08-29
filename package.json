@@ -2,6 +2,7 @@
   "name": "tryvia-root",
   "version": "1.0.0",
   "private": true,
+  "main": "expo-router/entry",
   "scripts": {
     "start": "cd mobile && npx expo start",
     "backend": "npm --prefix backend run dev",
@@ -12,7 +13,17 @@
     "ios": "cd mobile && npx expo start --ios"
   },
   "dependencies": {
-    "expo": "^57.0.15"
+    "expo": "~57.0.18",
+    "expo-constants": "57.0.16",
+    "expo-dev-client": "~57.0.16",
+    "expo-image-picker": "~57.0.14",
+    "expo-linking": "~57.0.8",
+    "expo-router": "~57.0.17",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.4",
