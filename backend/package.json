@@ -1,13 +1,13 @@
 {
   "name": "tryvia-backend",
   "version": "1.0.0",
-  "description": "TryVia MERN Backend Service with Express, TypeScript and MongoDB",
-  "main": "dist/server.js",
+  "description": "TryVia MERN Backend Service with Express and MongoDB",
+  "main": "src/server.js",
+  "type": "module",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "seed": "ts-node-dev --transpile-only src/seed.ts"
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed.js"
   },
   "dependencies": {
     "axios": "^1.20.0",
@@ -24,14 +24,7 @@
     "razorpay": "^2.9.8"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.8",
-    "@types/multer": "^2.2.0",
-    "@types/node": "^22.10.7",
     "mongodb-memory-server": "^11.2.0",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.7.3"
+    "nodemon": "^3.0.1"
   }
 }
