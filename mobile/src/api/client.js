@@ -4,15 +4,26 @@ import Constants from "expo-constants";
 import { getItemAsync, deleteItemAsync } from "../utils/storage";
 
 export const getBaseUrl = () => {
+  // If explicitly configured in environment variables, use it
+  if (
+    process.env.EXPO_PUBLIC_API_URL &&
+    !process.env.EXPO_PUBLIC_API_URL.includes("localhost")
+  ) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
   if (Platform.OS === "web") {
     const hostname =
       typeof window !== "undefined" && window.location?.hostname
         ? window.location.hostname
         : "localhost";
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      return "https://tryvia-r6z3.onrender.com/api/v1";
+    }
     return `http://${hostname}:8000/api/v1`;
   }
 
-  // Extract host IP from Expo Go / Metro bundler on mobile
+  // Extract host IP from Expo Go / Metro bundler on mobile in development
   const hostUri =
     Constants.expoConfig?.hostUri ||
     Constants.manifest?.debuggerHost ||
@@ -26,15 +37,8 @@ export const getBaseUrl = () => {
     }
   }
 
-  if (
-    process.env.EXPO_PUBLIC_API_URL &&
-    !process.env.EXPO_PUBLIC_API_URL.includes("localhost")
-  ) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
-  // Default LAN machine IP for physical mobile devices running Expo Go
-  return "http://172.20.10.10:8000/api/v1";
+  // Production Render Backend fallback for standalone APK / release builds
+  return "https://tryvia-r6z3.onrender.com/api/v1";
 };
 
 const BASE_URL = getBaseUrl();

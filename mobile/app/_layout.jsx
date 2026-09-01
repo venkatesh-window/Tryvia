@@ -1,3 +1,5 @@
+import "react-native-gesture-handler";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect, useState, useRef } from "react";
 import { Stack, ErrorBoundary } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -73,21 +75,25 @@ function RootLayoutNav() {
   const appIsReady =
     (fontsLoaded || fontError != null) && authInitialized && !isLoading;
 
-  // Single controlled, idempotent splash screen dismissal owned exclusively by root layout
+  // Single controlled splash screen dismissal with 2.5s fallback safety
   useEffect(() => {
-    if (!appIsReady || isSplashHidden.current) return;
-
-    isSplashHidden.current = true;
-
     async function hideSplash() {
+      if (isSplashHidden.current) return;
+      isSplashHidden.current = true;
       try {
         await SplashScreen.hideAsync();
-      } catch (err) {
-        // Native splash screen may already be dismissed or unavailable on current view controller
-      }
+      } catch (err) {}
     }
 
-    hideSplash();
+    if (appIsReady) {
+      hideSplash();
+    }
+
+    const fallbackTimer = setTimeout(() => {
+      hideSplash();
+    }, 2500);
+
+    return () => clearTimeout(fallbackTimer);
   }, [appIsReady]);
 
   if (!appIsReady) {
@@ -95,27 +101,29 @@ function RootLayoutNav() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" options={{ animation: "fade" }} />
-        <Stack.Screen name="landing" options={{ animation: "fade" }} />
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            animation: "fade",
-            animationDuration: 500,
-          }}
-        />
+    <GestureHandlerRootView style={styles.root}>
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ animation: "fade" }} />
+          <Stack.Screen name="landing" options={{ animation: "fade" }} />
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              animation: "fade",
+              animationDuration: 500,
+            }}
+          />
 
-        <Stack.Screen name="product/[id]" />
-        <Stack.Screen name="tester/[id]" />
-        <Stack.Screen
-          name="auth"
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
-        <Stack.Screen name="cart" options={{ presentation: "modal" }} />
-      </Stack>
-    </QueryClientProvider>
+          <Stack.Screen name="product/[id]" />
+          <Stack.Screen name="tester/[id]" />
+          <Stack.Screen
+            name="auth"
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
+          />
+          <Stack.Screen name="cart" options={{ presentation: "modal" }} />
+        </Stack>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -123,6 +131,9 @@ export { ErrorBoundary };
 export default RootLayoutNav;
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     backgroundColor: "#000000",
