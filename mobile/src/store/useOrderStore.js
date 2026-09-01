@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { orderService } from "../api/services/orderService";
+import { useCartStore } from "./useCartStore";
 
 export const useOrderStore = create((set, get) => ({
   orders: [],
@@ -72,7 +73,6 @@ export const useOrderStore = create((set, get) => ({
       paymentMethod.toLowerCase().includes("cod");
 
     try {
-      const { useCartStore } = await import("./useCartStore");
       const orderInputs = items.map((i) => ({
         product_id: i.product.id,
         item_type: i.type,

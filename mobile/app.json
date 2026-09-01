@@ -42,14 +42,14 @@
       "expo-web-browser"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5271138e-5351-4fb1-8b36-9bf595663f0e"
+        "projectId": "e4349297-fb2d-4783-bada-61154507266e"
       }
-    }
+    },
+    "owner": "varunios"
   }
 }

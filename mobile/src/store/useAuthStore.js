@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { setItemAsync, getItemAsync, deleteItemAsync } from "../utils/storage";
+import { authService } from "../api/services/authService";
 
 const TOKEN_KEY = "tryvia_jwt_token";
 
@@ -23,7 +24,6 @@ export const useAuthStore = create((set) => ({
     try {
       set({ isLoading: true });
       let token = await getItemAsync(TOKEN_KEY);
-      const { authService } = await import("../api/services/authService");
       let user = null;
 
       if (token) {
