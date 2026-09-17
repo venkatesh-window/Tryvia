@@ -1,6 +1,14 @@
 import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect, useState, useRef } from "react";
+import { ClerkProvider } from "@clerk/clerk-expo";
+import { tokenCache } from "../src/utils/tokenCache";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+if (!publishableKey) {
+  throw new Error("Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env");
+}
 import { Stack, ErrorBoundary } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useAuthStore } from "../src/store/useAuthStore";
@@ -101,8 +109,9 @@ function RootLayoutNav() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <QueryClientProvider client={queryClient}>
+    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+      <GestureHandlerRootView style={styles.root}>
+        <QueryClientProvider client={queryClient}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" options={{ animation: "fade" }} />
           <Stack.Screen name="landing" options={{ animation: "fade" }} />
@@ -124,6 +133,7 @@ function RootLayoutNav() {
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>
+    </ClerkProvider>
   );
 }
 

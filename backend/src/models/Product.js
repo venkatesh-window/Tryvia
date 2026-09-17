@@ -3,6 +3,8 @@ import mongoose, { Schema } from "mongoose";
 const ProductSchema = new Schema(
   {
     numericId: { type: Number, unique: true, index: true },
+    productId: { type: String, unique: true, index: true },
+    vendorId: { type: String, index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String },
     fullPrice: { type: Number, required: true },

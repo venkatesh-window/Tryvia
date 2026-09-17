@@ -106,13 +106,43 @@ export class ClerkService {
   }
 
   /**
-   * Google OAuth Sign-In Placeholder / Notice
+   * Sync OAuth User (e.g., Google) with backend
    */
-  static async signInWithGoogle() {
-    return {
-      status: "failed",
-      error: "Google Sign-In is not configured for local development.",
-    };
+  static async syncOAuthUser(email, fullName) {
+    try {
+      const syncRes = await authService.sync({
+        email: email,
+        fullName: fullName,
+      });
+
+      if (syncRes?.access_token) {
+        return {
+          status: "complete",
+          token: syncRes.access_token,
+          user: {
+            id: String(syncRes.user.id),
+            email: syncRes.user.email,
+            fullName: syncRes.user.full_name || email.split("@")[0],
+            role: syncRes.user.role || "CUSTOMER",
+          },
+        };
+      }
+
+      return {
+        status: "failed",
+        error: "Sync failed. No access token received.",
+      };
+    } catch (err) {
+      const detail =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        "Unable to sync Google account.";
+      return {
+        status: "failed",
+        error: detail,
+      };
+    }
   }
 
   /**

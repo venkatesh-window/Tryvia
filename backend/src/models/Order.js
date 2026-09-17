@@ -2,6 +2,8 @@ import mongoose, { Schema } from "mongoose";
 
 const OrderItemSchema = new Schema(
   {
+    orderItemId: { type: String, unique: true, sparse: true, index: true },
+    vendorId: { type: String, index: true },
     product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
     itemType: { type: String, enum: ["full", "tester"], required: true },
     quantity: { type: Number, required: true, min: 1 },
@@ -9,6 +11,17 @@ const OrderItemSchema = new Schema(
     totalPrice: { type: Number, required: true },
     platformFee: { type: Number, default: 0 },
     vendorEarnings: { type: Number, default: 0 },
+    itemStatus: {
+      type: String,
+      enum: ["PENDING", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"],
+      default: "PENDING",
+    },
+    shipment: {
+      courier: { type: String },
+      trackingNumber: { type: String },
+      shippedAt: { type: Date },
+      estimatedDelivery: { type: Date },
+    }
   },
   { _id: false },
 );
@@ -43,11 +56,13 @@ const VendorStatusSchema = new Schema(
 const OrderSchema = new Schema(
   {
     numericId: { type: Number, unique: true, index: true },
+    orderId: { type: String, unique: true, index: true },
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     items: [OrderItemSchema],
     subtotal: { type: Number, required: true },
     walletDiscount: { type: Number, default: 0 },
     platformFee: { type: Number, default: 0 },
+    deliveryCharge: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
@@ -74,6 +89,7 @@ const OrderSchema = new Schema(
         ret.id = ret.numericId || ret._id;
         ret.wallet_discount = ret.walletDiscount;
         ret.platform_fee = ret.platformFee;
+        ret.delivery_charge = ret.deliveryCharge;
         ret.total_amount = ret.totalAmount;
         ret.vendor_statuses = ret.vendorStatuses;
         ret.payment_method = ret.paymentMethod;

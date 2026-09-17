@@ -116,7 +116,7 @@ export default function CheckoutScreen() {
       >
         <View style={[styles.header, { paddingTop: safeTopPadding }]}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
             style={styles.backBtn}
             hitSlop={8}
           >
@@ -371,15 +371,6 @@ export default function CheckoutScreen() {
                         -₹{checkoutCalculation.walletUsed.toFixed(2)}
                       </Typography>
                     </View>
-
-                    <View style={styles.summaryRow}>
-                      <Typography variant="body" color="secondary">
-                        Platform Fee (10% on credits)
-                      </Typography>
-                      <Typography variant="price" weight="medium">
-                        ₹{checkoutCalculation.platformFee.toFixed(2)}
-                      </Typography>
-                    </View>
                     
                     <View style={styles.summaryRow}>
                       <Typography variant="body" color="secondary">
@@ -391,6 +382,24 @@ export default function CheckoutScreen() {
                     </View>
                   </View>
                 )}
+
+                <View style={styles.summaryRow}>
+                  <Typography variant="body" color="secondary">
+                    Platform Fee
+                  </Typography>
+                  <Typography variant="price" weight="medium">
+                    ₹{checkoutCalculation.platformFee.toFixed(2)}
+                  </Typography>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <Typography variant="body" color="secondary">
+                    Delivery Charge
+                  </Typography>
+                  <Typography variant="price" weight="medium">
+                    ₹{checkoutCalculation.deliveryCharge.toFixed(2)}
+                  </Typography>
+                </View>
 
                 <View style={styles.divider} />
 

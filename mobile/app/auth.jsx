@@ -40,8 +40,14 @@ import {
 import { GoogleIcon } from "../src/components/ui/GoogleIcon";
 import { ClerkService } from "../src/services/clerkService";
 import * as Haptics from "expo-haptics";
+import { useOAuth } from "@clerk/clerk-expo";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { login: setAuthUser } = useAuthStore();
@@ -55,7 +61,6 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [signUpRole, setSignUpRole] = useState("CUSTOMER");
 
   // Verification modal state
   const [isVerifying, setIsVerifying] = useState(false);
@@ -96,10 +101,6 @@ export default function AuthScreen() {
     opacity: signupFieldsProgress.value,
     marginBottom: signupFieldsProgress.value * 16,
     overflow: "hidden",
-  }));
-
-  const roleFieldStyle = useAnimatedStyle(() => ({
-    height: signupFieldsProgress.value * 70,
   }));
 
   const handleSignIn = async () => {
@@ -188,7 +189,7 @@ export default function AuthScreen() {
         cleanEmail,
         cleanPassword,
         cleanName,
-        signUpRole,
+        "CUSTOMER"
       );
 
       if (result.status === "failed" || !result.token) {
@@ -222,28 +223,48 @@ export default function AuthScreen() {
     setError(null);
 
     try {
-      const result = await ClerkService.signInWithGoogle();
+      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/(tabs)'),
+      });
 
-      if (result.status === "failed") {
-        setError(
-          result.error || "Google authentication was cancelled or failed.",
-        );
-        setGoogleLoading(false);
-        return;
-      }
+      if (createdSessionId) {
+        await setActive({ session: createdSessionId });
 
-      // Google Auth is not fully configured, should never reach here since status is failed.
-      if (result.user && result.token) {
-        await setAuthUser(result.token, result.user);
-        if (result.user?.role === "VENDOR") {
-          router.replace("/vendor");
-        } else if (router.canGoBack()) {
-          router.back();
+        let email = "";
+        let fullName = "";
+
+        if (signUp?.emailAddress) {
+          email = signUp.emailAddress;
+          fullName = signUp.firstName ? `${signUp.firstName} ${signUp.lastName || ""}`.trim() : "";
+        } else if (signIn?.identifier) {
+          email = signIn.identifier;
+        }
+
+        if (email) {
+          const result = await ClerkService.syncOAuthUser(email, fullName);
+
+          if (result.status === "failed") {
+            setError(result.error || "Google Sign-In failed during backend sync.");
+            setGoogleLoading(false);
+            return;
+          }
+
+          if (result.user && result.token) {
+            await setAuthUser(result.token, result.user);
+            if (result.user?.role === "VENDOR") {
+              router.replace("/vendor");
+            } else if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(tabs)");
+            }
+          }
         } else {
-          router.replace("/(tabs)");
+          setError("Unable to retrieve email from Google Sign-In.");
         }
       }
     } catch (err) {
+      console.error("OAuth error:", err);
       setError(err?.message || "Google Sign-In failed.");
     } finally {
       setGoogleLoading(false);
@@ -472,59 +493,6 @@ export default function AuthScreen() {
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
               />
-            </View>
-          </Animated.View>
-
-          {/* Role Selection (Smooth Slide Open / Collapse) */}
-          <Animated.View
-            style={[
-              styles.inputGroup,
-              signupFieldStyle,
-              roleFieldStyle,
-            ]}
-          >
-            <Typography style={styles.inputLabel}>ACCOUNT TYPE</Typography>
-            <View style={styles.roleSwitcherTrack}>
-              <TouchableOpacity
-                style={[
-                  styles.roleTab,
-                  signUpRole === "CUSTOMER" && styles.roleTabActive,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (Platform.OS === "ios") Haptics.selectionAsync();
-                  setSignUpRole("CUSTOMER");
-                }}
-              >
-                <Typography
-                  style={[
-                    styles.roleText,
-                    signUpRole === "CUSTOMER" && styles.roleTextActive,
-                  ]}
-                >
-                  Shopper
-                </Typography>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleTab,
-                  signUpRole === "VENDOR" && styles.roleTabActive,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (Platform.OS === "ios") Haptics.selectionAsync();
-                  setSignUpRole("VENDOR");
-                }}
-              >
-                <Typography
-                  style={[
-                    styles.roleText,
-                    signUpRole === "VENDOR" && styles.roleTextActive,
-                  ]}
-                >
-                  Vendor
-                </Typography>
-              </TouchableOpacity>
             </View>
           </Animated.View>
 

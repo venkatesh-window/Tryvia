@@ -11,6 +11,7 @@ export const useCartStore = create()(
       subtotal: 0,
       walletDeduction: 0,
       platformFee: 0,
+      deliveryCharge: 0,
       total: 0,
       appliedWalletCredit: null,
       isCheckingEligibility: false,
@@ -63,6 +64,7 @@ export const useCartStore = create()(
           subtotal: 0,
           walletDeduction: 0,
           platformFee: 0,
+          deliveryCharge: 0,
           total: 0,
           appliedWalletCredit: null,
           isCheckingEligibility: false,
@@ -101,7 +103,8 @@ function calculateTotals(items, useWallet = true) {
   );
 
   let walletDeduction = 0;
-  let platformFee = 0;
+  let platformFee = 10;
+  let deliveryCharge = 40;
   let total = subtotal;
 
   const originalProductsTotal = items
@@ -123,10 +126,10 @@ function calculateTotals(items, useWallet = true) {
   if (useWallet && originalProductsTotal > 0 && walletBalance > 0) {
     const maximumWalletUsage = originalProductsTotal * 0.60;
     walletDeduction = Math.min(walletBalance, maximumWalletUsage);
-    platformFee = walletDeduction * 0.10;
-    const productAmount = originalProductsTotal - walletDeduction;
-    total = productAmount + platformFee + miniProductsTotal;
   }
+
+  const productAmount = originalProductsTotal - walletDeduction;
+  total = productAmount + platformFee + deliveryCharge + miniProductsTotal;
 
   return {
     items,
@@ -134,6 +137,7 @@ function calculateTotals(items, useWallet = true) {
     subtotal,
     walletDeduction,
     platformFee,
+    deliveryCharge,
     total,
   };
 }

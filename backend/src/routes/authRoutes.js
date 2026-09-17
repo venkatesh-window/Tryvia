@@ -204,4 +204,92 @@ router.put("/vendor/password", authenticate, async (req, res) => {
   }
 });
 
+import { Vendor } from "../models/Vendor.js";
+
+// POST /api/v1/auth/vendor/register
+router.post("/vendor/register", async (req, res) => {
+  try {
+    const { email, password, full_name, storeName, phone, address, city, state, pincode, gst, description } = req.body;
+
+    if (!email || !password || !full_name || !storeName) {
+      res.status(400).json({ detail: "Email, password, full name, and store name are required" });
+      return;
+    }
+
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      res.status(400).json({ detail: "Invalid email format" });
+      return;
+    }
+
+    if (typeof password !== "string" || password.length < 6) {
+      res.status(400).json({ detail: "Password must be at least 6 characters long" });
+      return;
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      res.status(400).json({ detail: "An account with this email already exists" });
+      return;
+    }
+
+    const lastUser = await User.findOne().sort({ numericId: -1 });
+    const numericId = (lastUser?.numericId || 0) + 1;
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      numericId,
+      email: normalizedEmail,
+      fullName: String(full_name).trim(),
+      passwordHash,
+      walletBalance: 0,
+      loyaltyTier: "BRONZE",
+      stars: 0,
+      role: "VENDOR",
+      isActive: true,
+    });
+    await user.save();
+
+    const count = await Vendor.countDocuments();
+    const vendorNumericId = count + 5000;
+    const vendorId = `TRY-VND-${vendorNumericId.toString().padStart(6, '0')}`;
+    const vendor = new Vendor({
+      numericId: vendorNumericId,
+      vendorId,
+      user: user._id,
+      storeName,
+      description,
+      email: normalizedEmail,
+      phone,
+      address: `${address || ''}, ${city || ''}, ${state || ''}, ${pincode || ''}`.replace(/^[,\s]+|[,\s]+$/g, ''),
+      gst,
+      status: "APPROVED",
+      statusHistory: [
+        {
+          status: "APPROVED",
+          changedAt: new Date(),
+          reason: "Direct Vendor Registration",
+        },
+      ],
+    });
+    await vendor.save();
+
+    const token = generateToken(user.numericId);
+
+    res.status(201).json({
+      access_token: token,
+      token_type: "bearer",
+      user: user.toJSON(),
+      vendor: vendor.toJSON(),
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      res.status(400).json({ detail: "Store name already exists." });
+      return;
+    }
+    res.status(500).json({ detail: error.message });
+  }
+});
+
 export default router;

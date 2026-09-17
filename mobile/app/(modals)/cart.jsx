@@ -51,14 +51,18 @@ export default function CartModal() {
 
   const handleContinueShopping = () => {
     setCompletedOrder(null);
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
   };
 
   return (
     <ScreenContainer showOrbs={false}>
       <View style={styles.header}>
         <Typography variant="h2">Your Bag</Typography>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+        <Pressable onPress={() => { router.canGoBack() ? router.back() : router.replace("/(tabs)"); }} style={styles.closeBtn}>
           <Typography variant="h3" color="secondary">
             ✕
           </Typography>
@@ -148,29 +152,32 @@ export default function CartModal() {
           <>
             <View style={styles.totalRow}>
               <Typography variant="body" color="primary">
-                Wallet Credit (90% of Tester)
+                Wallet Credit Used
               </Typography>
               <Typography variant="h3" color="primary">
-                -₹{Number(appliedWalletCredit?.redeemable_amount ?? appliedWalletCredit?.redeemableAmount ?? 0).toFixed(2)}
-              </Typography>
-            </View>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "flex-start",
-                marginBottom: 12,
-              }}
-            >
-              <Typography
-                variant="caption"
-                style={{ color: "#666", fontStyle: "italic" }}
-              >
-                *From your ₹{appliedWalletCredit?.original_amount ?? appliedWalletCredit?.originalAmount ?? 0} tester
-                purchase (10% Platform Fee applied)
+                -₹{Number(walletDeduction).toFixed(2)}
               </Typography>
             </View>
           </>
         )}
+
+        <View style={styles.totalRow}>
+          <Typography variant="body" color="secondary">
+            Platform Fee
+          </Typography>
+          <Typography variant="price" weight="medium">
+            ₹10.00
+          </Typography>
+        </View>
+
+        <View style={styles.totalRow}>
+          <Typography variant="body" color="secondary">
+            Delivery Charge
+          </Typography>
+          <Typography variant="price" weight="medium">
+            ₹40.00
+          </Typography>
+        </View>
 
         <View
           style={[

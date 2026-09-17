@@ -119,17 +119,17 @@ router.post("/checkout/calculate", authenticate, async (req, res) => {
     const validWalletBalance = await syncUserWalletBalance(user._id);
 
     let walletUsed = 0;
-    let platformFee = 0;
+    let platformFee = 10;
+    let deliveryCharge = 40;
     let maximumWalletUsage = 0;
 
     if (use_wallet && validWalletBalance > 0 && originalProductsTotal > 0) {
       maximumWalletUsage = originalProductsTotal * 0.60;
       walletUsed = Math.min(validWalletBalance, maximumWalletUsage);
-      platformFee = walletUsed * 0.10;
     }
 
     const productAmount = originalProductsTotal - walletUsed + miniProductsTotal;
-    const customerPayment = productAmount + platformFee;
+    const customerPayment = productAmount + platformFee + deliveryCharge;
     const remainingWallet = validWalletBalance - walletUsed;
 
     res.json({
@@ -139,6 +139,7 @@ router.post("/checkout/calculate", authenticate, async (req, res) => {
       walletUsed,
       productAmount,
       platformFee,
+      deliveryCharge,
       customerPayment,
       remainingWallet,
     });
@@ -223,16 +224,17 @@ router.post("/create-order", authenticate, async (req, res) => {
     let maximumWalletUsage = 0;
     let walletUsed = 0;
     let productAmount = originalProductsTotal;
-    let platformFee = 0;
+    let platformFee = 10;
+    let deliveryCharge = 40;
     let totalAmount = subtotal;
 
     if (useWallet && validWalletBalance > 0 && originalProductsTotal > 0) {
       maximumWalletUsage = originalProductsTotal * 0.60;
       walletUsed = Math.min(validWalletBalance, maximumWalletUsage);
       productAmount = originalProductsTotal - walletUsed;
-      platformFee = walletUsed * 0.10;
-      totalAmount = productAmount + platformFee + miniProductsTotal;
     }
+    
+    totalAmount = productAmount + platformFee + deliveryCharge + miniProductsTotal;
 
     const remainingWallet = validWalletBalance - walletUsed;
     let walletDiscount = walletUsed;
@@ -284,6 +286,7 @@ router.post("/create-order", authenticate, async (req, res) => {
       subtotal,
       walletDiscount,
       platformFee,
+      deliveryCharge,
       totalAmount,
       status: "PENDING",
       paymentMethod: "Razorpay Online",

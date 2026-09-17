@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const VendorSchema = new Schema(
   {
     numericId: { type: Number, unique: true, index: true },
+    vendorId: { type: String, unique: true, index: true },
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     storeName: { type: String, required: true, trim: true },
     logo: { type: String },

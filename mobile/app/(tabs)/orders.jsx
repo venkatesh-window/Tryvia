@@ -320,9 +320,18 @@ export default function OrdersScreen() {
                         </View>
 
                         <View style={styles.itemDetails}>
-                          <Typography style={styles.itemBrand}>
-                            {item.brand.toUpperCase()}
-                          </Typography>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Typography style={styles.itemBrand}>
+                              {item.brand.toUpperCase()}
+                            </Typography>
+                            {item.item_status && (
+                              <View style={{ backgroundColor: item.item_status === 'DELIVERED' ? '#DCFCE7' : item.item_status === 'SHIPPED' ? '#DBEAFE' : '#F3F4F6', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 }}>
+                                <Typography style={{ fontSize: 8, fontFamily: "Inter_700Bold", color: item.item_status === 'DELIVERED' ? '#16A34A' : item.item_status === 'SHIPPED' ? '#2563EB' : '#4B5563' }}>
+                                  {item.item_status}
+                                </Typography>
+                              </View>
+                            )}
+                          </View>
                           <Typography style={styles.itemName} numberOfLines={2}>
                             {item.name}
                           </Typography>

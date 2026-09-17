@@ -57,7 +57,7 @@ export default function ReviewScreen() {
           </Typography>
           <PremiumButton
             title="Back to Orders"
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
             style={{ minWidth: 180 }}
           />
         </View>
@@ -73,7 +73,7 @@ export default function ReviewScreen() {
       >
         <View style={[styles.header, { paddingTop: safeTopPadding }]}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
             style={styles.backButton}
             hitSlop={8}
           >

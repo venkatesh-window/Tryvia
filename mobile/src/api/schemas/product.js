@@ -24,8 +24,8 @@ export const ProductSchema = z.object({
   category_id: z.any().nullable().optional(),
   brand_id: z.any().nullable().optional(),
   // Relations
-  brand: BrandSchema.optional(),
-  category: CategorySchema.optional(),
+  brand: BrandSchema.nullable().optional(),
+  category: CategorySchema.nullable().optional(),
 });
 
 export const ProductListSchema = z.array(ProductSchema);

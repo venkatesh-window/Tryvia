@@ -74,7 +74,7 @@ export default function CartScreen() {
         <TouchableOpacity
           style={styles.backCircleBtn}
           activeOpacity={0.8}
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
         >
           <ChevronLeft size={20} color="#1A1918" strokeWidth={2} />
         </TouchableOpacity>

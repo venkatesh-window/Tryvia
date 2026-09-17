@@ -2,9 +2,30 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { Product } from "../models/Product.js";
 import { Category } from "../models/Category.js";
+import { Brand } from "../models/Brand.js";
 import { Vendor } from "../models/Vendor.js";
 
 const router = Router();
+
+// GET /api/v1/products/categories
+router.get("/categories", async (req, res) => {
+  try {
+    const categories = await Category.find();
+    res.json(categories.map((c) => c.toJSON()));
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// GET /api/v1/products/brands
+router.get("/brands", async (req, res) => {
+  try {
+    const brands = await Brand.find();
+    res.json(brands.map((b) => b.toJSON()));
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
 
 // GET /api/v1/products/testers
 router.get("/testers", async (req, res) => {

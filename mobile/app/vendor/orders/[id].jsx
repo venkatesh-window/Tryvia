@@ -98,7 +98,7 @@ export default function VendorOrderDetailScreen() {
           {error || "Order not found"}
         </Typography>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/vendor"))}
           style={{ marginTop: 20 }}
         >
           <Typography style={{ color: "#1A1918" }}>Go Back</Typography>
@@ -120,7 +120,7 @@ export default function VendorOrderDetailScreen() {
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/vendor"))}
             style={styles.backBtn}
           >
             <ArrowLeft size={20} color="#1A1918" />

@@ -99,7 +99,7 @@ export default function AddProductScreen() {
           "Content-Type": "multipart/form-data",
         },
       });
-      router.back();
+      router.canGoBack() ? router.back() : router.replace("/vendor");
     } catch (err) {
       setError(
         err.response?.data?.detail ||
@@ -119,7 +119,7 @@ export default function AddProductScreen() {
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/vendor"))}
             style={styles.backBtn}
           >
             <ArrowLeft size={20} color="#1A1918" />

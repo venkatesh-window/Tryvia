@@ -75,7 +75,7 @@ export default function PublicVendorStoreScreen() {
           {error || "This store is currently unavailable."}
         </Typography>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
           style={{
             marginTop: 24,
             padding: 12,
@@ -121,7 +121,7 @@ export default function PublicVendorStoreScreen() {
           )}
 
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
             style={styles.backButton}
           >
             <ArrowLeft size={20} color="#1A1918" />

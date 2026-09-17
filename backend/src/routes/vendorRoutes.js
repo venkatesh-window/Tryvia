@@ -183,7 +183,7 @@ router.get("/dashboard", getVendor, async (req, res) => {
     const lowStockProducts = products.filter(
       (p) => p.stockFull < 10 || p.stockTester < 10,
     ).length;
-    const orders = await Order.find({ "items.product": { $in: productIds } });
+    const orders = await Order.find({ "items.product": { $in: productIds }, status: { $ne: "PENDING" } });
     let pendingOrders = 0;
     let completedOrders = 0;
     let grossSales = 0;
@@ -249,7 +249,7 @@ router.get("/earnings", getVendor, async (req, res) => {
     const vendor = req.vendor;
     const products = await Product.find({ vendor: vendor._id }, "_id");
     const productIds = products.map((p) => p._id);
-    const orders = await Order.find({ "items.product": { $in: productIds } })
+    const orders = await Order.find({ "items.product": { $in: productIds }, status: { $ne: "PENDING" } })
       .populate("items.product", "name numericId")
       .sort({ createdAt: -1 });
     let grossSales = 0;
@@ -318,6 +318,7 @@ router.get("/analytics", getVendor, async (req, res) => {
     const productIds = products.map((p) => p._id);
     const orders = await Order.find({
       "items.product": { $in: productIds },
+      status: { $ne: "PENDING" }
     }).populate("items.product", "name");
     const productSalesMap = {};
     let testerSales = 0;
@@ -403,18 +404,21 @@ router.post(
       }
       const count = await Product.countDocuments();
       const numericId = count + 1000;
+      const productId = `TRY-PRD-${numericId.toString().padStart(6, '0')}`;
       const product = new Product({
         numericId,
+        productId,
         name,
         description,
         fullPrice: fullPrice ? Number(fullPrice) : 0,
-        testerPrice: testerPrice ? Number(testerPrice) : 0,
+        testerPrice: 0,
         stockFull: stockFull ? Number(stockFull) : 0,
-        stockTester: stockTester ? Number(stockTester) : 0,
+        stockTester: 0,
         imageUrl,
         category,
         brand,
         vendor: vendor._id,
+        vendorId: vendor.vendorId, // From vendor document
         status: status || "ACTIVE",
       });
       await product.save();
@@ -473,7 +477,7 @@ router.get("/orders", getVendor, async (req, res) => {
     const vendor = req.vendor;
     const products = await Product.find({ vendor: vendor._id }, "_id");
     const productIds = products.map((p) => p._id);
-    const orders = await Order.find({ "items.product": { $in: productIds } })
+    const orders = await Order.find({ "items.product": { $in: productIds }, status: { $ne: "PENDING" } })
       .populate("user", "fullName email")
       .populate("items.product", "name imageUrl numericId")
       .sort({ createdAt: -1 });
@@ -519,6 +523,7 @@ router.get("/orders/:id", getVendor, async (req, res) => {
     const order = await Order.findOne({
       _id: req.params.id,
       "items.product": { $in: productIds },
+      status: { $ne: "PENDING" }
     })
       .populate("user", "fullName email phone")
       .populate(
@@ -581,6 +586,7 @@ router.patch("/orders/:id/status", getVendor, async (req, res) => {
     const order = await Order.findOne({
       _id: req.params.id,
       "items.product": { $in: productIds },
+      status: { $ne: "PENDING" }
     });
     if (!order) {
       res.status(404).json({ detail: "Order not found" });
@@ -611,6 +617,20 @@ router.patch("/orders/:id/status", getVendor, async (req, res) => {
       if (shippingPartner)
         order.vendorStatuses[vStatusIndex].shippingPartner = shippingPartner;
     }
+    
+    // Also update individual item statuses for this vendor
+    order.items.forEach(item => {
+      const itemProductId = item.product?._id || item.product;
+      if (productIds.some(id => id.equals(itemProductId))) {
+        item.itemStatus = status;
+        if (trackingNumber || shippingPartner || status === 'SHIPPED') {
+          item.shipment = item.shipment || {};
+          if (shippingPartner) item.shipment.courier = shippingPartner;
+          if (trackingNumber) item.shipment.trackingNumber = trackingNumber;
+          if (status === 'SHIPPED' && !item.shipment.shippedAt) item.shipment.shippedAt = new Date();
+        }
+      }
+    });
     await order.save();
     // Create ledger entries if order is DELIVERED and wasn't already
     if (status === "DELIVERED" && oldStatus !== "DELIVERED") {

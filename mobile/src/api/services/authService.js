@@ -34,4 +34,15 @@ export const authService = {
     const response = await apiClient.get("/auth/me");
     return UserSchema.parse(response.data);
   },
+
+  /**
+   * Syncs an OAuth user (e.g., Google) with the backend
+   */
+  sync: async (payload) => {
+    const response = await apiClient.post("/auth/sync", {
+      email: payload.email,
+      full_name: payload.fullName || payload.full_name,
+    });
+    return TokenResponseSchema.parse(response.data);
+  },
 };

@@ -14,11 +14,11 @@ const router = Router();
 // POST /api/v1/orders/
 router.post("/", authenticate, async (req, res) => {
   try {
+    const { items, paymentMethod, apply_wallet_credit_id, use_wallet, shippingAddress } = req.body;
     const user = req.user;
-    const { items, apply_wallet_credit_id } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ detail: "Order must contain items" });
+      res.status(400).json({ detail: "Order must contain at least one item" });
       return;
     }
 
@@ -76,11 +76,19 @@ router.post("/", authenticate, async (req, res) => {
 
       subtotal += totalPrice;
 
+      let vendorIdStr = "";
       if (productDoc.vendor) {
         uniqueVendors.add(productDoc.vendor.toString());
+        vendorIdStr = productDoc.vendorId || "";
       }
 
+      const orderItemCount = orderItems.length + 1;
+      const tempNumericId = Math.floor(Math.random() * 1000000);
+      const orderItemId = `TRY-ITEM-${tempNumericId.toString().padStart(6, '0')}-${orderItemCount}`;
+
       orderItems.push({
+        orderItemId,
+        vendorId: vendorIdStr,
         product: productDoc._id,
         itemType,
         quantity: qty,
@@ -88,6 +96,7 @@ router.post("/", authenticate, async (req, res) => {
         totalPrice,
         platformFee: itemPlatformFee,
         vendorEarnings: vendorEarnings,
+        itemStatus: "PENDING",
       });
 
       if (itemType === "tester") {
@@ -96,7 +105,7 @@ router.post("/", authenticate, async (req, res) => {
     }
 
     // NEW SYSTEM WALLET CALCULATION
-    const useWallet = req.body.use_wallet || !!apply_wallet_credit_id;
+    const useWallet = use_wallet || !!apply_wallet_credit_id;
     const originalProductsTotal = orderItems
       .filter((item) => item.itemType === "full")
       .reduce((acc, item) => acc + item.totalPrice, 0);
@@ -106,34 +115,32 @@ router.post("/", authenticate, async (req, res) => {
       .reduce((acc, item) => acc + item.totalPrice, 0);
 
     let walletBalanceBefore = user.walletBalance || 0;
+    let validWalletBalance = walletBalanceBefore;
     let maximumWalletUsage = 0;
     let walletUsed = 0;
     let productAmount = originalProductsTotal;
-    let platformFee = 0;
+    let platformFee = 10;
+    let deliveryCharge = 40;
     let totalAmount = subtotal;
 
-    if (useWallet && walletBalanceBefore > 0 && originalProductsTotal > 0) {
+    if (useWallet && validWalletBalance > 0 && originalProductsTotal > 0) {
       maximumWalletUsage = originalProductsTotal * 0.60;
-      walletUsed = Math.min(walletBalanceBefore, maximumWalletUsage);
+      walletUsed = Math.min(validWalletBalance, maximumWalletUsage);
       productAmount = originalProductsTotal - walletUsed;
-      platformFee = walletUsed * 0.10;
-      totalAmount = productAmount + platformFee + miniProductsTotal;
     }
+    
+    totalAmount = productAmount + platformFee + deliveryCharge + miniProductsTotal;
 
     const remainingWallet = walletBalanceBefore - walletUsed;
     let walletDiscount = walletUsed;
 
     const orderCount = await Order.countDocuments();
     const numericId = 8920 + orderCount + 1;
-    const shippingAddress =
-      req.body.shipping_address || req.body.shippingAddress || undefined;
+    const orderId = `TRY-ORD-${numericId.toString().padStart(6, '0')}`;
+    const resolvedShippingAddress =
+      shippingAddress || req.body.shipping_address || req.body.shippingAddress || undefined;
 
-    const paymentMethod =
-      req.body.payment_method || req.body.paymentMethod || "";
-    const isCod =
-      paymentMethod.toLowerCase().includes("cash") ||
-      paymentMethod.toLowerCase().includes("cod");
-    const orderStatus = isCod ? "PENDING" : "PAID";
+    const orderStatus = "PAID";
 
     const vendorStatuses = Array.from(uniqueVendors).map((vId) => ({
       vendor: new mongoose.Types.ObjectId(vId),
@@ -141,19 +148,23 @@ router.post("/", authenticate, async (req, res) => {
       history: [{ status: orderStatus, changedAt: new Date() }],
     }));
 
+    // For simplicity we use the same generated orderId to update item's orderItemId to have true TRY-ORD connection if we wanted, but TRY-ITEM is fine.
+    
     const order = new Order({
       numericId,
+      orderId,
       user: user._id,
       items: orderItems,
       subtotal,
       walletDiscount,
       platformFee,
+      deliveryCharge,
       totalAmount,
       status: orderStatus,
       paymentMethod:
-        paymentMethod || (isCod ? "Cash on Delivery" : "Tryvia Pay"),
+        paymentMethod || "Tryvia Pay",
       appliedCreditId: apply_wallet_credit_id ? 1 : undefined,
-      shippingAddress,
+      shippingAddress: resolvedShippingAddress,
       vendorStatuses,
       walletBalanceBefore,
       maximumWalletUsage,
@@ -164,7 +175,7 @@ router.post("/", authenticate, async (req, res) => {
 
     await order.save();
 
-    // If order is PAID (e.g. not COD), fulfill it immediately!
+    // If order is PAID, fulfill it immediately!
     if (order.status === "PAID") {
       await fulfillOrder(order._id);
     }
@@ -187,6 +198,8 @@ router.post("/", authenticate, async (req, res) => {
         quantity: i.quantity,
         unit_price: i.unitPrice,
         total_price: i.totalPrice,
+        item_status: i.itemStatus,
+        shipment: i.shipment,
       }));
     }
 
@@ -201,7 +214,8 @@ router.post("/", authenticate, async (req, res) => {
 router.get("/", authenticate, async (req, res) => {
   try {
     const user = req.user;
-    const orders = await Order.find({ user: user._id })
+    // Do not show PENDING orders that might be failed or abandoned payments
+    const orders = await Order.find({ user: req.user._id, status: { $ne: "PENDING" } })
       .populate({
         path: "items.product",
         populate: { path: "brand" },
@@ -219,6 +233,8 @@ router.get("/", authenticate, async (req, res) => {
         quantity: i.quantity,
         unit_price: i.unitPrice,
         total_price: i.totalPrice,
+        item_status: i.itemStatus,
+        shipment: i.shipment,
       }));
       return json;
     });
@@ -268,6 +284,8 @@ router.get("/:id", authenticate, async (req, res) => {
       quantity: i.quantity,
       unit_price: i.unitPrice,
       total_price: i.totalPrice,
+      item_status: i.itemStatus,
+      shipment: i.shipment,
     }));
 
     res.json(responseJSON);
