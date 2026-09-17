@@ -9,9 +9,17 @@ export const useCartStore = create()(
       items: [],
       totalItems: 0,
       subtotal: 0,
+      productSubtotal: 0,
+      testerSubtotal: 0,
       walletDeduction: 0,
       platformFee: 0,
       deliveryCharge: 0,
+      testerGst: 0,
+      productDeliveryFee: 0,
+      testerDeliveryFee: 0,
+      productSectionTotal: 0,
+      testerSectionTotal: 0,
+      isTesterMinimumMet: true,
       total: 0,
       appliedWalletCredit: null,
       isCheckingEligibility: false,
@@ -62,9 +70,17 @@ export const useCartStore = create()(
           items: [],
           totalItems: 0,
           subtotal: 0,
+          productSubtotal: 0,
+          testerSubtotal: 0,
           walletDeduction: 0,
           platformFee: 0,
           deliveryCharge: 0,
+          testerGst: 0,
+          productDeliveryFee: 0,
+          testerDeliveryFee: 0,
+          productSectionTotal: 0,
+          testerSectionTotal: 0,
+          isTesterMinimumMet: true,
           total: 0,
           appliedWalletCredit: null,
           isCheckingEligibility: false,
@@ -94,26 +110,15 @@ export const useCartStore = create()(
   ),
 );
 
-// Helper to recalculate totals
 function calculateTotals(items, useWallet = true) {
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotal = items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0,
-  );
+  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-  let walletDeduction = 0;
-  let platformFee = 10;
-  let deliveryCharge = 40;
-  let total = subtotal;
+  const fullProducts = items.filter(i => i.type === "full");
+  const testerProducts = items.filter(i => i.type === "tester");
 
-  const originalProductsTotal = items
-    .filter((i) => i.type === "full")
-    .reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-  const miniProductsTotal = items
-    .filter((i) => i.type === "tester")
-    .reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const productSubtotal = fullProducts.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const testerSubtotal = testerProducts.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   let walletBalance = 0;
   try {
@@ -123,21 +128,53 @@ function calculateTotals(items, useWallet = true) {
     console.log("Could not read walletBalance:", err);
   }
 
-  if (useWallet && originalProductsTotal > 0 && walletBalance > 0) {
-    const maximumWalletUsage = originalProductsTotal * 0.60;
+  let walletDeduction = 0;
+  if (useWallet && productSubtotal > 0 && walletBalance > 0) {
+    const maximumWalletUsage = productSubtotal * 0.60;
     walletDeduction = Math.min(walletBalance, maximumWalletUsage);
   }
 
-  const productAmount = originalProductsTotal - walletDeduction;
-  total = productAmount + platformFee + deliveryCharge + miniProductsTotal;
+  let productPlatformFee = 0;
+  let productDeliveryFee = 0;
+  let productSectionTotal = 0;
+
+  if (fullProducts.length > 0) {
+    productPlatformFee = 10;
+    productDeliveryFee = 40;
+    productSectionTotal = productSubtotal - walletDeduction + productPlatformFee + productDeliveryFee;
+  }
+
+  let testerGst = 0;
+  let testerDeliveryFee = 0;
+  let testerSectionTotal = 0;
+
+  if (testerProducts.length > 0) {
+    testerGst = testerSubtotal * 0.18;
+    testerDeliveryFee = 40;
+    testerSectionTotal = testerSubtotal + testerGst + testerDeliveryFee;
+  }
+
+  const deliveryCharge = productDeliveryFee + testerDeliveryFee;
+  const platformFee = productPlatformFee;
+  const total = productSectionTotal + testerSectionTotal;
+
+  const isTesterMinimumMet = testerProducts.length === 0 || testerSubtotal >= 200;
 
   return {
     items,
     totalItems,
     subtotal,
+    productSubtotal,
+    testerSubtotal,
     walletDeduction,
     platformFee,
     deliveryCharge,
+    testerGst,
+    productDeliveryFee,
+    testerDeliveryFee,
+    productSectionTotal,
+    testerSectionTotal,
+    isTesterMinimumMet,
     total,
   };
 }

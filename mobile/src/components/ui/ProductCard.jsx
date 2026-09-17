@@ -10,7 +10,7 @@ import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useRouter } from "expo-router";
 
-export const ProductCard = ({ product, onPress, style }) => {
+export const ProductCard = ({ product, onPress, style, size = "full" }) => {
   const router = useRouter();
   const theme = useTheme();
   const { addItem } = useCartStore();
@@ -51,7 +51,7 @@ export const ProductCard = ({ product, onPress, style }) => {
       stock_full: 10,
       stock_tester: 10,
     };
-    addItem(cartProduct, "tester");
+    addItem(cartProduct, size);
   };
 
   const handleToggleLike = (e) => {
@@ -142,7 +142,7 @@ export const ProductCard = ({ product, onPress, style }) => {
             {/* Price & Bag Button */}
             <View style={styles.bottomRow}>
               <Typography variant="h3" weight="bold" style={styles.priceText}>
-                ₹{product.testerPrice || product.fullPrice}
+                ₹{size === "tester" ? product.testerPrice : product.fullPrice}
               </Typography>
 
               <Pressable

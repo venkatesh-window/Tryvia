@@ -137,7 +137,8 @@ export default function OffersScreen() {
                       "https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=600&auto=format&fit=crop",
                     category: item.category?.name || "Beauty",
                   }}
-                  onPress={() => router.push(`/product/${item.id}`)}
+                  size="tester"
+                  onPress={() => router.push(`/tester/${item.id}`)}
                 />
               </Animated.View>
             ))}

@@ -152,12 +152,15 @@ export default function TestersScreen() {
                     product={{
                       id: item.id,
                       name: item.name,
-                      brand: item.brand?.name || "CHANEL",
+                      brand: item.brand?.name || "DIOR",
                       fullPrice: item.full_price,
                       testerPrice: item.tester_price,
                       imageUrl:
-                        item.image_url || "https://via.placeholder.com/300",
+                        item.image_url ||
+                        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=600&auto=format&fit=crop",
+                      category: item.category?.name || "Beauty",
                     }}
+                    size="tester"
                     onPress={() => router.push(`/tester/${item.id}`)}
                   />
                 </View>

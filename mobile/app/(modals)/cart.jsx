@@ -23,17 +23,28 @@ export default function CartModal() {
   const {
     items,
     total,
-    subtotal,
+    productSubtotal,
+    testerSubtotal,
     walletDeduction,
-    appliedWalletCredit,
+    platformFee,
+    deliveryCharge,
+    testerGst,
+    productDeliveryFee,
+    testerDeliveryFee,
+    productSectionTotal,
+    testerSectionTotal,
+    isTesterMinimumMet,
     removeItem,
   } = useCartStore();
 
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
 
-  const isMinimumMet = total > 0;
-  const minOrderValue = 1;
+  const fullProducts = items.filter(i => i.type === "full");
+  const testerProducts = items.filter(i => i.type === "tester");
+
+  const isMinimumMet = total > 0 && isTesterMinimumMet;
+  const minOrderValue = 200;
 
   const handleCheckout = () => {
     setIsPaymentModalVisible(true);
@@ -58,6 +69,47 @@ export default function CartModal() {
     }
   };
 
+  const renderItem = (item) => (
+    <GlassCard key={item.id} style={styles.cartItem}>
+      <Image
+        source={{
+          uri: item.product.image_url || "https://via.placeholder.com/150",
+        }}
+        style={styles.itemImage}
+      />
+      <View style={styles.itemInfo}>
+        <Typography variant="caption" color="secondary">
+          {item.product.brand?.name?.toUpperCase() || "UNKNOWN BRAND"}
+        </Typography>
+        <Typography variant="body" weight="medium">
+          {item.product.name}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="secondary"
+          style={{ marginTop: 2 }}
+        >
+          {item.type === "tester" ? "Mini/Tester" : "Full Size"} x{item.quantity}
+        </Typography>
+        <Typography
+          variant="price"
+          weight="bold"
+          style={styles.itemPrice}
+        >
+          ₹{item.price}
+        </Typography>
+      </View>
+      <Pressable
+        onPress={() => removeItem(item.id)}
+        style={styles.removeBtn}
+      >
+        <Typography variant="caption" color="secondary">
+          Remove
+        </Typography>
+      </Pressable>
+    </GlassCard>
+  );
+
   return (
     <ScreenContainer showOrbs={false}>
       <View style={styles.header}>
@@ -77,48 +129,83 @@ export default function CartModal() {
             </Typography>
           </View>
         ) : (
-          items.map((item) => (
-            <GlassCard key={item.id} style={styles.cartItem}>
-              <Image
-                source={{
-                  uri:
-                    item.product.image_url || "https://via.placeholder.com/150",
-                }}
-                style={styles.itemImage}
-              />
-              <View style={styles.itemInfo}>
-                <Typography variant="caption" color="secondary">
-                  {item.product.brand?.name?.toUpperCase() || "UNKNOWN BRAND"}
+          <>
+            {/* FULL PRODUCTS SECTION */}
+            {fullProducts.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <Typography variant="h3" weight="bold" style={styles.sectionTitle}>
+                  Full Size Products
                 </Typography>
-                <Typography variant="body" weight="medium">
-                  {item.product.name}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="secondary"
-                  style={{ marginTop: 2 }}
-                >
-                  {item.type === "tester" ? "Mini/Tester" : "Full Size"} x
-                  {item.quantity}
-                </Typography>
-                <Typography
-                  variant="price"
-                  weight="bold"
-                  style={styles.itemPrice}
-                >
-                  ₹{item.price}
-                </Typography>
+                {fullProducts.map(renderItem)}
+                
+                <View style={styles.sectionBill}>
+                  <View style={styles.totalRow}>
+                    <Typography variant="body" color="secondary">Product Subtotal</Typography>
+                    <Typography variant="price" weight="medium">₹{productSubtotal}</Typography>
+                  </View>
+                  {walletDeduction > 0 && (
+                    <View style={styles.totalRow}>
+                      <Typography variant="body" color="primary">Wallet Credit Used</Typography>
+                      <Typography variant="price" color="primary">-₹{Number(walletDeduction).toFixed(2)}</Typography>
+                    </View>
+                  )}
+                  <View style={styles.totalRow}>
+                    <Typography variant="body" color="secondary">Platform Fee</Typography>
+                    <Typography variant="price" weight="medium">₹{platformFee.toFixed(2)}</Typography>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Typography variant="body" color="secondary">Delivery Charge</Typography>
+                    <Typography variant="price" weight="medium">₹{productDeliveryFee.toFixed(2)}</Typography>
+                  </View>
+                  <View style={[styles.totalRow, { marginTop: 8, borderTopWidth: 1, borderColor: "rgba(0,0,0,0.05)", paddingTop: 8 }]}>
+                    <Typography variant="body" weight="bold">Product Total</Typography>
+                    <Typography variant="price" weight="bold">₹{productSectionTotal.toFixed(2)}</Typography>
+                  </View>
+                </View>
               </View>
-              <Pressable
-                onPress={() => removeItem(item.id)}
-                style={styles.removeBtn}
-              >
-                <Typography variant="caption" color="secondary">
-                  Remove
+            )}
+
+            {/* TESTERS SECTION */}
+            {testerProducts.length > 0 && (
+              <View style={[styles.sectionContainer, fullProducts.length > 0 && { marginTop: 32 }]}>
+                <Typography variant="h3" weight="bold" style={styles.sectionTitle}>
+                  Mini / Testers
                 </Typography>
-              </Pressable>
-            </GlassCard>
-          ))
+                {testerProducts.map(renderItem)}
+
+                <View style={styles.sectionBill}>
+                  <View style={styles.totalRow}>
+                    <Typography variant="body" color="secondary">Tester Subtotal</Typography>
+                    <Typography variant="price" weight="medium">₹{testerSubtotal}</Typography>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Typography variant="body" color="secondary">GST (18%)</Typography>
+                    <Typography variant="price" weight="medium">₹{testerGst.toFixed(2)}</Typography>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Typography variant="body" color="secondary">Delivery Charge</Typography>
+                    <Typography variant="price" weight="medium">₹{testerDeliveryFee.toFixed(2)}</Typography>
+                  </View>
+                  <View style={[styles.totalRow, { marginTop: 8, borderTopWidth: 1, borderColor: "rgba(0,0,0,0.05)", paddingTop: 8 }]}>
+                    <Typography variant="body" weight="bold">Tester Total</Typography>
+                    <Typography variant="price" weight="bold">₹{testerSectionTotal.toFixed(2)}</Typography>
+                  </View>
+                  
+                  <View style={styles.cashbackBadge}>
+                    <Typography variant="caption" weight="bold" style={{ color: "#B8860B", textAlign: "center" }}>
+                      ✨ You will receive ₹{testerSubtotal.toFixed(2)} as cashback in your wallet after purchase!
+                    </Typography>
+                  </View>
+
+                  {!isTesterMinimumMet && (
+                    <Typography variant="caption" style={{ color: "#EF4444", textAlign: "center", marginTop: 8 }}>
+                      Minimum tester purchase of ₹200 required to checkout.
+                    </Typography>
+                  )}
+                </View>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -128,71 +215,17 @@ export default function CartModal() {
           { backgroundColor: theme.colors.background.default },
         ]}
       >
-        <View style={styles.progressContainer}>
-          <Typography
-            variant="caption"
-            color={isMinimumMet ? "primary" : "secondary"}
-          >
-            {isMinimumMet
-              ? `✓ Minimum order value (₹${minOrderValue}) met!`
-              : `Add ₹${minOrderValue - total} more to checkout.`}
-          </Typography>
-        </View>
-
-        <View style={styles.totalRow}>
-          <Typography variant="body" color="secondary">
-            Subtotal
-          </Typography>
-          <Typography variant="price" weight="medium">
-            ₹{subtotal}
-          </Typography>
-        </View>
-
-        {walletDeduction > 0 && (
-          <>
-            <View style={styles.totalRow}>
-              <Typography variant="body" color="primary">
-                Wallet Credit Used
-              </Typography>
-              <Typography variant="h3" color="primary">
-                -₹{Number(walletDeduction).toFixed(2)}
-              </Typography>
-            </View>
-          </>
-        )}
-
-        <View style={styles.totalRow}>
-          <Typography variant="body" color="secondary">
-            Platform Fee
-          </Typography>
-          <Typography variant="price" weight="medium">
-            ₹10.00
-          </Typography>
-        </View>
-
-        <View style={styles.totalRow}>
-          <Typography variant="body" color="secondary">
-            Delivery Charge
-          </Typography>
-          <Typography variant="price" weight="medium">
-            ₹40.00
-          </Typography>
-        </View>
-
         <View
           style={[
             styles.totalRow,
             {
-              marginTop: 8,
-              borderTopWidth: 1,
-              borderColor: "rgba(0,0,0,0.05)",
-              paddingTop: 16,
+              paddingTop: 8,
             },
           ]}
         >
-          <Typography variant="h3">Total</Typography>
-          <Typography variant="price" weight="bold" style={{ fontSize: 24 }}>
-            ₹{total}
+          <Typography variant="h2">Grand Total</Typography>
+          <Typography variant="price" weight="bold" style={{ fontSize: 28 }}>
+            ₹{total.toFixed(2)}
           </Typography>
         </View>
 
@@ -201,6 +234,7 @@ export default function CartModal() {
           onPress={handleCheckout}
           disabled={!isMinimumMet || items.length === 0}
           variant={isMinimumMet && items.length > 0 ? "primary" : "secondary"}
+          style={{ marginTop: 16 }}
         />
       </View>
 
@@ -277,5 +311,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    marginBottom: 16,
+  },
+  sectionBill: {
+    backgroundColor: "rgba(0,0,0,0.02)",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  cashbackBadge: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: "rgba(212, 175, 55, 0.1)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.2)",
   },
 });

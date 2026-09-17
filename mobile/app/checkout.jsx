@@ -321,85 +321,85 @@ export default function CheckoutScreen() {
               </View>
             ) : checkoutCalculation ? (
               <View>
-                <View style={styles.summaryRow}>
-                  <Typography variant="body" color="secondary">
-                    Product Price
-                  </Typography>
-                  <Typography variant="price" weight="medium">
-                    ₹{checkoutCalculation.subtotal.toFixed(2)}
-                  </Typography>
-                </View>
-
-                {checkoutCalculation.availableCredits > 0 && (
-                  <>
-                    <View style={styles.divider} />
-                    <View style={[styles.summaryRow, { alignItems: 'center', marginBottom: 16 }]}>
-                      <View>
-                        <Typography variant="body" weight="medium">
-                          Use TRYVIA Wallet
-                        </Typography>
-                        <Typography variant="caption" color="secondary" style={{ fontSize: 11 }}>
-                          Available: ₹{checkoutCalculation.availableCredits.toFixed(2)}
-                        </Typography>
-                      </View>
-                      <Switch
-                        value={useWallet}
-                        onValueChange={toggleUseWallet}
-                        trackColor={{ false: "#E2E8F0", true: "#B8860B" }}
-                        thumbColor={"#FFFFFF"}
-                      />
-                    </View>
-                  </>
-                )}
-
-                {useWallet && checkoutCalculation.walletUsed > 0 && (
-                  <View>
-                    <View style={styles.summaryRow}>
-                      <Typography variant="body" color="secondary">
-                        Maximum Credits Usable (60%)
-                      </Typography>
-                      <Typography variant="price" weight="medium">
-                        ₹{checkoutCalculation.maximumWalletUsage.toFixed(2)}
-                      </Typography>
-                    </View>
-
-                    <View style={styles.summaryRow}>
-                      <Typography variant="body" color="secondary">
-                        Credits Used
-                      </Typography>
-                      <Typography variant="price" weight="medium" style={{ color: "#16A34A" }}>
-                        -₹{checkoutCalculation.walletUsed.toFixed(2)}
-                      </Typography>
-                    </View>
+                {checkoutCalculation.productSubtotal > 0 && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Typography variant="caption" weight="bold" style={{ marginBottom: 8, color: "#1A1918" }}>
+                      FULL PRODUCTS
+                    </Typography>
                     
                     <View style={styles.summaryRow}>
-                      <Typography variant="body" color="secondary">
-                        Remaining Credits
-                      </Typography>
-                      <Typography variant="price" weight="medium" style={{ fontSize: 12 }}>
-                        ₹{checkoutCalculation.remainingWallet.toFixed(2)}
-                      </Typography>
+                      <Typography variant="body" color="secondary">Product Subtotal</Typography>
+                      <Typography variant="price" weight="medium">₹{checkoutCalculation.productSubtotal.toFixed(2)}</Typography>
+                    </View>
+
+                    {checkoutCalculation.availableCredits > 0 && (
+                      <View style={[styles.summaryRow, { alignItems: 'center', marginVertical: 8 }]}>
+                        <View>
+                          <Typography variant="body" weight="medium">Use TRYVIA Wallet</Typography>
+                          <Typography variant="caption" color="secondary" style={{ fontSize: 11 }}>
+                            Available: ₹{checkoutCalculation.availableCredits.toFixed(2)}
+                          </Typography>
+                        </View>
+                        <Switch
+                          value={useWallet}
+                          onValueChange={toggleUseWallet}
+                          trackColor={{ false: "#E2E8F0", true: "#B8860B" }}
+                          thumbColor={"#FFFFFF"}
+                        />
+                      </View>
+                    )}
+
+                    {useWallet && checkoutCalculation.walletUsed > 0 && (
+                      <>
+                        <View style={styles.summaryRow}>
+                          <Typography variant="body" color="secondary">Credits Used</Typography>
+                          <Typography variant="price" weight="medium" style={{ color: "#16A34A" }}>
+                            -₹{checkoutCalculation.walletUsed.toFixed(2)}
+                          </Typography>
+                        </View>
+                        <View style={styles.summaryRow}>
+                          <Typography variant="body" color="secondary">Remaining Credits</Typography>
+                          <Typography variant="price" weight="medium" style={{ fontSize: 12 }}>
+                            ₹{checkoutCalculation.remainingWallet.toFixed(2)}
+                          </Typography>
+                        </View>
+                      </>
+                    )}
+
+                    <View style={styles.summaryRow}>
+                      <Typography variant="body" color="secondary">Platform Fee</Typography>
+                      <Typography variant="price" weight="medium">₹{checkoutCalculation.platformFee.toFixed(2)}</Typography>
+                    </View>
+
+                    <View style={styles.summaryRow}>
+                      <Typography variant="body" color="secondary">Delivery Charge</Typography>
+                      <Typography variant="price" weight="medium">₹40.00</Typography>
                     </View>
                   </View>
                 )}
 
-                <View style={styles.summaryRow}>
-                  <Typography variant="body" color="secondary">
-                    Platform Fee
-                  </Typography>
-                  <Typography variant="price" weight="medium">
-                    ₹{checkoutCalculation.platformFee.toFixed(2)}
-                  </Typography>
-                </View>
+                {checkoutCalculation.testerSubtotal > 0 && (
+                  <View style={{ marginBottom: 16, borderTopWidth: checkoutCalculation.productSubtotal > 0 ? 1 : 0, borderColor: "rgba(0,0,0,0.06)", paddingTop: checkoutCalculation.productSubtotal > 0 ? 16 : 0 }}>
+                    <Typography variant="caption" weight="bold" style={{ marginBottom: 8, color: "#1A1918" }}>
+                      MINI / TESTERS
+                    </Typography>
+                    
+                    <View style={styles.summaryRow}>
+                      <Typography variant="body" color="secondary">Tester Subtotal</Typography>
+                      <Typography variant="price" weight="medium">₹{checkoutCalculation.testerSubtotal.toFixed(2)}</Typography>
+                    </View>
 
-                <View style={styles.summaryRow}>
-                  <Typography variant="body" color="secondary">
-                    Delivery Charge
-                  </Typography>
-                  <Typography variant="price" weight="medium">
-                    ₹{checkoutCalculation.deliveryCharge.toFixed(2)}
-                  </Typography>
-                </View>
+                    <View style={styles.summaryRow}>
+                      <Typography variant="body" color="secondary">GST (18%)</Typography>
+                      <Typography variant="price" weight="medium">₹{checkoutCalculation.taxAmount.toFixed(2)}</Typography>
+                    </View>
+
+                    <View style={styles.summaryRow}>
+                      <Typography variant="body" color="secondary">Delivery Charge</Typography>
+                      <Typography variant="price" weight="medium">₹40.00</Typography>
+                    </View>
+                  </View>
+                )}
 
                 <View style={styles.divider} />
 

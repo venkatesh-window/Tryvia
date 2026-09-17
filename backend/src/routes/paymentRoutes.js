@@ -119,27 +119,48 @@ router.post("/checkout/calculate", authenticate, async (req, res) => {
     const validWalletBalance = await syncUserWalletBalance(user._id);
 
     let walletUsed = 0;
-    let platformFee = 10;
-    let deliveryCharge = 40;
     let maximumWalletUsage = 0;
-
     if (use_wallet && validWalletBalance > 0 && originalProductsTotal > 0) {
       maximumWalletUsage = originalProductsTotal * 0.60;
       walletUsed = Math.min(validWalletBalance, maximumWalletUsage);
     }
 
-    const productAmount = originalProductsTotal - walletUsed + miniProductsTotal;
-    const customerPayment = productAmount + platformFee + deliveryCharge;
+    const productAmount = originalProductsTotal - walletUsed;
+
+    let platformFee = 0;
+    let deliveryCharge = 0;
+    let taxAmount = 0;
+    let customerPayment = 0;
+
+    if (originalProductsTotal > 0) {
+      platformFee = 10;
+      deliveryCharge += 40;
+      customerPayment += productAmount + platformFee + 40;
+    }
+
+    if (miniProductsTotal > 0) {
+      if (miniProductsTotal < 200) {
+        res.status(400).json({ detail: "Minimum tester order value is ₹200." });
+        return;
+      }
+      taxAmount = miniProductsTotal * 0.18;
+      deliveryCharge += 40;
+      customerPayment += miniProductsTotal + taxAmount + 40;
+    }
+
     const remainingWallet = validWalletBalance - walletUsed;
 
     res.json({
       subtotal,
+      productSubtotal: originalProductsTotal,
+      testerSubtotal: miniProductsTotal,
       availableCredits: validWalletBalance,
       maximumWalletUsage,
       walletUsed,
       productAmount,
       platformFee,
       deliveryCharge,
+      taxAmount,
       customerPayment,
       remainingWallet,
     });
@@ -224,17 +245,33 @@ router.post("/create-order", authenticate, async (req, res) => {
     let maximumWalletUsage = 0;
     let walletUsed = 0;
     let productAmount = originalProductsTotal;
-    let platformFee = 10;
-    let deliveryCharge = 40;
-    let totalAmount = subtotal;
-
+    
     if (useWallet && validWalletBalance > 0 && originalProductsTotal > 0) {
       maximumWalletUsage = originalProductsTotal * 0.60;
       walletUsed = Math.min(validWalletBalance, maximumWalletUsage);
       productAmount = originalProductsTotal - walletUsed;
     }
-    
-    totalAmount = productAmount + platformFee + deliveryCharge + miniProductsTotal;
+
+    let platformFee = 0;
+    let deliveryCharge = 0;
+    let taxAmount = 0;
+    let totalAmount = 0;
+
+    if (originalProductsTotal > 0) {
+      platformFee = 10;
+      deliveryCharge += 40;
+      totalAmount += productAmount + platformFee + 40;
+    }
+
+    if (miniProductsTotal > 0) {
+      if (miniProductsTotal < 200) {
+        res.status(400).json({ detail: "Minimum tester order value is ₹200." });
+        return;
+      }
+      taxAmount = miniProductsTotal * 0.18;
+      deliveryCharge += 40;
+      totalAmount += miniProductsTotal + taxAmount + 40;
+    }
 
     const remainingWallet = validWalletBalance - walletUsed;
     let walletDiscount = walletUsed;
@@ -287,6 +324,7 @@ router.post("/create-order", authenticate, async (req, res) => {
       walletDiscount,
       platformFee,
       deliveryCharge,
+      taxAmount,
       totalAmount,
       status: "PENDING",
       paymentMethod: "Razorpay Online",

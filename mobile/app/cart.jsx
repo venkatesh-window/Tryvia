@@ -34,7 +34,22 @@ import Animated, {
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, subtotal, total, addItem, removeItem } = useCartStore();
+  const {
+    items,
+    total,
+    productSubtotal,
+    testerSubtotal,
+    walletDeduction,
+    platformFee,
+    testerGst,
+    productDeliveryFee,
+    testerDeliveryFee,
+    productSectionTotal,
+    testerSectionTotal,
+    isTesterMinimumMet,
+    addItem,
+    removeItem,
+  } = useCartStore();
   const { isAuthenticated } = useAuthStore();
 
   const handleCheckout = () => {
@@ -221,19 +236,67 @@ export default function CartScreen() {
             >
               <Typography style={styles.summaryTitle}>ORDER SUMMARY</Typography>
 
-              {/* Subtotal */}
-              <View style={styles.summaryRow}>
-                <Typography style={styles.summaryLabel}>Subtotal</Typography>
-                <Typography style={styles.summaryValue}>
-                  ₹{subtotal.toFixed(2)}
-                </Typography>
-              </View>
+              {productSubtotal > 0 && (
+                <View style={{ marginBottom: 12 }}>
+                  <Typography style={{ fontFamily: "Inter_700Bold", fontSize: 12, color: "#1A1918", marginBottom: 8 }}>FULL PRODUCTS</Typography>
+                  <View style={styles.summaryRow}>
+                    <Typography style={styles.summaryLabel}>Product Subtotal</Typography>
+                    <Typography style={styles.summaryValue}>₹{productSubtotal.toFixed(2)}</Typography>
+                  </View>
+                  {walletDeduction > 0 && (
+                    <View style={styles.summaryRow}>
+                      <Typography style={[styles.summaryLabel, { color: "#D4AF37" }]}>Wallet Used</Typography>
+                      <Typography style={[styles.summaryValue, { color: "#D4AF37" }]}>-₹{walletDeduction.toFixed(2)}</Typography>
+                    </View>
+                  )}
+                  <View style={styles.summaryRow}>
+                    <Typography style={styles.summaryLabel}>Platform Fee</Typography>
+                    <Typography style={styles.summaryValue}>₹{platformFee.toFixed(2)}</Typography>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Typography style={styles.summaryLabel}>Delivery Charge</Typography>
+                    <Typography style={styles.summaryValue}>₹{productDeliveryFee.toFixed(2)}</Typography>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                    <Typography style={{ fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Product Total</Typography>
+                    <Typography style={{ fontSize: 13, fontFamily: "Inter_700Bold" }}>₹{productSectionTotal.toFixed(2)}</Typography>
+                  </View>
+                </View>
+              )}
+
+              {testerSubtotal > 0 && (
+                <View style={{ marginBottom: 12, paddingTop: productSubtotal > 0 ? 12 : 0, borderTopWidth: productSubtotal > 0 ? 1 : 0, borderColor: "#F0ECE6" }}>
+                  <Typography style={{ fontFamily: "Inter_700Bold", fontSize: 12, color: "#1A1918", marginBottom: 8 }}>MINI / TESTERS</Typography>
+                  <View style={styles.summaryRow}>
+                    <Typography style={styles.summaryLabel}>Tester Subtotal</Typography>
+                    <Typography style={styles.summaryValue}>₹{testerSubtotal.toFixed(2)}</Typography>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Typography style={styles.summaryLabel}>GST (18%)</Typography>
+                    <Typography style={styles.summaryValue}>₹{testerGst.toFixed(2)}</Typography>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Typography style={styles.summaryLabel}>Delivery Charge</Typography>
+                    <Typography style={styles.summaryValue}>₹{testerDeliveryFee.toFixed(2)}</Typography>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                    <Typography style={{ fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Tester Total</Typography>
+                    <Typography style={{ fontSize: 13, fontFamily: "Inter_700Bold" }}>₹{testerSectionTotal.toFixed(2)}</Typography>
+                  </View>
+                  
+                  {!isTesterMinimumMet && (
+                    <Typography style={{ color: "#EF4444", fontSize: 11, marginTop: 8, textAlign: "center", fontFamily: "Inter_500Medium" }}>
+                      *Minimum tester purchase of ₹200 required
+                    </Typography>
+                  )}
+                </View>
+              )}
 
               <View style={styles.summaryDivider} />
 
               {/* Total */}
               <View style={styles.totalRow}>
-                <Typography style={styles.totalLabel}>Total</Typography>
+                <Typography style={styles.totalLabel}>Grand Total</Typography>
                 <Typography style={styles.totalValue}>
                   ₹{total.toFixed(2)}
                 </Typography>
@@ -241,9 +304,10 @@ export default function CartScreen() {
 
               {/* Checkout Securely Button */}
               <TouchableOpacity
-                style={styles.checkoutBtn}
+                style={[styles.checkoutBtn, (!isTesterMinimumMet || total === 0) && { opacity: 0.5 }]}
                 activeOpacity={0.85}
                 onPress={handleCheckout}
+                disabled={!isTesterMinimumMet || total === 0}
               >
                 <Lock size={16} color="#FFFFFF" strokeWidth={2} />
                 <Typography style={styles.checkoutBtnText}>
