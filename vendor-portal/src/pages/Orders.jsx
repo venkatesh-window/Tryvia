@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Search, ShoppingCart, Truck, Check, X } from "lucide-react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ export default function Orders() {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem("vendor_token");
-      const res = await axios.get("http://localhost:8000/api/v1/vendor/orders", {
+      const res = await axios.get(`${API_URL}/vendor/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(res.data);
@@ -128,7 +130,7 @@ function OrderModal({ order, onClose, onUpdate }) {
     setError("");
     try {
       const token = localStorage.getItem("vendor_token");
-      await axios.patch(`http://localhost:8000/api/v1/vendor/orders/${order._id}/status`, {
+      await axios.patch(`${API_URL}/vendor/orders/${order._id}/status`, {
         status,
         shippingPartner: courier,
         trackingNumber

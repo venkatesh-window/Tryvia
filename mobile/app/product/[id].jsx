@@ -353,6 +353,41 @@ export default function ProductDetailsScreen() {
                 </Typography>
               </View>
             </View>
+
+            {/* Additional Product Details */}
+            <View style={styles.detailsSection}>
+              {product.claims && (
+                <View style={styles.detailBlock}>
+                  <Typography style={styles.detailHeading}>Claims</Typography>
+                  <Typography style={styles.detailBody}>{product.claims}</Typography>
+                </View>
+              )}
+
+              {product.ingredients && (
+                <View style={styles.detailBlock}>
+                  <Typography style={styles.detailHeading}>Ingredients</Typography>
+                  <Typography style={styles.detailBody}>{product.ingredients}</Typography>
+                </View>
+              )}
+
+              {product.usageInstructions && (
+                <View style={styles.detailBlock}>
+                  <Typography style={styles.detailHeading}>How to Use</Typography>
+                  <Typography style={styles.detailBody}>{product.usageInstructions}</Typography>
+                </View>
+              )}
+
+              {(product.sizeQuantity || product.sampleSize) && (
+                <View style={styles.detailBlock}>
+                  <Typography style={styles.detailHeading}>Size</Typography>
+                  <Typography style={styles.detailBody}>
+                    {product.sizeQuantity && `Full Size: ${product.sizeQuantity}`}
+                    {product.sizeQuantity && product.sampleSize && ' | '}
+                    {product.sampleSize && `Sample: ${product.sampleSize}`}
+                  </Typography>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -633,5 +668,26 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     lineHeight: 14,
+  },
+  detailsSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: "#EAE3DC",
+  },
+  detailBlock: {
+    marginBottom: 20,
+  },
+  detailHeading: {
+    fontFamily: "CormorantGaramond_700Bold",
+    fontSize: 18,
+    color: "#1A1918",
+    marginBottom: 6,
+  },
+  detailBody: {
+    fontSize: 13,
+    color: "#6E6862",
+    lineHeight: 20,
+    fontFamily: "Inter_400Regular",
   },
 });

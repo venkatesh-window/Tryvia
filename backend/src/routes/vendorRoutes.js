@@ -391,6 +391,11 @@ router.post(
         category,
         brand,
         status,
+        ingredients,
+        sizeQuantity,
+        sampleSize,
+        usageInstructions,
+        claims,
       } = req.body;
       // Cloudinary returns the secure_url via req.file.path
       let imageUrl = req.body.imageUrl;
@@ -420,6 +425,11 @@ router.post(
         vendor: vendor._id,
         vendorId: vendor.vendorId, // From vendor document
         status: status || "ACTIVE",
+        ingredients,
+        sizeQuantity,
+        sampleSize,
+        usageInstructions,
+        claims,
       });
       await product.save();
       res.json(product.toJSON());

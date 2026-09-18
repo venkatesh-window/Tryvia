@@ -12,6 +12,11 @@ const ProductSchema = new Schema(
     stockFull: { type: Number, default: 10 },
     stockTester: { type: Number, default: 10 },
     imageUrl: { type: String },
+    ingredients: { type: String },
+    sizeQuantity: { type: String },
+    sampleSize: { type: String },
+    usageInstructions: { type: String },
+    claims: { type: String },
     brand: { type: Schema.Types.ObjectId, ref: "Brand", required: true },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
     vendor: { type: Schema.Types.ObjectId, ref: "Vendor" },
@@ -33,6 +38,11 @@ const ProductSchema = new Schema(
         ret.stock_full = ret.stockFull;
         ret.stock_tester = ret.stockTester;
         ret.image_url = ret.imageUrl;
+        ret.ingredients = ret.ingredients;
+        ret.sizeQuantity = ret.sizeQuantity;
+        ret.sampleSize = ret.sampleSize;
+        ret.usageInstructions = ret.usageInstructions;
+        ret.claims = ret.claims;
         if (ret.vendor) {
           ret.vendor_id = ret.vendor;
         }

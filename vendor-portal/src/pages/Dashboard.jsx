@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Package, ShoppingCart, DollarSign, AlertCircle, Truck, RefreshCw } from "lucide-react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const token = localStorage.getItem("vendor_token");
-      const res = await axios.get("http://localhost:8000/api/v1/vendor/dashboard", {
+      const res = await axios.get(`${API_URL}/vendor/dashboard`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMetrics(res.data);

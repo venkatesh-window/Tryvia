@@ -18,7 +18,7 @@ export const getBaseUrl = () => {
         ? window.location.hostname
         : "localhost";
     if (hostname !== "localhost" && hostname !== "127.0.0.1") {
-      return "https://tryvia-r6z3.onrender.com/api/v1";
+      return "https://tryvia-ta57.onrender.com/api/v1";
     }
     return `http://${hostname}:8000/api/v1`;
   }
@@ -38,7 +38,7 @@ export const getBaseUrl = () => {
   }
 
   // Production Render Backend fallback for standalone APK / release builds
-  return "https://tryvia-r6z3.onrender.com/api/v1";
+  return "https://tryvia-ta57.onrender.com/api/v1";
 };
 
 const BASE_URL = getBaseUrl();

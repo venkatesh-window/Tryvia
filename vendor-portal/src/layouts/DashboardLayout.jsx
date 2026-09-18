@@ -1,4 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { LayoutDashboard, Package, ShoppingCart, LogOut, Store } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -10,6 +11,14 @@ function cn(...inputs) {
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("vendor_token");
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("vendor_token");

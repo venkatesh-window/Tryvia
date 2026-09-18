@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, Loader2, Image as ImageIcon, X } from "lucide-react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 export default function ProductForm() {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -19,15 +21,20 @@ export default function ProductForm() {
     stockFull: "",
     category: "",
     brand: "",
-    status: "ACTIVE"
+    status: "ACTIVE",
+    ingredients: "",
+    sizeQuantity: "",
+    sampleSize: "",
+    usageInstructions: "",
+    claims: ""
   });
 
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
         const [catRes, brandRes] = await Promise.all([
-          axios.get("http://localhost:8000/api/v1/products/categories"),
-          axios.get("http://localhost:8000/api/v1/products/brands")
+          axios.get(`${API_URL}/products/categories`),
+          axios.get(`${API_URL}/products/brands`)
         ]);
         setCategories(catRes.data);
         setBrands(brandRes.data);
@@ -81,7 +88,7 @@ export default function ProductForm() {
         // Fallback for demo if no image is selected, the backend might handle it or we can provide a dummy URL
       }
 
-      await axios.post("http://localhost:8000/api/v1/vendor/products", submitData, {
+      await axios.post(`${API_URL}/vendor/products`, submitData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -143,6 +150,42 @@ export default function ProductForm() {
                   className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body resize-y"
                 ></textarea>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Ingredients</label>
+                <textarea
+                  name="ingredients"
+                  value={formData.ingredients}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body resize-y"
+                  placeholder="E.g., Aqua, Glycerin, Niacinamide..."
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Usage Instructions</label>
+                <textarea
+                  name="usageInstructions"
+                  value={formData.usageInstructions}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body resize-y"
+                  placeholder="E.g., Apply a pea-sized amount twice daily..."
+                ></textarea>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Claims</label>
+                <textarea
+                  name="claims"
+                  value={formData.claims}
+                  onChange={handleChange}
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body resize-y"
+                  placeholder="E.g., Dermatologically tested, Cruelty-free"
+                ></textarea>
+              </div>
             </div>
 
             <div className="bg-background-paper p-6 rounded-2xl shadow-card border border-border-light space-y-5">
@@ -162,6 +205,18 @@ export default function ProductForm() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Full Size Quantity (e.g. 50ml) *</label>
+                  <input
+                    type="text"
+                    name="sizeQuantity"
+                    value={formData.sizeQuantity}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body"
+                    placeholder="E.g. 50ml, 100g"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Full Size Stock *</label>
                   <input
                     type="number"
@@ -171,6 +226,17 @@ export default function ProductForm() {
                     required
                     min={0}
                     className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Sample Size (e.g. 5ml)</label>
+                  <input
+                    type="text"
+                    name="sampleSize"
+                    value={formData.sampleSize}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body"
+                    placeholder="E.g. 5ml, 10g"
                   />
                 </div>
               </div>

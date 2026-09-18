@@ -23,7 +23,7 @@ export default function PublicVendorStoreScreen() {
     const fetchStore = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/v1/products/store/${slug}`,
+          `https://tryvia-ta57.onrender.com/api/v1/products/store/${slug}`,
         );
         if (!response.ok) {
           throw new Error("Store not found");

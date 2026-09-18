@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { Store, Loader2 } from "lucide-react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 export default function Register() {
   const [formData, setFormData] = useState({
     storeName: "",
@@ -40,7 +42,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8000/api/v1/auth/vendor/register", formData);
+      const response = await axios.post(`${API_URL}/auth/vendor/register`, formData);
       localStorage.setItem("vendor_token", response.data.access_token);
       localStorage.setItem("vendor_user", JSON.stringify(response.data.user));
       navigate("/dashboard");

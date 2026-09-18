@@ -3,6 +3,8 @@ import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +14,7 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem("vendor_token");
-      const res = await axios.get("http://localhost:8000/api/v1/vendor/products", {
+      const res = await axios.get(`${API_URL}/vendor/products`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProducts(res.data);
