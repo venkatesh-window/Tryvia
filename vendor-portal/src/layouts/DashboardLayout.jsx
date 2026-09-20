@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import logo from "../assets/logo.png";
 import { LayoutDashboard, Package, ShoppingCart, LogOut, Store } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -38,9 +39,7 @@ export default function DashboardLayout() {
       {/* Sidebar */}
       <aside className="w-64 bg-background-paper border-r border-border-light flex flex-col shadow-card">
         <div className="p-6 flex items-center gap-3 border-b border-border-light">
-          <div className="bg-primary-light p-2 rounded-lg">
-            <Store className="w-6 h-6 text-primary-main" />
-          </div>
+          <img src={logo} alt="Tryvia Logo" className="w-10 h-10 object-contain rounded-lg bg-black" />
           <div>
             <h1 className="font-brand text-2xl font-bold text-text-primary tracking-tight">TRYVIA</h1>
             <p className="text-xs font-body text-text-secondary uppercase tracking-widest font-semibold">Vendor Portal</p>
