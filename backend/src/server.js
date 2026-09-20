@@ -49,7 +49,11 @@ app.use(
         "http://127.0.0.1:5173",
       ];
       
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (process.env.FRONTEND_URL) {
+        allowedOrigins.push(...process.env.FRONTEND_URL.split(',').map(url => url.trim()));
+      }
+      
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
         callback(null, true);
       } else {
         // Fallback for development/testing when origins might vary
