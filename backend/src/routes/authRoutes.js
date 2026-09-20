@@ -18,7 +18,7 @@ const generateToken = (numericId) => {
 const loginSchema = z.object({
   body: z.object({
     username: z.string().optional(),
-    email: z.string().email().optional(),
+    email: z.string().trim().email().optional(),
     password: z.string().min(1, "Password is required"),
   })
 });
@@ -67,7 +67,7 @@ router.post("/login", authLimiter, validate(loginSchema), async (req, res) => {
 
 const registerSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    email: z.string().trim().email(),
     password: z.string().min(10, "Password must be at least 10 characters")
       .regex(/[A-Z]/, "Must contain uppercase")
       .regex(/[a-z]/, "Must contain lowercase")
@@ -206,7 +206,7 @@ import { Vendor } from "../models/Vendor.js";
 
 const vendorRegisterSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    email: z.string().trim().email(),
     password: z.string().min(10, "Password must be at least 10 characters")
       .regex(/[A-Z]/, "Must contain uppercase")
       .regex(/[a-z]/, "Must contain lowercase")
