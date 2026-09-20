@@ -13,8 +13,11 @@ export const authenticate = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   try {
-    const secret =
-      process.env.JWT_SECRET || "tryvia_secret_jwt_key_super_secure_2026";
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      res.status(500).json({ detail: "Internal Server Error: Missing secret" });
+      return;
+    }
 
     const decoded = jwt.verify(token, secret);
     const sub = decoded?.sub;

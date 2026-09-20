@@ -1,10 +1,9 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { Order } from "../models/Order.js";
+import { adminLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
-const ADMIN_PASSWORD = "0822";
-const JWT_SECRET = process.env.JWT_SECRET || "tryvia_secret_jwt_key_super_secure_2026";
 
 const requireAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -14,7 +13,7 @@ const requireAdmin = (req, res, next) => {
   }
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== "SUPER_ADMIN") {
       res.status(403).json({ detail: "Access denied" });
       return;
@@ -26,10 +25,16 @@ const requireAdmin = (req, res, next) => {
 };
 
 // POST /api/v1/admin/login
-router.post("/login", (req, res) => {
+router.post("/login", adminLimiter, (req, res) => {
   const { password } = req.body;
-  if (password === ADMIN_PASSWORD) {
-    const token = jwt.sign({ role: "SUPER_ADMIN" }, JWT_SECRET, { expiresIn: "24h" });
+  
+  if (!process.env.ADMIN_PASSWORD) {
+    res.status(500).json({ detail: "Server misconfiguration" });
+    return;
+  }
+  
+  if (password === process.env.ADMIN_PASSWORD) {
+    const token = jwt.sign({ role: "SUPER_ADMIN" }, process.env.JWT_SECRET, { expiresIn: "24h" });
     res.json({ token });
   } else {
     res.status(401).json({ detail: "Invalid credentials" });

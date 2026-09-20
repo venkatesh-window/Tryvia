@@ -9,6 +9,8 @@ import { User } from "../models/User.js";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
+import { z } from "zod";
+import { validate } from "../middleware/validation.js";
 
 const isCloudinaryConfigured =
   process.env.CLOUDINARY_API_KEY &&
@@ -373,11 +375,29 @@ router.get("/products", getVendor, async (req, res) => {
   }
 });
 
+const productSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).trim(),
+    description: z.string().min(1).trim(),
+    fullPrice: z.coerce.number().min(0).default(0),
+    stockFull: z.coerce.number().int().min(0).default(0),
+    category: z.string().optional(),
+    brand: z.string().optional(),
+    status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+    ingredients: z.string().optional(),
+    sizeQuantity: z.string().optional(),
+    sampleSize: z.string().optional(),
+    usageInstructions: z.string().optional(),
+    claims: z.string().optional(),
+  })
+});
+
 // POST /api/v1/vendor/products
 router.post(
   "/products",
   getVendor,
   upload.single("image"),
+  validate(productSchema),
   async (req, res) => {
     try {
       const vendor = req.vendor;
@@ -684,11 +704,31 @@ router.get("/testers", getVendor, async (req, res) => {
   }
 });
 
+const testerSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).trim(),
+    description: z.string().min(1).trim(),
+    fullPrice: z.coerce.number().min(0).default(0),
+    testerPrice: z.coerce.number().min(0).default(0),
+    stockFull: z.coerce.number().int().min(0).default(0),
+    stockTester: z.coerce.number().int().min(0).default(0),
+    category: z.string().optional(),
+    brand: z.string().optional(),
+    status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+    ingredients: z.string().optional(),
+    sizeQuantity: z.string().optional(),
+    sampleSize: z.string().optional(),
+    usageInstructions: z.string().optional(),
+    claims: z.string().optional(),
+  })
+});
+
 // POST /api/v1/vendor/testers
 router.post(
   "/testers",
   getVendor,
   upload.single("image"),
+  validate(testerSchema),
   async (req, res) => {
     try {
       const vendor = req.vendor;

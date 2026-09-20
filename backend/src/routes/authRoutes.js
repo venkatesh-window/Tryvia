@@ -1,8 +1,11 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 import { User } from "../models/User.js";
 import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validation.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
@@ -12,21 +15,23 @@ const generateToken = (numericId) => {
   return jwt.sign({ sub: numericId }, secret, { expiresIn: "7d" });
 };
 
+const loginSchema = z.object({
+  body: z.object({
+    username: z.string().optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(1, "Password is required"),
+  })
+});
+
 // POST /api/v1/auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, validate(loginSchema), async (req, res) => {
   try {
     const rawEmail = req.body.username || req.body.email || "";
     const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
-    const password = typeof req.body.password === "string" ? req.body.password : "";
+    const password = req.body.password;
 
-    if (!email || !password) {
-      res.status(400).json({ detail: "Email and password are required" });
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      res.status(400).json({ detail: "Invalid email format" });
+    if (!email) {
+      res.status(400).json({ detail: "Email is required" });
       return;
     }
 
@@ -60,31 +65,24 @@ router.post("/login", async (req, res) => {
   }
 });
 
+const registerSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(10, "Password must be at least 10 characters")
+      .regex(/[A-Z]/, "Must contain uppercase")
+      .regex(/[a-z]/, "Must contain lowercase")
+      .regex(/[0-9]/, "Must contain number")
+      .regex(/[^A-Za-z0-9]/, "Must contain special character"),
+    full_name: z.string().min(1, "Full name is required").trim(),
+    role: z.enum(["CUSTOMER", "VENDOR"]).optional()
+  })
+});
+
 // POST /api/v1/auth/register
-router.post("/register", async (req, res) => {
+router.post("/register", authLimiter, validate(registerSchema), async (req, res) => {
   try {
     const { email, password, full_name, role } = req.body;
-
-    if (!email || !password || !full_name) {
-      res
-        .status(400)
-        .json({ detail: "Email, password, and full name are required" });
-      return;
-    }
-
-    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      res.status(400).json({ detail: "Invalid email format" });
-      return;
-    }
-
-    if (typeof password !== "string" || password.length < 6) {
-      res
-        .status(400)
-        .json({ detail: "Password must be at least 6 characters long" });
-      return;
-    }
+    const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
@@ -206,27 +204,31 @@ router.put("/vendor/password", authenticate, async (req, res) => {
 
 import { Vendor } from "../models/Vendor.js";
 
+const vendorRegisterSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(10, "Password must be at least 10 characters")
+      .regex(/[A-Z]/, "Must contain uppercase")
+      .regex(/[a-z]/, "Must contain lowercase")
+      .regex(/[0-9]/, "Must contain number")
+      .regex(/[^A-Za-z0-9]/, "Must contain special character"),
+    full_name: z.string().min(1).trim(),
+    storeName: z.string().min(1).trim(),
+    phone: z.string().optional(),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    pincode: z.string().optional(),
+    gst: z.string().optional(),
+    description: z.string().optional()
+  })
+});
+
 // POST /api/v1/auth/vendor/register
-router.post("/vendor/register", async (req, res) => {
+router.post("/vendor/register", authLimiter, validate(vendorRegisterSchema), async (req, res) => {
   try {
     const { email, password, full_name, storeName, phone, address, city, state, pincode, gst, description } = req.body;
-
-    if (!email || !password || !full_name || !storeName) {
-      res.status(400).json({ detail: "Email, password, full name, and store name are required" });
-      return;
-    }
-
-    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      res.status(400).json({ detail: "Invalid email format" });
-      return;
-    }
-
-    if (typeof password !== "string" || password.length < 6) {
-      res.status(400).json({ detail: "Password must be at least 6 characters long" });
-      return;
-    }
+    const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {

@@ -7,6 +7,9 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "android": {
+      "package": "com.venkateshgs.tryviaroot"
+    }
   }
 }

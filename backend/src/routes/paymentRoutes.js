@@ -14,8 +14,23 @@ import {
 } from "../config/razorpay.js";
 import { fulfillOrder } from "../utils/orderHelper.js";
 import { syncUserWalletBalance } from "../utils/walletHelper.js";
+import { z } from "zod";
+import { validate } from "../middleware/validation.js";
 
 const router = Router();
+
+const checkoutSchema = z.object({
+  body: z.object({
+    items: z.array(z.object({
+      product_id: z.string().or(z.number()),
+      quantity: z.coerce.number().int().min(1).default(1),
+      item_type: z.enum(["full", "tester"]).optional()
+    })).min(1),
+    use_wallet: z.boolean().optional(),
+    apply_wallet_credit_id: z.boolean().or(z.string()).or(z.number()).optional(),
+    shipping_address: z.any().optional(),
+  }).passthrough()
+});
 
 // Helper to grant tester upgrade credits
 async function grantTesterUpgradeCredits(orderItems, userId) {
@@ -77,15 +92,10 @@ router.get("/config", (_req, res) => {
 });
 
 // POST /api/v1/payments/checkout/calculate - Preview the checkout calculation
-router.post("/checkout/calculate", authenticate, async (req, res) => {
+router.post("/checkout/calculate", authenticate, validate(checkoutSchema), async (req, res) => {
   try {
     const user = req.user;
     const { items, use_wallet } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ detail: "Order must contain at least one item" });
-      return;
-    }
 
     let originalProductsTotal = 0;
     let miniProductsTotal = 0;
@@ -170,15 +180,10 @@ router.post("/checkout/calculate", authenticate, async (req, res) => {
 });
 
 // POST /api/v1/payments/create-order - Validates cart, calculates authoritative price & creates Razorpay Order
-router.post("/create-order", authenticate, async (req, res) => {
+router.post("/create-order", authenticate, validate(checkoutSchema), async (req, res) => {
   try {
     const user = req.user;
     const { items, apply_wallet_credit_id, shipping_address } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ detail: "Order must contain at least one item" });
-      return;
-    }
 
     let subtotal = 0;
     const orderItems = [];

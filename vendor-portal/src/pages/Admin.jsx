@@ -29,7 +29,11 @@ export default function Admin() {
       setToken(res.data.token);
       localStorage.setItem("admin_token", res.data.token);
     } catch (err) {
-      setError("Invalid credentials");
+      if (err.response?.status === 429) {
+        setError("Too many attempts. Please try again later.");
+      } else {
+        setError("Invalid credentials or access denied.");
+      }
     } finally {
       setLoading(false);
     }

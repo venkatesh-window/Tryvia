@@ -8,19 +8,38 @@ import { WalletRule } from "../models/WalletRule.js";
 import { User } from "../models/User.js";
 import { SystemConfig } from "../models/SystemConfig.js";
 import { fulfillOrder } from "../utils/orderHelper.js";
+import { z } from "zod";
+import { validate } from "../middleware/validation.js";
 
 const router = Router();
 
+const orderSchema = z.object({
+  body: z.object({
+    items: z.array(z.object({
+      product_id: z.string().or(z.number()),
+      quantity: z.coerce.number().int().min(1).default(1),
+      item_type: z.enum(["full", "tester"]).optional()
+    })).min(1),
+    paymentMethod: z.string().optional(),
+    apply_wallet_credit_id: z.boolean().or(z.string()).or(z.number()).optional(),
+    use_wallet: z.boolean().optional(),
+    shippingAddress: z.object({
+      fullName: z.string().optional(),
+      street: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      zipCode: z.string().optional(),
+      country: z.string().optional(),
+      phone: z.string().optional(),
+    }).passthrough().optional()
+  }).passthrough()
+});
+
 // POST /api/v1/orders/
-router.post("/", authenticate, async (req, res) => {
+router.post("/", authenticate, validate(orderSchema), async (req, res) => {
   try {
     const { items, paymentMethod, apply_wallet_credit_id, use_wallet, shippingAddress } = req.body;
     const user = req.user;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ detail: "Order must contain at least one item" });
-      return;
-    }
 
     let subtotal = 0;
     const orderItems = [];
