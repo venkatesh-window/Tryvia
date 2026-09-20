@@ -29,6 +29,7 @@ export default function DashboardLayout() {
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { label: "Products", path: "/products", icon: Package },
+    { label: "Testers", path: "/testers", icon: Package },
     { label: "Orders", path: "/orders", icon: ShoppingCart },
   ];
 

@@ -6,6 +6,9 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import ProductForm from "./pages/ProductForm";
 import Orders from "./pages/Orders";
+import Admin from "./pages/Admin";
+import Testers from "./pages/Testers";
+import TesterForm from "./pages/TesterForm";
 
 function App() {
   return (
@@ -19,8 +22,12 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<Products />} />
           <Route path="products/new" element={<ProductForm />} />
+          <Route path="testers" element={<Testers />} />
+          <Route path="testers/new" element={<TesterForm />} />
           <Route path="orders" element={<Orders />} />
         </Route>
+        
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   );

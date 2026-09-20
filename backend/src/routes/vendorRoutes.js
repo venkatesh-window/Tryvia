@@ -671,4 +671,83 @@ router.patch("/orders/:id/status", getVendor, async (req, res) => {
   }
 });
 
+// GET /api/v1/vendor/testers
+router.get("/testers", getVendor, async (req, res) => {
+  try {
+    const vendor = req.vendor;
+    const products = await Product.find({ vendor: vendor._id, isTester: true })
+      .populate("category")
+      .populate("brand");
+    res.json(products.map((p) => p.toJSON()));
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// POST /api/v1/vendor/testers
+router.post(
+  "/testers",
+  getVendor,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const vendor = req.vendor;
+      const {
+        name,
+        description,
+        fullPrice,
+        testerPrice,
+        stockFull,
+        stockTester,
+        category,
+        brand,
+        status,
+        ingredients,
+        sizeQuantity,
+        sampleSize,
+        usageInstructions,
+        claims,
+      } = req.body;
+      
+      let imageUrl = req.body.imageUrl;
+      if (req.file) {
+        if (isCloudinaryConfigured) {
+          imageUrl = req.file.path;
+        } else {
+          imageUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
+        }
+      }
+      const count = await Product.countDocuments();
+      const numericId = count + 1000;
+      const productId = `TRY-PRD-${numericId.toString().padStart(6, '0')}`;
+      const product = new Product({
+        numericId,
+        productId,
+        name,
+        description,
+        fullPrice: fullPrice ? Number(fullPrice) : 0,
+        testerPrice: testerPrice ? Number(testerPrice) : 0,
+        stockFull: stockFull ? Number(stockFull) : 0,
+        stockTester: stockTester ? Number(stockTester) : 0,
+        imageUrl,
+        category,
+        brand,
+        vendor: vendor._id,
+        vendorId: vendor.vendorId,
+        status: status || "ACTIVE",
+        ingredients,
+        sizeQuantity,
+        sampleSize,
+        usageInstructions,
+        claims,
+        isTester: true,
+      });
+      await product.save();
+      res.json(product.toJSON());
+    } catch (error) {
+      res.status(500).json({ detail: error.message });
+    }
+  },
+);
+
 export default router;

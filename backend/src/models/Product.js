@@ -22,6 +22,7 @@ const ProductSchema = new Schema(
     vendor: { type: Schema.Types.ObjectId, ref: "Vendor" },
     tags: [{ type: String }],
     isFeatured: { type: Boolean, default: false },
+    isTester: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE", "OUT_OF_STOCK"],
@@ -47,6 +48,7 @@ const ProductSchema = new Schema(
           ret.vendor_id = ret.vendor;
         }
         ret.status = ret.status;
+        ret.is_tester = ret.isTester;
         delete ret.__v;
         return ret;
       },

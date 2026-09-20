@@ -11,6 +11,7 @@ import payoutRoutes from "./routes/payoutRoutes.js";
 import returnRoutes from "./routes/returnRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 dotenv.config();
@@ -71,6 +72,7 @@ app.use(`${API_PREFIX}/payouts`, payoutRoutes);
 app.use(`${API_PREFIX}/returns`, returnRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/payments`, paymentRoutes);
+app.use(`${API_PREFIX}/admin`, adminRoutes);
 
 // Health Check
 app.get("/", (req, res) => {
