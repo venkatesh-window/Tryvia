@@ -1,0 +1,26 @@
+{
+  "task_id": "install-ux-ui-skills",
+  "mode": "implement",
+  "objective": "Install UX/UI Agent Skills",
+  "acceptance_criteria": [
+    {
+      "id": "AC-001",
+      "statement": "Clone and install ux-ui-agent-skills as an Antigravity plugin/skills bundle"
+    },
+    {
+      "id": "AC-002",
+      "statement": "Verify 25 runnable skills, rules, and token kits are active"
+    }
+  ],
+  "risk_level": "low",
+  "budget_profile": "balanced",
+  "allowed_write_scope": [
+    "c:/tryvia/.agents",
+    ".agents",
+    "c:/tryvia",
+    "C:/Users/gsven/.gemini/config",
+    "c:/Users/gsven/.gemini/config"
+  ],
+  "validators": [],
+  "required_validators": []
+}

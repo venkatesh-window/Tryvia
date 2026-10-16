@@ -7,6 +7,7 @@ import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
 import { Vendor } from "../models/Vendor.js";
 import { Product } from "../models/Product.js";
+import { AuditLog } from "../models/AuditLog.js";
 
 const router = Router();
 
@@ -197,6 +198,27 @@ router.patch(
         );
       }
 
+      await AuditLog.create(
+        [
+          {
+            actorId: req.user?._id,
+            actorRole: req.user?.role || "ADMIN",
+            action: "UPDATE_RETURN_STATUS",
+            targetType: "Return",
+            targetId: String(ret._id),
+            ipAddress: req.ip || req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            details: {
+              status,
+              note,
+              order: String(ret.order),
+              vendor: String(ret.vendor),
+            },
+          },
+        ],
+        { session },
+      );
+
       await session.commitTransaction();
       res.json(ret.toJSON());
     } catch (error) {
@@ -209,16 +231,17 @@ router.patch(
 );
 
 // ==========================================
-// TEST ENDPOINT FOR CREATING RETURNS
+// TEST ENDPOINT FOR CREATING RETURNS (Dev/Test only)
 // ==========================================
-router.post("/test-create", async (req, res) => {
-  try {
-    const { orderId, productId, customerReason } = req.body;
-    const order = await Order.findById(orderId);
-    if (!order) {
-      res.status(404).json({ detail: "Order not found" });
-      return;
-    }
+if (process.env.NODE_ENV !== "production") {
+  router.post("/test-create", authenticate, async (req, res) => {
+    try {
+      const { orderId, productId, customerReason } = req.body;
+      const order = await Order.findOne({ _id: orderId, user: req.user._id });
+      if (!order) {
+        res.status(404).json({ detail: "Order not found or access denied" });
+        return;
+      }
 
     // Find the item
     const item = order.items.find((i) => i.product.toString() === productId);
@@ -264,8 +287,9 @@ router.post("/test-create", async (req, res) => {
 
     res.json(ret.toJSON());
   } catch (error) {
-    res.status(500).json({ detail: error.message });
+    res.status(500).json({ detail: "Failed to create return request" });
   }
 });
+}
 
 export default router;

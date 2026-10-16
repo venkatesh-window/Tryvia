@@ -1,0 +1,118 @@
+{
+  "phase": "recon",
+  "completed_criteria": [],
+  "pending_criteria": [
+    "AC-001",
+    "AC-002"
+  ],
+  "files_touched": [
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\install.ps1",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\failures.jsonl",
+    "c:\\tryvia\\install_ux_skills.ps1"
+  ],
+  "known_failures": [
+    {
+      "tool": "list_dir",
+      "input_summary": {
+        "DirectoryPath": "C:\\Users\\gsven\\.gemini\\config\\skills",
+        "toolAction": "Listing global skills dir",
+        "toolSummary": "Check global skills folder"
+      },
+      "fingerprint": "211ff1adf7598561",
+      "error": "",
+      "timestamp": "2026-10-16T14:42:45.138907+00:00"
+    }
+  ],
+  "last_successful_action": null,
+  "next_action": null,
+  "read_files": [
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\259f5080-735e-453d-acbd-c5eb8bbd30fb\\.system_generated\\logs\\transcript.jsonl",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\103\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\107\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\111\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\115\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\119\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\125\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\7\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\93\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\.system_generated\\steps\\97\\content.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills\\.claude",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills\\.claude-plugin\\plugin.json",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills\\.claude\\agents",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills\\.claude\\rules",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills\\.claude\\skills",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\ux-ui-agent-skills\\.claude\\skills\\design-component\\SKILL.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\7467d41d-b377-4af6-bf58-2897a6509184\\.system_generated\\logs\\transcript.jsonl",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\builtin\\skills\\agy-customizations\\SKILL.md",
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\builtin\\skills\\agy-customizations\\docs\\skills.md",
+    "C:\\Users\\gsven\\.gemini\\config\\plugins",
+    "C:\\Users\\gsven\\.gemini\\config\\plugins\\ux-ui-agent-skills",
+    "C:\\Users\\gsven\\.gemini\\config\\skills",
+    "c:\\tryvia\\.agents",
+    "c:\\tryvia\\.agents\\plugins",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\contract.json",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\evidence.jsonl",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\failures.jsonl",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\state.json",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\stop_gate.log",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-39e73263cdff3d2b2b2ced40",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-39e73263cdff3d2b2b2ced40\\contract.json",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-39e73263cdff3d2b2b2ced40\\state.json",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\.gravitas\\sessions\\conversation-98273e5fd382e6031f32e7a6",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\hooks.json",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\scripts\\ledger_add.py",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\scripts\\pre_tool.py",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\scripts\\session_context.py",
+    "c:\\tryvia\\.agents\\plugins\\gravitas-antigravity\\scripts\\stop_gate.py",
+    "c:\\tryvia\\.agents\\plugins\\ux-ui-agent-skills",
+    "c:\\tryvia\\.agents\\skills",
+    "c:\\tryvia\\.agents\\skills\\gravitas\\SKILL.md",
+    "c:\\tryvia\\.agents\\skills\\gravitas\\references\\task-contract.md",
+    "c:\\tryvia\\.gravitas",
+    "c:\\tryvia\\Gravitas\\plugins\\gravitas-antigravity\\scripts\\gravitas_action.py",
+    "c:\\tryvia\\Gravitas\\plugins\\gravitas-antigravity\\scripts\\gravitas_policy.py",
+    "c:\\tryvia\\Gravitas\\plugins\\gravitas-antigravity\\scripts\\init_session.py",
+    "c:\\tryvia\\Gravitas\\plugins\\gravitas-antigravity\\scripts\\pre_tool.py",
+    "c:\\tryvia\\Gravitas\\plugins\\gravitas-antigravity\\scripts\\session_context.py",
+    "c:\\tryvia\\mobile\\app",
+    "c:\\tryvia\\mobile\\app\\(tabs)\\index.jsx",
+    "c:\\tryvia\\mobile\\app\\index.jsx",
+    "c:\\tryvia\\vendor-portal\\src",
+    "c:\\tryvia\\vendor-portal\\src\\index.css",
+    "c:\\tryvia\\vendor-portal\\src\\pages",
+    "c:\\tryvia\\vendor-portal\\src\\pages\\Dashboard.jsx"
+  ],
+  "last_updated": "2026-10-16T14:46:00.954876+00:00",
+  "impact_graph": {
+    "C:\\Users\\gsven\\.gemini\\antigravity-ide\\brain\\6fbb80e6-e349-404b-8d41-2d34ac75e94a\\scratch\\install.ps1": {
+      "callers": [],
+      "tests": [],
+      "config": [],
+      "importers": [],
+      "symbols": [],
+      "co_changed": []
+    },
+    ".gravitas\\sessions\\conversation-1a0fa19859e898dd545067bc\\failures.jsonl": {
+      "callers": [],
+      "tests": [],
+      "config": [],
+      "importers": [],
+      "symbols": [],
+      "co_changed": []
+    },
+    "c:\\tryvia\\install_ux_skills.ps1": {
+      "callers": [],
+      "tests": [],
+      "config": [],
+      "importers": [],
+      "symbols": [],
+      "co_changed": []
+    }
+  },
+  "verification_targets": []
+}

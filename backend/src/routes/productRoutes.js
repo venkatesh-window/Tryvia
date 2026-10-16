@@ -30,7 +30,7 @@ router.get("/brands", async (req, res) => {
 // GET /api/v1/products/testers
 router.get("/testers", async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
     const products = await Product.find({ stockTester: { $gt: 0 } })
       .populate("brand")
       .populate("category")
@@ -75,7 +75,7 @@ router.get("/:id", async (req, res) => {
 // GET /api/v1/products
 router.get("/", async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 14;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 14, 1), 100);
     const search = req.query.search;
     const categoryId =
       typeof req.query.category_id === "string"
@@ -84,11 +84,14 @@ router.get("/", async (req, res) => {
 
     const filter = {};
 
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
+    if (search && typeof search === "string") {
+      const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").trim();
+      if (sanitizedSearch.length > 0) {
+        filter.$or = [
+          { name: { $regex: sanitizedSearch, $options: "i" } },
+          { description: { $regex: sanitizedSearch, $options: "i" } },
+        ];
+      }
     }
 
     if (categoryId) {

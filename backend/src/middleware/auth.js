@@ -3,14 +3,19 @@ import mongoose from "mongoose";
 import { User } from "../models/User.js";
 
 export const authenticate = async (req, res, next) => {
+  let token = null;
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if (req.query && typeof req.query.token === "string") {
+    token = req.query.token;
+  }
+
+  if (!token) {
     res.status(401).json({ detail: "Not authenticated" });
     return;
   }
-
-  const token = authHeader.split(" ")[1];
 
   try {
     const secret = process.env.JWT_SECRET;

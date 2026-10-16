@@ -28,13 +28,48 @@ if (isCloudinaryConfigured) {
     params: {
       folder: "tryvia-products",
       allowed_formats: ["jpg", "png", "jpeg", "webp"],
+      public_id: () => `prod_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     },
   });
 } else {
   storage = multer.memoryStorage();
 }
 
-const upload = multer({ storage: storage });
+const fileFilter = (req, file, cb) => {
+  const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+  if (!allowedMimes.includes(file.mimetype)) {
+    return cb(new Error("Invalid file type. Only JPEG, PNG, and WebP images are allowed."));
+  }
+  cb(null, true);
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB maximum file size
+    files: 1,
+  },
+  fileFilter,
+});
+
+export const validateImageMagicBytes = (req, res, next) => {
+  if (!req.file || !req.file.buffer) return next();
+  const buffer = req.file.buffer;
+  if (buffer.length >= 4) {
+    const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+    const isWebp =
+      buffer.length >= 12 &&
+      buffer.toString("ascii", 0, 4) === "RIFF" &&
+      buffer.toString("ascii", 8, 12) === "WEBP";
+
+    if (!isJpeg && !isPng && !isWebp) {
+      return res.status(400).json({ detail: "Uploaded file failed magic bytes verification (invalid or malicious image)." });
+    }
+  }
+  next();
+};
+
 const router = Router();
 
 router.use(authenticate);
@@ -64,12 +99,12 @@ router.post("/apply", async (req, res) => {
       slug,
       gst,
       pan,
-      status: "APPROVED",
+      status: "PENDING",
       statusHistory: [
         {
-          status: "APPROVED",
+          status: "PENDING",
           changedAt: new Date(),
-          reason: "Auto-approved Application",
+          reason: "Vendor Application Submitted",
         },
       ],
     });
@@ -105,10 +140,8 @@ const getVendor = async (req, res, next) => {
     req.vendor = vendor;
     // Allow access to /application and /profile regardless of status
     const allowedPaths = ["/application", "/profile"];
-    // Treat PENDING as APPROVED since auto-approval is now enabled
     if (
       vendor.status !== "APPROVED" &&
-      vendor.status !== "PENDING" &&
       !allowedPaths.some((p) => req.path === p)
     ) {
       res
@@ -397,6 +430,7 @@ router.post(
   "/products",
   getVendor,
   upload.single("image"),
+  validateImageMagicBytes,
   validate(productSchema),
   async (req, res) => {
     try {
@@ -479,13 +513,32 @@ router.get("/products/:id", getVendor, async (req, res) => {
   }
 });
 
+const updateProductSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(1).optional(),
+    description: z.string().trim().optional(),
+    fullPrice: z.coerce.number().min(0).optional(),
+    testerPrice: z.coerce.number().min(0).optional(),
+    stockFull: z.coerce.number().int().min(0).optional(),
+    stockTester: z.coerce.number().int().min(0).optional(),
+    status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]).optional(),
+    ingredients: z.string().optional(),
+    sizeQuantity: z.string().optional(),
+    sampleSize: z.string().optional(),
+    usageInstructions: z.string().optional(),
+    claims: z.string().optional(),
+  }).strict()
+});
+
 // PUT /api/v1/vendor/products/:id
-router.put("/products/:id", getVendor, async (req, res) => {
+router.put("/products/:id", getVendor, validate(updateProductSchema), async (req, res) => {
   try {
     const vendor = req.vendor;
-    const updateData = { ...req.body };
-    delete updateData.vendor; // Prevent vendor reassignment
-    delete updateData.numericId; // Prevent ID reassignment
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ detail: "Invalid product ID" });
+      return;
+    }
+    const updateData = req.body;
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, vendor: vendor._id },
       { $set: updateData },
@@ -728,6 +781,7 @@ router.post(
   "/testers",
   getVendor,
   upload.single("image"),
+  validateImageMagicBytes,
   validate(testerSchema),
   async (req, res) => {
     try {

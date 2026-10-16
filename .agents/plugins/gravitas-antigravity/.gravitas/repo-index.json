@@ -1,0 +1,927 @@
+{
+ "version": 1,
+ "root": "C:\\tryvia\\.agents\\plugins\\gravitas-antigravity",
+ "files": {
+  "scripts\\evidence_chain.py": {
+   "symbols": [
+    "canonical_json",
+    "sha256",
+    "_last_event_hash",
+    "append_evidence",
+    "verify_chain"
+   ],
+   "imports": [
+    "__future__",
+    "hashlib",
+    "json",
+    "os",
+    "datetime",
+    "pathlib",
+    "fcntl"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312287930800,
+    3291
+   ],
+   "imported_by": [
+    "scripts\\ledger_add.py",
+    "scripts\\post_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py"
+   ],
+   "callers": [
+    "scripts\\gravitas_context.py",
+    "scripts\\gravitas_policy.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\session_context.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\doctor.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\gravitas_action.py": {
+   "symbols": [
+    "Action",
+    "HostEnvelope",
+    "canonical_tool",
+    "target_file",
+    "command_text",
+    "_basename",
+    "_strip_wrappers",
+    "_strip_git_globals",
+    "_operand_paths",
+    "classify_shell_segment",
+    "classify_shell",
+    "normalize",
+    "antigravity_envelope",
+    "workspace_roots",
+    "confine_cwd"
+   ],
+   "imports": [
+    "__future__",
+    "re",
+    "shlex",
+    "dataclasses",
+    "pathlib",
+    "os"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312290933500,
+    23303
+   ],
+   "imported_by": [
+    "scripts\\gravitas_policy.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\validator_runner.py"
+   ],
+   "callers": [
+    "scripts\\gravitas_policy.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\validator_runner.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\gravitas_context.py": {
+   "symbols": [
+    "elide_output",
+    "_read_json",
+    "_read_jsonl",
+    "_truncate",
+    "summarize_session"
+   ],
+   "imports": [
+    "__future__",
+    "hashlib",
+    "json",
+    "re",
+    "pathlib"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312293938100,
+    6308
+   ],
+   "imported_by": [
+    "scripts\\resume_session.py"
+   ],
+   "callers": [
+    "scripts\\resume_session.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\gravitas_evidence.py": {
+   "symbols": [
+    "parse_time",
+    "owned_validator_pass",
+    "last_write_time",
+    "is_fresh",
+    "criterion_states",
+    "evidence_deficit"
+   ],
+   "imports": [
+    "__future__",
+    "datetime"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312298940500,
+    6000
+   ],
+   "imported_by": [
+    "scripts\\post_invocation.py",
+    "scripts\\stop_gate.py"
+   ],
+   "callers": [
+    "scripts\\post_invocation.py",
+    "scripts\\stop_gate.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\gravitas_policy.py": {
+   "symbols": [
+    "normalize_mode",
+    "action_fingerprint",
+    "target_in_scope",
+    "evaluate_action",
+    "_safe_int",
+    "decide",
+    "_record",
+    "_with_delegation",
+    "_delegation",
+    "policy_record_for_contract"
+   ],
+   "imports": [
+    "__future__",
+    "hashlib",
+    "json",
+    "pathlib",
+    "gravitas_action"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312302942400,
+    12409
+   ],
+   "imported_by": [
+    "scripts\\pre_tool.py"
+   ],
+   "callers": [
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\gravitas_repo.py": {
+   "symbols": [
+    "iter_source_files",
+    "read_text",
+    "extract_symbols",
+    "extract_imports",
+    "specifier_stem",
+    "is_test_path",
+    "co_changed_pairs",
+    "flush",
+    "build_index",
+    "_attach_relations",
+    "configured_by",
+    "index_path",
+    "load_index",
+    "refresh_index",
+    "get_index",
+    "save_index",
+    "rank_related",
+    "add",
+    "context_for"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "re",
+    "subprocess",
+    "pathlib"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312306936600,
+    14281
+   ],
+   "imported_by": [
+    "scripts\\impact_graph.py"
+   ],
+   "callers": [
+    "scripts\\evidence_chain.py",
+    "scripts\\gravitas_action.py",
+    "scripts\\gravitas_context.py",
+    "scripts\\gravitas_verify.py",
+    "scripts\\impact_graph.py",
+    "scripts\\post_invocation.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\doctor.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\gravitas_verify.py": {
+   "symbols": [
+    "_read_text",
+    "_has_marker",
+    "_has_executable",
+    "_package_json_scripts",
+    "_makefile_targets",
+    "_ci_workflows",
+    "discover_validators",
+    "_validator_for",
+    "escalation_plan",
+    "expand_cases",
+    "add"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "re",
+    "shutil",
+    "pathlib"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312310944400,
+    12721
+   ],
+   "imported_by": [
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "callers": [
+    "scripts\\gravitas_action.py",
+    "scripts\\gravitas_repo.py",
+    "scripts\\post_invocation.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\impact_graph.py": {
+   "symbols": [
+    "_normalize_changed",
+    "related_files",
+    "build_impact_graph",
+    "verification_context",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "argparse",
+    "json",
+    "pathlib",
+    "gravitas_repo"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312314945600,
+    3191
+   ],
+   "imported_by": [
+    "scripts\\post_invocation.py"
+   ],
+   "callers": [
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\init_session.py": {
+   "symbols": [
+    "criterion_ids",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "argparse",
+    "re",
+    "datetime",
+    "pathlib",
+    "session_context"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312319434800,
+    4231
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\gravitas_context.py",
+    "scripts\\gravitas_evidence.py",
+    "scripts\\impact_graph.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\ledger_add.py": {
+   "symbols": [
+    "find_session_dir",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "sys",
+    "argparse",
+    "pathlib",
+    "evidence_chain"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312325433500,
+    2193
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\post_invocation.py": {
+   "symbols": [
+    "criterion_id",
+    "load_state",
+    "update_state_from_evidence",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "sys",
+    "pathlib",
+    "datetime",
+    "impact_graph",
+    "session_context",
+    "gravitas_evidence"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312329426000,
+    4627
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\post_tool.py": {
+   "symbols": [
+    "tool_call",
+    "action_fingerprint",
+    "append_jsonl",
+    "is_sensitive_path",
+    "redact_text",
+    "redact_value",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "sys",
+    "hashlib",
+    "re",
+    "datetime",
+    "pathlib",
+    "session_context",
+    "evidence_chain",
+    "gravitas_action"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312334441500,
+    6397
+   ],
+   "imported_by": [
+    "scripts\\repro_runner.py"
+   ],
+   "callers": [
+    "scripts\\gravitas_policy.py",
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\pre_tool.py": {
+   "symbols": [
+    "load_contract",
+    "load_failures",
+    "load_reads",
+    "deny",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "sys",
+    "pathlib",
+    "gravitas_action",
+    "gravitas_policy",
+    "session_context"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312338431600,
+    5072
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\gravitas_policy.py",
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\repro_runner.py": {
+   "symbols": [
+    "run_bounded",
+    "load_contract",
+    "criterion_ids",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "argparse",
+    "hashlib",
+    "json",
+    "subprocess",
+    "tempfile",
+    "time",
+    "pathlib",
+    "evidence_chain",
+    "gravitas_action",
+    "post_tool"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312343927200,
+    5545
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\gravitas_context.py",
+    "scripts\\gravitas_evidence.py",
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\resume_session.py": {
+   "symbols": [
+    "find_session_dir",
+    "load_json",
+    "load_jsonl",
+    "resume_context",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "argparse",
+    "json",
+    "sys",
+    "pathlib",
+    "gravitas_context"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312349921900,
+    2709
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\session_context.py": {
+   "symbols": [
+    "conversation_key",
+    "session_dir_for_payload"
+   ],
+   "imports": [
+    "__future__",
+    "hashlib",
+    "datetime",
+    "pathlib"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312355925300,
+    2157
+   ],
+   "imported_by": [
+    "scripts\\init_session.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\stop_gate.py"
+   ],
+   "callers": [
+    "scripts\\init_session.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\stop_gate.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\session_status.py": {
+   "symbols": [
+    "find_session_dir",
+    "load_jsonl",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "sys",
+    "pathlib",
+    "argparse"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312358935900,
+    3113
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\stop_gate.py": {
+   "symbols": [
+    "load_contract",
+    "load_evidence",
+    "load_state",
+    "load_failures",
+    "count_stop_gate_cycles",
+    "record_stop_gate_cycle",
+    "criterion_id",
+    "criterion_label",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "json",
+    "sys",
+    "pathlib",
+    "datetime",
+    "session_context",
+    "evidence_chain",
+    "gravitas_evidence"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792138502081326900,
+    9373
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "scripts\\validator_runner.py": {
+   "symbols": [
+    "run_bounded",
+    "git_snapshot",
+    "run",
+    "load_contract",
+    "validate_invocation",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "argparse",
+    "hashlib",
+    "json",
+    "subprocess",
+    "tempfile",
+    "time",
+    "pathlib",
+    "evidence_chain",
+    "gravitas_action"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312376926200,
+    6612
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\gravitas_action.py",
+    "scripts\\gravitas_evidence.py",
+    "scripts\\gravitas_repo.py",
+    "scripts\\gravitas_verify.py",
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "skills\\gravitas\\scripts\\detect_project.py": {
+   "symbols": [
+    "detect_language",
+    "count_source_files",
+    "suggest_budget",
+    "main"
+   ],
+   "imports": [
+    "json",
+    "os",
+    "sys",
+    "pathlib",
+    "gravitas_verify"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312535906800,
+    3201
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\doctor.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "skills\\gravitas\\scripts\\doctor.py": {
+   "symbols": [
+    "sha256",
+    "imported_plugin_names",
+    "main"
+   ],
+   "imports": [
+    "__future__",
+    "hashlib",
+    "json",
+    "shutil",
+    "pathlib"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312537911600,
+    2192
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\evidence_chain.py",
+    "scripts\\gravitas_context.py",
+    "scripts\\gravitas_policy.py",
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_context.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\verify.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  },
+  "skills\\gravitas\\scripts\\verify.py": {
+   "symbols": [
+    "detect_language",
+    "run_verification",
+    "main"
+   ],
+   "imports": [
+    "json",
+    "subprocess",
+    "sys",
+    "argparse",
+    "pathlib",
+    "gravitas_verify",
+    "shlex"
+   ],
+   "test": false,
+   "fingerprint": [
+    1792135312543906700,
+    4189
+   ],
+   "imported_by": [],
+   "callers": [
+    "scripts\\impact_graph.py",
+    "scripts\\init_session.py",
+    "scripts\\ledger_add.py",
+    "scripts\\post_invocation.py",
+    "scripts\\post_tool.py",
+    "scripts\\pre_tool.py",
+    "scripts\\repro_runner.py",
+    "scripts\\resume_session.py",
+    "scripts\\session_status.py",
+    "scripts\\stop_gate.py",
+    "scripts\\validator_runner.py",
+    "skills\\gravitas\\scripts\\detect_project.py",
+    "skills\\gravitas\\scripts\\doctor.py"
+   ],
+   "tested_by": [],
+   "configured_by": [],
+   "co_changed": []
+  }
+ }
+}

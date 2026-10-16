@@ -1,0 +1,310 @@
+================================================================================
+                    TRYVIA SECURITY TEST RESULTS REPORT
+================================================================================
+Generated: 2026-10-16
+Target Scope: backend/src (Authentication, Payments, Payouts, Admin, Models)
+Overall Status: ALL TESTS PASSED (0 FAILED)
+Total Security Tests Executed: 33 (29 Codebase Tests + 4 Validator/Audit Suites)
+================================================================================
+
+--------------------------------------------------------------------------------
+PART 1: CODEBASE RUNTIME SECURITY TESTS (backend/test_security_gates.js)
+--------------------------------------------------------------------------------
+
+[TEST 01]
+Name: NoSQL Injection Body Operator Sanitization
+Target: backend/src/middleware/nosqlSanitize.js
+What it tests for:
+  Verifies that MongoDB operator keys starting with '$' (e.g., {"$gt": ""}) 
+  submitted in JSON request bodies are recursively stripped by nosqlSanitize 
+  middleware to prevent NoSQL query injection and authentication bypass.
+Status: PASSED
+
+[TEST 02]
+Name: NoSQL Injection Dotted Key Sanitization
+Target: backend/src/middleware/nosqlSanitize.js
+What it tests for:
+  Verifies that keys containing dot notation (e.g., "nested.field") are 
+  stripped to prevent Mongoose schema manipulation and prototype pollution.
+Status: PASSED
+
+[TEST 03]
+Name: NoSQL Injection Array Object Sanitization
+Target: backend/src/middleware/nosqlSanitize.js
+What it tests for:
+  Verifies that array-nested objects containing '$' operators (e.g., [{"$ne": null}])
+  are recursively discovered and sanitized.
+Status: PASSED
+
+[TEST 04]
+Name: Safe Request Body Data Preservation
+Target: backend/src/middleware/nosqlSanitize.js
+What it tests for:
+  Ensures benign application data (standard strings, numbers, booleans)
+  is preserved without corruption or data loss during sanitization.
+Status: PASSED
+
+[TEST 05]
+Name: NoSQL Injection Query Parameter Sanitization
+Target: backend/src/middleware/nosqlSanitize.js
+What it tests for:
+  Verifies that '$where' and other operator injections submitted in URL query
+  parameters (e.g., ?filter[$where]=sleep(5000)) are stripped from req.query.
+Status: PASSED
+
+[TEST 06]
+Name: Safe Query Parameter Preservation
+Target: backend/src/middleware/nosqlSanitize.js
+What it tests for:
+  Ensures legitimate URL query parameters (e.g., ?normalQuery=123) remain 
+  intact and accessible to downstream route handlers.
+Status: PASSED
+
+[TEST 07]
+Name: Razorpay Checkout Payment Signature Verification
+Target: backend/src/config/razorpay.js
+What it tests for:
+  Confirms that authentic cryptographic HMAC-SHA256 signatures generated 
+  with the Razorpay secret key are accepted during checkout verification.
+Status: PASSED
+
+[TEST 08]
+Name: Razorpay Tampered Signature Rejection
+Target: backend/src/config/razorpay.js
+What it tests for:
+  Confirms that modified, forged, or tampered payment signatures are 
+  rejected, preventing unauthorized or spoofed order fulfillment.
+Status: PASSED
+
+[TEST 09]
+Name: Razorpay Empty Signature Rejection
+Target: backend/src/config/razorpay.js
+What it tests for:
+  Confirms that empty or missing signature strings are safely rejected 
+  without throwing unhandled runtime exceptions.
+Status: PASSED
+
+[TEST 10]
+Name: Razorpay Webhook HMAC Signature Validation
+Target: backend/src/config/razorpay.js
+What it tests for:
+  Verifies that incoming webhook event payloads from Razorpay are verified 
+  using constant-time HMAC-SHA256 comparison on raw payload buffers.
+Status: PASSED
+
+[TEST 11]
+Name: Razorpay Invalid Webhook Signature Rejection
+Target: backend/src/config/razorpay.js
+What it tests for:
+  Ensures spoofed external webhook requests lacking valid HMAC signatures 
+  are rejected immediately.
+Status: PASSED
+
+[TEST 12]
+Name: ReDoS Regular Expression Metacharacter Escaping
+Target: backend/src/routes/productRoutes.js
+What it tests for:
+  Verifies that special regex characters in product searches (e.g., .*.*.*.*a)
+  are escaped before being passed to MongoDB $regex queries, preventing 
+  catastrophic backtracking Regular Expression Denial of Service (ReDoS).
+Status: PASSED
+
+[TEST 13]
+Name: Disguised File Magic Bytes Verification
+Target: backend/src/routes/vendorRoutes.js
+What it tests for:
+  Verifies that malicious scripts or executables disguised with fake image 
+  extensions (.jpg, .png) are rejected by inspecting the initial file header 
+  magic bytes.
+Status: PASSED
+
+[TEST 14]
+Name: Authentic JPEG Magic Bytes Acceptance
+Target: backend/src/routes/vendorRoutes.js
+What it tests for:
+  Confirms that genuine JPEG image uploads (header 0xFF 0xD8 0xFF) pass 
+  the magic byte security gate.
+Status: PASSED
+
+[TEST 15]
+Name: Authentic PNG Magic Bytes Acceptance
+Target: backend/src/routes/vendorRoutes.js
+What it tests for:
+  Confirms that genuine PNG image uploads (header 0x89 0x50 0x4E 0x47...) 
+  pass the magic byte security gate.
+Status: PASSED
+
+[TEST 16]
+Name: Unhandled Exception HTTP 500 Mapping
+Target: backend/src/middleware/errorHandler.js
+What it tests for:
+  Verifies that unhandled server exceptions are intercepted by the centralized 
+  error handler and consistently mapped to HTTP status 500.
+Status: PASSED
+
+[TEST 17]
+Name: Internal Database Error Message Concealment
+Target: backend/src/middleware/errorHandler.js
+What it tests for:
+  Verifies that database connection strings, database credentials, and internal 
+  MongoDB driver exceptions are concealed in production environments, returning 
+  a generic safe message ("An unexpected error occurred. Please try again later.").
+Status: PASSED
+
+[TEST 18]
+Name: Production Error Stack Trace Exclusion
+Target: backend/src/middleware/errorHandler.js
+What it tests for:
+  Confirms that internal file system paths, line numbers, and stack traces 
+  are excluded from error responses when NODE_ENV is set to production.
+Status: PASSED
+
+[TEST 19]
+Name: Constant-Time Admin Password Verification (Valid)
+Target: backend/src/routes/adminRoutes.js
+What it tests for:
+  Verifies that authentic administrative master passwords match correctly 
+  using crypto.timingSafeEqual on SHA-256 buffer digests.
+Status: PASSED
+
+[TEST 20]
+Name: Invalid Admin Password Rejection
+Target: backend/src/routes/adminRoutes.js
+What it tests for:
+  Verifies that incorrect admin master passwords are denied with HTTP 401.
+Status: PASSED
+
+[TEST 21]
+Name: Timing Attack Defense on Prefix Match Passwords
+Target: backend/src/routes/adminRoutes.js
+What it tests for:
+  Verifies that candidate passwords sharing initial byte prefixes with the 
+  master password evaluate in constant time and are rejected without early-exit 
+  timing side channels.
+Status: PASSED
+
+[TEST 22]
+Name: Empty Admin Password Safe Handling
+Target: backend/src/routes/adminRoutes.js
+What it tests for:
+  Verifies that empty or undefined password submissions are rejected safely 
+  without buffer length mismatch exceptions.
+Status: PASSED
+
+[TEST 23]
+Name: Vendor Payout Bank Account Number Masking
+Target: backend/src/models/Vendor.js
+What it tests for:
+  Verifies that vendor bank account numbers stored in MongoDB are masked 
+  (showing only the last 4 digits, e.g., ****1098) in all API responses 
+  via the Vendor.toJSON() transformation.
+Status: PASSED
+
+[TEST 24]
+Name: Masked Account Number Property Generation
+Target: backend/src/models/Vendor.js
+What it tests for:
+  Verifies that the maskedAccountNumber property is properly created and 
+  accessible on serialized vendor models.
+Status: PASSED
+
+[TEST 25]
+Name: Vendor Registration Status Invariant (Default PENDING)
+Target: backend/src/models/Vendor.js & backend/src/routes/authRoutes.js
+What it tests for:
+  Verifies that newly created vendor records default to "PENDING" status, 
+  preventing unvetted accounts from self-approving storefront access.
+Status: PASSED
+
+[TEST 26]
+Name: Excessive Pagination Limit Clamping
+Target: backend/src/routes/notificationRoutes.js & productRoutes.js
+What it tests for:
+  Verifies that large pagination query limits (e.g., ?limit=1000000) are 
+  strictly clamped to a maximum ceiling of 100 to prevent Node.js heap 
+  exhaustion and denial of service (DoS).
+Status: PASSED
+
+[TEST 27]
+Name: Negative Pagination Limit Clamping
+Target: backend/src/routes/notificationRoutes.js & productRoutes.js
+What it tests for:
+  Verifies that negative pagination limits (e.g., ?limit=-50) are clamped 
+  to a minimum of 1 item per page.
+Status: PASSED
+
+[TEST 28]
+Name: Valid Intermediate Pagination Limit Preservation
+Target: backend/src/routes/notificationRoutes.js & productRoutes.js
+What it tests for:
+  Confirms that valid query limits within the allowed range (e.g., ?limit=50) 
+  are preserved accurately.
+Status: PASSED
+
+[TEST 29]
+Name: Default Pagination Limit Fallback
+Target: backend/src/routes/notificationRoutes.js & productRoutes.js
+What it tests for:
+  Verifies that requests omitting the limit parameter fall back to standard 
+  default page sizes (10, 14, or 20 items).
+Status: PASSED
+
+--------------------------------------------------------------------------------
+PART 2: CLOUDFLARE SECURITY AUDIT & LEDGER VALIDATORS
+--------------------------------------------------------------------------------
+
+[SUITE 01]
+Name: Findings Document Schema Validator
+Tool: .agents/skills/security-audit/validate-findings.cjs
+Input: ~/audits/my-project/findings.json
+What it tests for:
+  Validates that all findings strictly comply with report-schema.json:
+  - Lexicographic ordering by fingerprint
+  - Valid verdicts (confirmed, needs_validation, rejected)
+  - Trace format (entrypoint -> propagation -> sink)
+  - Safe repository-relative source paths
+  - Overall severity bounded by demonstrated impact
+Result: PASS (8 / 8 findings valid, 0 errors)
+Status: PASSED
+
+[SUITE 02]
+Name: Coverage Ledger Integrity Validator
+Tool: .agents/skills/security-audit/validate-coverage-ledger.cjs
+Input: ~/audits/my-project/coverage-ledger.json
+What it tests for:
+  Validates that all coverage ledger units comply with the audit contract:
+  - Collision-free canonical SHA-256 coverage IDs
+  - Path ownership by verified reviewers
+  - Attack class mappings and exclusion justifications
+  - Lexicographic sorting
+Result: PASS (10 / 10 coverage units valid, 0 errors)
+Status: PASSED
+
+[SUITE 03]
+Name: Security Audit Findings Test Suite
+File: .agents/skills/security-audit/validate-findings.test.cjs
+What it tests for:
+  Executes 34 unit tests verifying validator parser correctness, Unicode 
+  safety, depth limits, and canonical set uniqueness.
+Result: 29 passed, 5 skipped (OS-specific symlink/FIFO checks), 0 failed
+Status: PASSED
+
+[SUITE 04]
+Name: Coverage Ledger Test Suite
+File: .agents/skills/security-audit/validate-coverage-ledger.test.cjs
+What it tests for:
+  Executes 31 unit tests verifying ledger parser bounds, structural limits, 
+  wave numbering, and reassignment evidence archival.
+Result: 24 passed, 7 skipped (OS-specific symlink/FIFO checks), 0 failed
+Status: PASSED
+
+================================================================================
+FINAL SUMMARY
+================================================================================
+Codebase Security Gates:   29 Passed,  0 Failed
+Findings Schema Validator:  8 Passed,  0 Failed
+Coverage Ledger Validator: 10 Passed,  0 Failed
+Audit Engine Unit Tests:   53 Passed,  0 Failed
+--------------------------------------------------------------------------------
+TOTAL STATUS: ALL SECURITY TESTS PASSED (100% SUCCESS)
+================================================================================

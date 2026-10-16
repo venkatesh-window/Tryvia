@@ -1,9 +1,19 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { Order } from "../models/Order.js";
+import { Vendor } from "../models/Vendor.js";
+import { AuditLog } from "../models/AuditLog.js";
 import { adminLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
+
+export const verifyAdminPassword = (candidatePassword, masterPassword) => {
+  if (!candidatePassword || !masterPassword) return false;
+  const inputHash = crypto.createHash("sha256").update(String(candidatePassword)).digest();
+  const targetHash = crypto.createHash("sha256").update(String(masterPassword)).digest();
+  return crypto.timingSafeEqual(inputHash, targetHash);
+};
 
 const requireAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -18,6 +28,7 @@ const requireAdmin = (req, res, next) => {
       res.status(403).json({ detail: "Access denied" });
       return;
     }
+    req.admin = decoded;
     next();
   } catch (error) {
     res.status(401).json({ detail: "Invalid token" });
@@ -33,7 +44,7 @@ router.post("/login", adminLimiter, (req, res) => {
     return;
   }
   
-  if (password === process.env.ADMIN_PASSWORD) {
+  if (verifyAdminPassword(password, process.env.ADMIN_PASSWORD)) {
     const token = jwt.sign({ role: "SUPER_ADMIN" }, process.env.JWT_SECRET, { expiresIn: "24h" });
     res.json({ token });
   } else {
@@ -115,10 +126,59 @@ router.patch("/minis/orders/:id/status", requireAdmin, async (req, res) => {
 
     if (updated) {
       await order.save();
+      await AuditLog.create({
+        actorRole: "SUPER_ADMIN",
+        action: "UPDATE_MINIS_ORDER_STATUS",
+        targetType: "Order",
+        targetId: order._id.toString(),
+        ipAddress: req.ip || req.headers["x-forwarded-for"],
+        userAgent: req.headers["user-agent"],
+        details: {
+          status: status === "ACCEPTED" ? "PROCESSING" : status,
+          trackingNumber,
+          itemId,
+        },
+      });
       res.json({ detail: "Tester status updated successfully" });
     } else {
       res.status(400).json({ detail: "No tester items found to update" });
     }
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// PATCH /api/v1/admin/vendors/:id/status
+router.patch("/vendors/:id/status", requireAdmin, async (req, res) => {
+  try {
+    const { status, reason } = req.body;
+    if (!["APPROVED", "REJECTED", "SUSPENDED", "PENDING"].includes(status)) {
+      res.status(400).json({ detail: "Invalid vendor status" });
+      return;
+    }
+    const vendor = await Vendor.findById(req.params.id);
+    if (!vendor) {
+      res.status(404).json({ detail: "Vendor not found" });
+      return;
+    }
+    vendor.status = status;
+    vendor.statusHistory = vendor.statusHistory || [];
+    vendor.statusHistory.push({
+      status,
+      changedAt: new Date(),
+      reason: reason || "Admin Status Update",
+    });
+    await vendor.save();
+    await AuditLog.create({
+      actorRole: "SUPER_ADMIN",
+      action: "UPDATE_VENDOR_STATUS",
+      targetType: "Vendor",
+      targetId: vendor._id.toString(),
+      ipAddress: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+      details: { status, reason },
+    });
+    res.json({ detail: "Vendor status updated successfully", vendor: vendor.toJSON() });
   } catch (error) {
     res.status(500).json({ detail: error.message });
   }

@@ -5,6 +5,8 @@ import { Payout } from "../models/Payout.js";
 import { VendorLedger } from "../models/VendorLedger.js";
 import { Vendor } from "../models/Vendor.js";
 import { Notification } from "../models/Notification.js";
+import { AuditLog } from "../models/AuditLog.js";
+import { payoutLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
@@ -41,8 +43,12 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Helper to calculate vendor balances
-export const getVendorBalances = async (vendorId) => {
-  const ledgerEntries = await VendorLedger.find({ vendor: vendorId });
+export const getVendorBalances = async (vendorId, session = null) => {
+  const query = VendorLedger.find({ vendor: vendorId });
+  if (session) {
+    query.session(session);
+  }
+  const ledgerEntries = await query;
   let availableBalance = 0;
   let pendingBalance = 0;
   let totalEarnings = 0;
@@ -105,7 +111,7 @@ router.get("/vendor", authenticate, getVendor, async (req, res) => {
 });
 
 // POST /api/v1/payouts/request
-router.post("/request", authenticate, getVendor, async (req, res) => {
+router.post("/request", payoutLimiter, authenticate, getVendor, async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -132,7 +138,7 @@ router.post("/request", authenticate, getVendor, async (req, res) => {
     }
 
     // Calculate real-time balance
-    const balances = await getVendorBalances(vendor._id);
+    const balances = await getVendorBalances(vendor._id, session);
     if (amount > balances.availableBalance) {
       res
         .status(400)
@@ -148,7 +154,7 @@ router.post("/request", authenticate, getVendor, async (req, res) => {
     const existingPending = await Payout.findOne({
       vendor: vendor._id,
       status: { $in: ["REQUESTED", "PROCESSING"] },
-    });
+    }).session(session);
     if (existingPending) {
       res
         .status(400)
@@ -238,6 +244,28 @@ router.patch(
       }
 
       await payout.save({ session });
+
+      // Audit Log for privileged action
+      await AuditLog.create(
+        [
+          {
+            actorId: req.user?._id,
+            actorRole: req.user?.role || "ADMIN",
+            action: "UPDATE_PAYOUT_STATUS",
+            targetType: "Payout",
+            targetId: String(payout._id),
+            ipAddress: req.ip || req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            details: {
+              oldStatus,
+              newStatus: status,
+              paymentReference,
+              note,
+            },
+          },
+        ],
+        { session },
+      );
 
       // Handle ledger updates based on status change
       const ledgerEntry = await VendorLedger.findOne({

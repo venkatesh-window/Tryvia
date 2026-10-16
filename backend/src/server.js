@@ -16,6 +16,10 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { nosqlSanitize } from "./middleware/nosqlSanitize.js";
+import { setup } from "./test_setup.js";
+import { seed } from "./seed.js";
+import { User } from "./models/User.js";
 
 dotenv.config();
 validateEnv();
@@ -24,8 +28,58 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 const API_PREFIX = "/api/v1";
 
-// Middlewares
-app.use(helmet());
+// Trust first proxy hop (e.g. AWS ALB, Cloudflare, Vercel, Render) for accurate client IPs in rate limiters
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+// Production HTTPS enforcement
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (
+      req.headers["x-forwarded-proto"] &&
+      req.headers["x-forwarded-proto"] !== "https"
+    ) {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
+
+// Security headers with tailored CSP for Razorpay checkout & image CDNs
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://checkout.razorpay.com",
+        ],
+        frameSrc: [
+          "'self'",
+          "https://api.razorpay.com",
+          "https://checkout.razorpay.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://api.razorpay.com",
+          "https://lumberjack.razorpay.com",
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://images.unsplash.com",
+          "https://res.cloudinary.com",
+          "https://cdn.razorpay.com",
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
 // Apply a general rate limit to all requests
 const generalLimiter = rateLimit({
@@ -39,59 +93,78 @@ app.use(generalLimiter);
 
 // Specific stricter limit for Auth/Admin routes will be applied in routes.
 
+const explicitAllowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://localhost:8081",
+];
+
+if (process.env.FRONTEND_URL) {
+  explicitAllowedOrigins.push(
+    ...process.env.FRONTEND_URL.split(",").map((url) => url.trim()),
+  );
+}
+
+if (process.env.ALLOWED_ORIGINS) {
+  explicitAllowedOrigins.push(
+    ...process.env.ALLOWED_ORIGINS.split(",").map((url) => url.trim()),
+  );
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // In production, restrict this to specific origins (e.g. process.env.FRONTEND_URL)
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-      ];
-      
-      if (process.env.FRONTEND_URL) {
-        allowedOrigins.push(...process.env.FRONTEND_URL.split(',').map(url => url.trim()));
+      // Allow non-browser agents (native mobile apps, backend callers) without origin header
+      if (!origin) {
+        return callback(null, true);
       }
-      
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-        callback(null, true);
-      } else {
-        // Fallback for development/testing when origins might vary
-        if (process.env.NODE_ENV !== "production") {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by CORS"));
-        }
+
+      // Strict exact match against allowlist
+      if (explicitAllowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+
+      return callback(new Error("CORS policy violation: origin not allowed"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-razorpay-signature"],
   }),
 );
 
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
-
-import { setup } from "./test_setup.js";
-import { seed } from "./seed.js";
-
-import { User } from "./models/User.js";
+app.use(
+  express.json({
+    limit: "2mb",
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(nosqlSanitize);
 
 // Connect to MongoDB
 connectDB()
   .then(async () => {
     const userCount = await User.countDocuments();
     if (userCount === 0) {
-      console.log("Database is empty. Running initial seed and setup...");
-      await seed();
-      await setup();
+      if (process.env.NODE_ENV !== "production") {
+        console.log("Database is empty. Running initial development seed...");
+        await seed();
+        if (process.env.ENABLE_DEV_TEST_USERS === "true") {
+          await setup();
+        }
+      } else {
+        console.log("Database connected in production mode.");
+      }
     } else {
       console.log(
         `Database already has data (${userCount} users). Skipping initial seed.`,
       );
-      // Still run setup to ensure test users exist (setup uses upsert, which is safe)
-      await setup();
+      if (process.env.NODE_ENV !== "production" && process.env.ENABLE_DEV_TEST_USERS === "true") {
+        await setup();
+      }
     }
   })
   .catch((err) => {

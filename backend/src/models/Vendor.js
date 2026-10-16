@@ -41,6 +41,11 @@ const VendorSchema = new Schema(
       transform: (_, ret) => {
         ret.id = ret.numericId || ret._id;
         ret.store_name = ret.storeName;
+        if (ret.payoutAccount && ret.payoutAccount.accountNumber) {
+          const raw = String(ret.payoutAccount.accountNumber);
+          ret.payoutAccount.maskedAccountNumber = raw.length > 4 ? `****${raw.slice(-4)}` : "****";
+          ret.payoutAccount.accountNumber = ret.payoutAccount.maskedAccountNumber;
+        }
         delete ret.__v;
         return ret;
       },

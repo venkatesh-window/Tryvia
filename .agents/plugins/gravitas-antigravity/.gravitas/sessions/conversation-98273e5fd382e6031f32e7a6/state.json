@@ -1,0 +1,13 @@
+{
+  "phase": "recon",
+  "completed_criteria": [],
+  "pending_criteria": [],
+  "files_touched": [],
+  "known_failures": [],
+  "last_successful_action": null,
+  "next_action": null,
+  "last_updated": "2026-10-16T07:24:46.216665+00:00",
+  "read_files": [
+    "c:\\tryvia\\Gravitas\\skills\\gravitas\\PROMPT-TEMPLATE.md"
+  ]
+}

@@ -10,8 +10,10 @@ import { authLimiter } from "../middleware/rateLimiter.js";
 const router = Router();
 
 const generateToken = (numericId) => {
-  const secret =
-    process.env.JWT_SECRET || "tryvia_secret_jwt_key_super_secure_2026";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured on server");
+  }
   return jwt.sign({ sub: numericId }, secret, { expiresIn: "7d" });
 };
 
@@ -122,22 +124,40 @@ router.post("/register", authLimiter, validate(registerSchema), async (req, res)
   }
 });
 
-// POST /api/v1/auth/sync (Sync Clerk/Google users into MongoDB)
-router.post("/sync", async (req, res) => {
+const syncSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email("Valid email required"),
+    full_name: z.string().trim().min(1).max(100).optional(),
+  })
+});
+
+// POST /api/v1/auth/sync (Sync Clerk/Google OAuth users into MongoDB)
+router.post("/sync", authLimiter, validate(syncSchema), async (req, res) => {
   try {
     const { email, full_name } = req.body;
-    if (!email) {
-      res.status(400).json({ detail: "Email is required for synchronization" });
-      return;
-    }
-
     const normalizedEmail = email.trim().toLowerCase();
+
     let user = await User.findOne({ email: normalizedEmail });
 
-    if (!user) {
-      const count = await User.countDocuments();
-      const numericId = count + 1;
-      const passwordHash = await bcrypt.hash("clerk_oauth_user_secret", 10);
+    if (user) {
+      // Disallow taking over privileged or staff accounts through unverified OAuth sync
+      if (user.role === "ADMIN" || user.role === "VENDOR" || user.isSuperuser) {
+        res.status(403).json({
+          detail: "Privileged accounts cannot be accessed via OAuth sync. Use direct credentials login.",
+        });
+        return;
+      }
+
+      if (!user.isActive) {
+        res.status(403).json({ detail: "Account is inactive" });
+        return;
+      }
+    } else {
+      // Create new customer account with random salt/hash (never static secret)
+      const lastUser = await User.findOne().sort({ numericId: -1 });
+      const numericId = (lastUser?.numericId || 0) + 1;
+      const randomSecret = (await import("crypto")).randomBytes(32).toString("hex");
+      const passwordHash = await bcrypt.hash(randomSecret, 10);
 
       user = new User({
         numericId,
@@ -147,6 +167,8 @@ router.post("/sync", async (req, res) => {
         walletBalance: 350,
         loyaltyTier: "BRONZE",
         stars: 0,
+        role: "CUSTOMER",
+        isActive: true,
       });
 
       await user.save();
@@ -160,7 +182,7 @@ router.post("/sync", async (req, res) => {
       user: user.toJSON(),
     });
   } catch (error) {
-    res.status(500).json({ detail: error.message });
+    res.status(500).json({ detail: "Authentication sync failed" });
   }
 });
 
@@ -266,12 +288,12 @@ router.post("/vendor/register", authLimiter, validate(vendorRegisterSchema), asy
       phone,
       address: `${address || ''}, ${city || ''}, ${state || ''}, ${pincode || ''}`.replace(/^[,\s]+|[,\s]+$/g, ''),
       gst,
-      status: "APPROVED",
+      status: "PENDING",
       statusHistory: [
         {
-          status: "APPROVED",
+          status: "PENDING",
           changedAt: new Date(),
-          reason: "Direct Vendor Registration",
+          reason: "Vendor Self-Registration Application",
         },
       ],
     });

@@ -1,0 +1,73 @@
+{
+  "task_id": "sec-audit-fix-2026",
+  "mode": "implement",
+  "objective": "Fix TryVia Security Checklist Gaps",
+  "acceptance_criteria": [
+    {
+      "id": "AC-001",
+      "statement": "Secrets eliminated from code"
+    },
+    {
+      "id": "AC-002",
+      "statement": "Razorpay webhook signature verified"
+    },
+    {
+      "id": "AC-003",
+      "statement": "Auth sync protected"
+    },
+    {
+      "id": "AC-004",
+      "statement": "Order auto-paid fulfillment disabled"
+    },
+    {
+      "id": "AC-005",
+      "statement": "CORS locked down"
+    },
+    {
+      "id": "AC-006",
+      "statement": "File upload size and type checked"
+    },
+    {
+      "id": "AC-007",
+      "statement": "Checkout session XSS and IDOR resolved"
+    },
+    {
+      "id": "AC-008",
+      "statement": "NoSQL injection sanitized"
+    },
+    {
+      "id": "AC-009",
+      "statement": "Rate limits and audit logging added"
+    },
+    {
+      "id": "AC-010",
+      "statement": "Security headers and proxy trust configured"
+    }
+  ],
+  "risk_level": "high",
+  "budget_profile": "balanced",
+  "allowed_write_scope": [
+    "backend/src",
+    "backend/package.json",
+    "backend/test",
+    "c:/tryvia/backend",
+    "c:/Users/gsven/audits",
+    "C:/Users/gsven/audits",
+    "c:/Users/gsven/audits/my-project",
+    "C:/Users/gsven/audits/my-project",
+    ".agents/skills/security-audit",
+    "c:/tryvia/.agents/skills/security-audit"
+  ],
+  "validators": [
+    {
+      "id": "VAL-001",
+      "command": [
+        "node",
+        "backend/test_security_gates.js"
+      ]
+    }
+  ],
+  "required_validators": [
+    "VAL-001"
+  ]
+}

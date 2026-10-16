@@ -1,0 +1,2 @@
+{"tool": "list_dir", "input_summary": {"DirectoryPath": "c:\\tryvia\\.gravitas", "toolAction": "Listing .gravitas dir", "toolSummary": "Check .gravitas directory"}, "fingerprint": "93be4480e7a92b33", "error": "", "timestamp": "2026-10-16T14:31:35.678097+00:00", "resolved": true}
+{"tool": "list_dir", "input_summary": {"DirectoryPath": "C:\\Users\\gsven\\.gemini\\config\\skills", "toolAction": "Listing global skills dir", "toolSummary": "Check global skills folder"}, "fingerprint": "211ff1adf7598561", "error": "", "timestamp": "2026-10-16T14:42:45.138907+00:00"}

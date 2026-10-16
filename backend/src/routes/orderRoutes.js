@@ -159,7 +159,8 @@ router.post("/", authenticate, validate(orderSchema), async (req, res) => {
     const resolvedShippingAddress =
       shippingAddress || req.body.shipping_address || req.body.shippingAddress || undefined;
 
-    const orderStatus = "PAID";
+    // Only mark order PAID immediately if the calculated total is 0 (100% wallet covered)
+    const orderStatus = totalAmount <= 0 ? "PAID" : "PENDING";
 
     const vendorStatuses = Array.from(uniqueVendors).map((vId) => ({
       vendor: new mongoose.Types.ObjectId(vId),

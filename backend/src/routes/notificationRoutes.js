@@ -7,7 +7,7 @@ const router = Router();
 // GET /api/v1/notifications
 router.get("/", authenticate, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
     const notifications = await Notification.find({ user: req.user?._id })
       .sort({ createdAt: -1 })
       .limit(limit);

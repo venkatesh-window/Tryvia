@@ -16,6 +16,7 @@ import { fulfillOrder } from "../utils/orderHelper.js";
 import { syncUserWalletBalance } from "../utils/walletHelper.js";
 import { z } from "zod";
 import { validate } from "../middleware/validation.js";
+import { paymentLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
@@ -180,7 +181,7 @@ router.post("/checkout/calculate", authenticate, validate(checkoutSchema), async
 });
 
 // POST /api/v1/payments/create-order - Validates cart, calculates authoritative price & creates Razorpay Order
-router.post("/create-order", authenticate, validate(checkoutSchema), async (req, res) => {
+router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSchema), async (req, res) => {
   try {
     const user = req.user;
     const { items, apply_wallet_credit_id, shipping_address } = req.body;
@@ -369,7 +370,7 @@ router.post("/create-order", authenticate, validate(checkoutSchema), async (req,
 });
 
 // POST /api/v1/payments/verify - Verifies HMAC-SHA256 payment signature & completes order idempotently
-router.post("/verify", authenticate, async (req, res) => {
+router.post("/verify", paymentLimiter, authenticate, async (req, res) => {
   try {
     const user = req.user;
     const {
@@ -475,8 +476,18 @@ router.post("/verify", authenticate, async (req, res) => {
   }
 });
 
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // GET /api/v1/payments/checkout-session/:orderId - Hosted Live Razorpay Checkout Page for Native Mobile
-router.get("/checkout-session/:orderId", async (req, res) => {
+router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
   try {
     const orderId = String(req.params.orderId);
     let query = {};
@@ -494,8 +505,24 @@ router.get("/checkout-session/:orderId", async (req, res) => {
       return;
     }
 
+    // IDOR protection: Verify authenticated caller owns this order (or is admin)
+    const isOwner = order.user && order.user._id && order.user._id.equals(req.user._id);
+    const isAdmin = req.user.role === "ADMIN" || req.user.isSuperuser;
+    if (!isOwner && !isAdmin) {
+      res.status(403).send("<h3>Access denied: You do not have authorization to view this checkout session.</h3>");
+      return;
+    }
+
     const user = order.user || {};
     const amountInPaise = Math.round(order.totalAmount * 100);
+
+    const safeAmount = escapeHtml(order.totalAmount.toFixed(2));
+    const safeKeyId = JSON.stringify(RAZORPAY_KEY_ID);
+    const safeRzpOrderId = JSON.stringify(order.razorpayOrderId);
+    const safeCustomerName = JSON.stringify(user.fullName || "TryVia Member");
+    const safeCustomerEmail = JSON.stringify(user.email || "");
+    const safeCustomerPhone = JSON.stringify(user.phone || "");
+    const safeNumericId = JSON.stringify(String(order.numericId));
 
     const html = `
 <!DOCTYPE html>
@@ -557,7 +584,7 @@ router.get("/checkout-session/:orderId", async (req, res) => {
   <div class="card">
     <div class="title">TRYVIA</div>
     <div class="subtitle">HAUTE PARFUMERIE & LUXURY BEAUTY</div>
-    <div class="amount">₹${order.totalAmount.toFixed(2)}</div>
+    <div class="amount">₹${safeAmount}</div>
     <button id="pay-btn" class="btn" onclick="openRazorpay()">Complete Payment</button>
     <div id="loader" class="loader"></div>
   </div>
@@ -565,31 +592,31 @@ router.get("/checkout-session/:orderId", async (req, res) => {
   <script>
     function openRazorpay() {
       var options = {
-        key: "${RAZORPAY_KEY_ID}",
-        amount: "${amountInPaise}",
+        key: ${safeKeyId},
+        amount: ${amountInPaise},
         currency: "INR",
         name: "TRYVIA",
         description: "Luxury Beauty & Discovery Formulations",
-        order_id: "${order.razorpayOrderId}",
+        order_id: ${safeRzpOrderId},
         image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=200",
         prefill: {
-          name: "${user.fullName || "TryVia Member"}",
-          email: "${user.email || ""}",
-          contact: "${user.phone || ""}"
+          name: ${safeCustomerName},
+          email: ${safeCustomerEmail},
+          contact: ${safeCustomerPhone}
         },
         theme: { color: "#1A1918" },
         handler: function (response) {
           document.getElementById('loader').style.display = 'block';
           var callbackUrl = "tryvia://payment-callback?" +
-            "razorpay_order_id=" + encodeURIComponent(response.razorpay_order_id || "${order.razorpayOrderId}") +
+            "razorpay_order_id=" + encodeURIComponent(response.razorpay_order_id || ${safeRzpOrderId}) +
             "&razorpay_payment_id=" + encodeURIComponent(response.razorpay_payment_id) +
             "&razorpay_signature=" + encodeURIComponent(response.razorpay_signature) +
-            "&order_id=" + encodeURIComponent("${order.numericId}");
+            "&order_id=" + encodeURIComponent(${safeNumericId});
           window.location.href = callbackUrl;
         },
         modal: {
           ondismiss: function () {
-            window.location.href = "tryvia://payment-callback?status=cancelled&order_id=${order.numericId}";
+            window.location.href = "tryvia://payment-callback?status=cancelled&order_id=" + encodeURIComponent(${safeNumericId});
           }
         }
       };
@@ -620,18 +647,29 @@ router.get("/checkout-session/:orderId", async (req, res) => {
 router.post("/webhook", async (req, res) => {
   try {
     const signature = req.headers["x-razorpay-signature"];
-    if (signature) {
-      const isValid = verifyWebhookSignature(
-        JSON.stringify(req.body),
-        signature,
-      );
-      if (!isValid) {
-        res.status(400).json({ detail: "Invalid webhook signature" });
+    if (!signature) {
+      res.status(401).json({ detail: "Missing x-razorpay-signature header" });
+      return;
+    }
+
+    const rawPayload = req.rawBody || JSON.stringify(req.body);
+    const isValid = verifyWebhookSignature(rawPayload, signature);
+    if (!isValid) {
+      res.status(400).json({ detail: "Invalid webhook signature" });
+      return;
+    }
+
+    // Replay attack prevention: verify event timestamp freshness (within 10 minutes)
+    const eventCreatedAt = req.body?.created_at;
+    if (eventCreatedAt && typeof eventCreatedAt === "number") {
+      const ageSeconds = Math.floor(Date.now() / 1000) - eventCreatedAt;
+      if (Math.abs(ageSeconds) > 600) {
+        res.status(400).json({ detail: "Webhook event timestamp expired or invalid" });
         return;
       }
     }
 
-    const event = req.body.event;
+    const event = req.body?.event;
     const paymentEntity = req.body?.payload?.payment?.entity;
 
     if (event === "payment.captured" && paymentEntity) {
@@ -640,6 +678,7 @@ router.post("/webhook", async (req, res) => {
         const order = await Order.findOne({ razorpayOrderId });
         if (order && order.status !== "PAID") {
           order.razorpayPaymentId = paymentEntity.id;
+          order.status = "PAID";
           await order.save();
           await fulfillOrder(order._id);
         }
@@ -648,8 +687,8 @@ router.post("/webhook", async (req, res) => {
 
     res.json({ status: "ok" });
   } catch (error) {
-    console.error("Webhook error:", error);
-    res.status(500).json({ detail: error.message });
+    console.error("Webhook processing error:", error);
+    res.status(500).json({ detail: "Internal Server Error" });
   }
 });
 
