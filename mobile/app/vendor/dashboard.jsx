@@ -53,16 +53,19 @@ export default function VendorDashboardScreen() {
     );
   }
 
+  const revenueAmount = data?.gross_sales ?? data?.net_earnings ?? data?.revenue ?? 0;
+  const pendingPayoutAmount = data?.pending_balance ?? data?.pending_payout ?? 0;
+
   const statCards = [
     {
       title: "Total Revenue",
-      value: `$${data?.revenue?.toLocaleString() || "0"}`,
+      value: `₹${Number(revenueAmount).toLocaleString()}`,
       icon: CreditCard,
       color: "#CB6D73",
     },
     {
       title: "Pending Payout",
-      value: `$${data?.pending_payout?.toLocaleString() || "0"}`,
+      value: `₹${Number(pendingPayoutAmount).toLocaleString()}`,
       icon: Clock,
       color: "#D9985F",
     },

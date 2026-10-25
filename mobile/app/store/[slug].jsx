@@ -10,6 +10,7 @@ import { Typography } from "../../src/components/ui/Typography";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { Store, ArrowLeft } from "lucide-react-native";
+import { apiClient } from "../../src/api/client";
 
 export default function PublicVendorStoreScreen() {
   const { slug } = useLocalSearchParams();
@@ -22,17 +23,16 @@ export default function PublicVendorStoreScreen() {
   useEffect(() => {
     const fetchStore = async () => {
       try {
-        const response = await fetch(
-          `https://tryvia-ta57.onrender.com/api/v1/products/store/${slug}`,
-        );
-        if (!response.ok) {
-          throw new Error("Store not found");
-        }
-        const data = await response.json();
-        setVendor(data.vendor);
-        setProducts(data.products);
+        const response = await apiClient.get(`/products/store/${slug}`);
+        setVendor(response.data.vendor);
+        setProducts(response.data.products || []);
       } catch (err) {
-        setError(err.message);
+        setError(
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Store not found"
+        );
       } finally {
         setLoading(false);
       }

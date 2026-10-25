@@ -39,9 +39,11 @@ export const authService = {
    * Syncs an OAuth user (e.g., Google) with the backend
    */
   sync: async (payload) => {
+    const cleanEmail = String(payload.email || "").trim().toLowerCase();
+    const cleanName = String(payload.fullName || payload.full_name || "").trim();
     const response = await apiClient.post("/auth/sync", {
-      email: payload.email,
-      full_name: payload.fullName || payload.full_name,
+      email: cleanEmail,
+      ...(cleanName ? { full_name: cleanName } : {}),
     });
     return TokenResponseSchema.parse(response.data);
   },

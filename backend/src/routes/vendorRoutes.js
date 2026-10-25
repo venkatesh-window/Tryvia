@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { authenticate, requireVendor } from "../middleware/auth.js";
 import { VendorLedger } from "../models/VendorLedger.js";
 import { getVendorBalances } from "./payoutRoutes.js";
@@ -554,6 +555,32 @@ router.put("/products/:id", getVendor, validate(updateProductSchema), async (req
   }
 });
 
+// DELETE /api/v1/vendor/products/:id
+router.delete("/products/:id", getVendor, async (req, res) => {
+  try {
+    const vendor = req.vendor;
+    const { id } = req.params;
+    let query;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: id, vendor: vendor._id };
+    } else if (!isNaN(Number(id))) {
+      query = { numericId: Number(id), vendor: vendor._id };
+    } else {
+      query = { productId: id, vendor: vendor._id };
+    }
+
+    const product = await Product.findOneAndDelete(query);
+    if (!product) {
+      res.status(404).json({ detail: "Product not found" });
+      return;
+    }
+
+    res.json({ detail: "Product removed successfully", id: product._id });
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
 // GET /api/v1/vendor/orders
 router.get("/orders", getVendor, async (req, res) => {
   try {
@@ -843,5 +870,31 @@ router.post(
     }
   },
 );
+
+// DELETE /api/v1/vendor/testers/:id
+router.delete("/testers/:id", getVendor, async (req, res) => {
+  try {
+    const vendor = req.vendor;
+    const { id } = req.params;
+    let query;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: id, vendor: vendor._id };
+    } else if (!isNaN(Number(id))) {
+      query = { numericId: Number(id), vendor: vendor._id };
+    } else {
+      query = { productId: id, vendor: vendor._id };
+    }
+
+    const product = await Product.findOneAndDelete(query);
+    if (!product) {
+      res.status(404).json({ detail: "Tester not found" });
+      return;
+    }
+
+    res.json({ detail: "Tester removed successfully", id: product._id });
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
 
 export default router;

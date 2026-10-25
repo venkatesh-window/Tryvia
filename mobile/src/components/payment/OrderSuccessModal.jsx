@@ -172,10 +172,10 @@ export const OrderSuccessModal = ({
                   fontSize: 10,
                 }}
               >
-                ITEMS IN THIS ORDER ({order.items.length})
+                ITEMS IN THIS ORDER ({(order.items || []).length})
               </Typography>
 
-              {order.items.map((item) => (
+              {(order.items || []).map((item) => (
                 <View key={item.id} style={styles.itemRow}>
                   <Image
                     source={{
@@ -192,7 +192,7 @@ export const OrderSuccessModal = ({
                       color="secondary"
                       style={{ fontFamily: "Inter_600SemiBold", fontSize: 10 }}
                     >
-                      {item.brand.toUpperCase()}
+                      {(item.brand || "TRYVIA").toString().toUpperCase()}
                     </Typography>
                     <Typography
                       variant="body"
@@ -237,7 +237,7 @@ export const OrderSuccessModal = ({
                   weight="bold"
                   style={styles.totalAmount}
                 >
-                  ₹{order.total}
+                  ₹{order.total ?? order.totalAmount ?? 0}
                 </Typography>
               </View>
             </View>

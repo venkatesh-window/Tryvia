@@ -26,10 +26,10 @@ const checkoutSchema = z.object({
       product_id: z.string().or(z.number()),
       quantity: z.coerce.number().int().min(1).default(1),
       item_type: z.enum(["full", "tester"]).optional()
-    })).min(1),
-    use_wallet: z.boolean().optional(),
-    apply_wallet_credit_id: z.boolean().or(z.string()).or(z.number()).optional(),
-    shipping_address: z.any().optional(),
+    }).passthrough()).min(1),
+    use_wallet: z.boolean().nullable().optional(),
+    apply_wallet_credit_id: z.boolean().or(z.string()).or(z.number()).nullable().optional(),
+    shipping_address: z.any().nullable().optional(),
   }).passthrough()
 });
 
@@ -312,11 +312,13 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
         code: rzpErr.error?.code,
         description: rzpErr.error?.description || rzpErr.message,
       });
+      const description = rzpErr.error?.description || rzpErr.message;
+      let detailMsg = description || "Unable to create Razorpay payment order";
+      if (description === "Authentication failed" || rzpErr.statusCode === 401) {
+        detailMsg = "Razorpay Gateway Authentication Failed: The configured RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is invalid or expired. Please update them in your Razorpay Dashboard.";
+      }
       res.status(400).json({
-        detail:
-          rzpErr.error?.description ||
-          rzpErr.message ||
-          "Unable to create Razorpay payment order",
+        detail: detailMsg,
       });
       return;
     }
@@ -513,8 +515,27 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
       return;
     }
 
+    // Explicitly configure headers for Razorpay checkout session to allow 3DS bank OTP frames and popup communication
+    res.removeHeader("Cross-Origin-Opener-Policy");
+    res.removeHeader("Cross-Origin-Embedder-Policy");
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; " +
+      "script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; " +
+      "connect-src * 'unsafe-inline' data: blob:; " +
+      "img-src * data: blob: https:; " +
+      "frame-src * data: blob: https:; " +
+      "child-src * data: blob: https:; " +
+      "style-src * 'unsafe-inline'; " +
+      "form-action *;"
+    );
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+
     const user = order.user || {};
     const amountInPaise = Math.round(order.totalAmount * 100);
+
+    const rawCallbackUrl = typeof req.query.callback_url === "string" ? req.query.callback_url.trim() : "";
+    const callbackBase = rawCallbackUrl || "tryvia://payment-callback";
 
     const safeAmount = escapeHtml(order.totalAmount.toFixed(2));
     const safeKeyId = JSON.stringify(RAZORPAY_KEY_ID);
@@ -523,6 +544,7 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
     const safeCustomerEmail = JSON.stringify(user.email || "");
     const safeCustomerPhone = JSON.stringify(user.phone || "");
     const safeNumericId = JSON.stringify(String(order.numericId));
+    const safeCallbackBase = JSON.stringify(callbackBase);
 
     const html = `
 <!DOCTYPE html>
@@ -556,7 +578,8 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
     }
     .title { font-size: 20px; font-weight: 700; color: #1A1918; margin-bottom: 6px; letter-spacing: 1px; }
     .subtitle { font-size: 13px; color: #8E8A85; margin-bottom: 20px; }
-    .amount { font-size: 32px; font-weight: 800; color: #1A1918; margin-bottom: 24px; }
+    .amount { font-size: 32px; font-weight: 800; color: #1A1918; margin-bottom: 16px; }
+    .status-msg { font-size: 13px; color: #666; margin-bottom: 18px; min-height: 20px; line-height: 1.4; }
     .btn {
       background: #1A1918;
       color: #FFFFFF;
@@ -567,6 +590,13 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
       font-weight: 600;
       width: 100%;
       cursor: pointer;
+      display: inline-block;
+      box-sizing: border-box;
+      text-decoration: none;
+    }
+    .btn-secondary {
+      background: #8E8A85;
+      margin-top: 10px;
     }
     .loader {
       border: 3px solid #f3f3f3;
@@ -585,11 +615,46 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
     <div class="title">TRYVIA</div>
     <div class="subtitle">HAUTE PARFUMERIE & LUXURY BEAUTY</div>
     <div class="amount">₹${safeAmount}</div>
+    <div id="status-msg" class="status-msg">Opening secure Razorpay payment window...</div>
     <button id="pay-btn" class="btn" onclick="openRazorpay()">Complete Payment</button>
+    <a id="return-btn" class="btn" style="display:none; margin-top: 14px;">Return to TryVia App</a>
     <div id="loader" class="loader"></div>
   </div>
 
   <script>
+    var callbackBase = ${safeCallbackBase};
+
+    function buildCallbackUrl(params) {
+      var sep = callbackBase.indexOf('?') === -1 ? '?' : '&';
+      var parts = [];
+      for (var key in params) {
+        if (params.hasOwnProperty(key) && params[key] !== undefined && params[key] !== null) {
+          parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+        }
+      }
+      return callbackBase + sep + parts.join('&');
+    }
+
+    function navigateToCallback(url, msg) {
+      var statusMsg = document.getElementById('status-msg');
+      if (statusMsg) statusMsg.innerText = msg;
+      var returnBtn = document.getElementById('return-btn');
+      if (returnBtn) {
+        returnBtn.href = url;
+        returnBtn.style.display = 'inline-block';
+      }
+      var payBtn = document.getElementById('pay-btn');
+      if (payBtn) payBtn.style.display = 'none';
+      var loader = document.getElementById('loader');
+      if (loader) loader.style.display = 'block';
+
+      try {
+        window.location.href = url;
+      } catch (e) {
+        console.error("Navigation error:", e);
+      }
+    }
+
     function openRazorpay() {
       var options = {
         key: ${safeKeyId},
@@ -606,24 +671,34 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
         },
         theme: { color: "#1A1918" },
         handler: function (response) {
-          document.getElementById('loader').style.display = 'block';
-          var callbackUrl = "tryvia://payment-callback?" +
-            "razorpay_order_id=" + encodeURIComponent(response.razorpay_order_id || ${safeRzpOrderId}) +
-            "&razorpay_payment_id=" + encodeURIComponent(response.razorpay_payment_id) +
-            "&razorpay_signature=" + encodeURIComponent(response.razorpay_signature) +
-            "&order_id=" + encodeURIComponent(${safeNumericId});
-          window.location.href = callbackUrl;
+          var targetUrl = buildCallbackUrl({
+            razorpay_order_id: response.razorpay_order_id || ${safeRzpOrderId},
+            razorpay_payment_id: response.razorpay_payment_id || "",
+            razorpay_signature: response.razorpay_signature || "",
+            order_id: ${safeNumericId}
+          });
+          navigateToCallback(targetUrl, "Payment successful! Returning to TryVia...");
         },
         modal: {
           ondismiss: function () {
-            window.location.href = "tryvia://payment-callback?status=cancelled&order_id=" + encodeURIComponent(${safeNumericId});
+            var targetUrl = buildCallbackUrl({
+              status: "cancelled",
+              order_id: ${safeNumericId}
+            });
+            navigateToCallback(targetUrl, "Payment cancelled. Returning to TryVia...");
           }
         }
       };
 
       var rzp = new Razorpay(options);
       rzp.on('payment.failed', function (response){
-        window.location.href = "tryvia://payment-callback?status=failed&error=" + encodeURIComponent(response.error.description || 'Payment Failed');
+        var desc = (response && response.error && response.error.description) ? response.error.description : 'Payment Failed';
+        var targetUrl = buildCallbackUrl({
+          status: "failed",
+          error: desc,
+          order_id: ${safeNumericId}
+        });
+        navigateToCallback(targetUrl, "Payment failed: " + desc);
       });
       rzp.open();
     }

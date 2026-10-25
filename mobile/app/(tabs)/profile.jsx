@@ -29,6 +29,7 @@ import { WishlistModal } from "../../src/components/profile/WishlistModal";
 import { PaymentMethodsModal } from "../../src/components/profile/PaymentMethodsModal";
 import { AccountSettingsModal } from "../../src/components/profile/AccountSettingsModal";
 import { WalletModal } from "../../src/components/profile/WalletModal";
+import { useClerk } from "@clerk/clerk-expo";
 
 const MENU_ITEMS = [
   { key: "orders", icon: Package, label: "My Orders" },
@@ -39,6 +40,7 @@ const MENU_ITEMS = [
 
 export default function ProfileScreen() {
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { signOut } = useClerk();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState(null);
@@ -55,6 +57,11 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     if (Platform.OS === "ios") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    try {
+      await signOut();
+    } catch (err) {
+      console.warn("Clerk signOut error during logout:", err);
     }
     await logout();
   };

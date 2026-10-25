@@ -39,18 +39,234 @@ import {
 } from "lucide-react-native";
 import { GoogleIcon } from "../src/components/ui/GoogleIcon";
 import { ClerkService } from "../src/services/clerkService";
+import { tokenCache } from "../src/utils/tokenCache";
 import * as Haptics from "expo-haptics";
-import { useOAuth } from "@clerk/clerk-expo";
+import { useOAuth, useClerk, useUser, useSession } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Pure JS base64 JWT payload decoder that runs safely in any React Native engine
+function decodeJwt(token) {
+  if (!token || typeof token !== "string") return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) {
+      base64 += "=";
+    }
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    let str = "";
+    for (let i = 0; i < base64.length; i += 4) {
+      const enc1 = chars.indexOf(base64.charAt(i));
+      const enc2 = chars.indexOf(base64.charAt(i + 1));
+      const enc3 = chars.indexOf(base64.charAt(i + 2));
+      const enc4 = chars.indexOf(base64.charAt(i + 3));
+      if (enc1 === -1 || enc2 === -1) break;
+      const chr1 = (enc1 << 2) | (enc2 >> 4);
+      const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+      const chr3 = ((enc3 & 3) << 6) | enc4;
+      str += String.fromCharCode(chr1);
+      if (enc3 !== 64 && enc3 !== -1) str += String.fromCharCode(chr2);
+      if (enc4 !== 64 && enc4 !== -1) str += String.fromCharCode(chr3);
+    }
+    return JSON.parse(str);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Recursive deep search for email and name anywhere inside an arbitrary Clerk object or response tree
+function findEmailAndName(obj, maxDepth = 6) {
+  let foundEmail = "";
+  let foundName = "";
+
+  function walk(curr, depth) {
+    if (!curr || depth > maxDepth || (foundEmail && foundName)) return;
+    if (typeof curr === "string") {
+      const s = curr.trim();
+      if (!foundEmail && s.includes("@") && s.includes(".") && !s.includes(" ") && s.length < 100) {
+        foundEmail = s.toLowerCase();
+      }
+      return;
+    }
+    if (typeof curr !== "object") return;
+
+    if (Array.isArray(curr)) {
+      for (const item of curr) walk(item, depth + 1);
+      return;
+    }
+
+    if (!foundName && (curr.fullName || curr.full_name)) {
+      const n = String(curr.fullName || curr.full_name).trim();
+      if (n) foundName = n;
+    } else if (!foundName && (curr.firstName || curr.first_name)) {
+      const first = curr.firstName || curr.first_name || "";
+      const last = curr.lastName || curr.last_name || "";
+      const n = `${first} ${last}`.trim();
+      if (n) foundName = n;
+    }
+
+    if (!foundEmail && (curr.emailAddress || curr.email_address || curr.email || curr.identifier)) {
+      const val = curr.emailAddress || curr.email_address || curr.email || curr.identifier;
+      if (typeof val === "string" && val.includes("@") && val.includes(".")) {
+        foundEmail = val.trim().toLowerCase();
+      }
+    }
+
+    for (const key of Object.keys(curr)) {
+      if (key === "clerk" || key === "_clerk" || key === "parent") continue;
+      walk(curr[key], depth + 1);
+    }
+  }
+
+  walk(obj, 0);
+  return { email: foundEmail, fullName: foundName };
+}
+
+// Multi-phase asynchronous profile resolver that activates existing sessions and polls for profile data
+async function resolveClerkProfile(clerk, targetSessionId, flowResult, maxAttempts = 15) {
+  for (let i = 0; i < maxAttempts; i++) {
+    // 1. From flowResult
+    if (flowResult) {
+      const r = findEmailAndName({ signUp: flowResult.signUp, signIn: flowResult.signIn });
+      if (r.email) return r;
+    }
+
+    // 2. From clerk.user (the most authoritative source in Clerk)
+    if (clerk?.user) {
+      const r = findEmailAndName(clerk.user);
+      if (r.email) return r;
+    }
+
+    // 3. From clerk.session
+    if (clerk?.session) {
+      const r = findEmailAndName(clerk.session);
+      if (r.email) return r;
+    }
+
+    // 4. From clerk.client.sessions
+    if (clerk?.client?.sessions && Array.isArray(clerk.client.sessions)) {
+      for (const s of clerk.client.sessions) {
+        const r = findEmailAndName(s);
+        if (r.email) {
+          if (clerk.setActive && s.id && clerk.session?.id !== s.id) {
+            try {
+              await clerk.setActive({ session: s.id });
+            } catch (_) {}
+          }
+          return r;
+        }
+      }
+    }
+
+    // 5. If we have sessions but no active session, activate it
+    if (clerk?.client?.sessions?.length && !clerk.session && clerk.setActive) {
+      try {
+        const sid = targetSessionId || clerk.client.lastActiveSessionId || clerk.client.sessions[0]?.id;
+        if (sid) {
+          await clerk.setActive({ session: sid });
+        }
+      } catch (_) {}
+    }
+
+    // 6. Refresh clerk client state from server
+    if (clerk?.client?.fetch && i % 2 === 1) {
+      try {
+        await clerk.client.fetch();
+      } catch (_) {}
+    }
+
+    if (i < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  // 7. Direct FAPI query using cached client JWT
+  try {
+    const clientJwt = await tokenCache.getToken("__clerk_client_jwt");
+    if (clientJwt) {
+      const resp = await fetch(
+        "https://amazing-humpback-4840.clerk.accounts.dev/v1/client?_is_native=1",
+        {
+          headers: {
+            authorization: clientJwt,
+            "x-mobile": "1",
+          },
+        }
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        const r = findEmailAndName(data);
+        if (r.email) return r;
+      }
+    }
+  } catch (_) {}
+
+  return { email: "", fullName: "" };
+}
+
 export default function AuthScreen() {
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+  const clerk = useClerk();
+  const { signOut } = clerk;
+  const { user: clerkUser } = useUser();
+  const { session: clerkSession } = useSession();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { login: setAuthUser } = useAuthStore();
+  const { user: authUser, isAuthenticated, login: setAuthUser } = useAuthStore();
+
+  // Warm up native in-app browser for fastest OAuth popup experience
+  useEffect(() => {
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (authUser?.role === "VENDOR") {
+        router.replace("/vendor");
+      } else {
+        router.replace("/(tabs)");
+      }
+    }
+  }, [isAuthenticated, authUser]);
+
+  // Auto-sync any existing Clerk session when the auth screen opens
+  useEffect(() => {
+    let isCancelled = false;
+    async function checkExistingClerkSession() {
+      if (isAuthenticated) return;
+      const profile = await resolveClerkProfile(clerk, null, null, 3);
+
+      if (profile.email && !isCancelled) {
+        setGoogleLoading(true);
+        try {
+          const result = await ClerkService.syncOAuthUser(profile.email, profile.fullName);
+          if (!isCancelled && result.status !== "failed" && result.user && result.token) {
+            await setAuthUser(result.token, result.user);
+            if (result.user?.role === "VENDOR") {
+              router.replace("/vendor");
+            } else {
+              router.replace("/(tabs)");
+            }
+          }
+        } catch (err) {
+          console.warn("Auto-sync existing session error:", err);
+        } finally {
+          if (!isCancelled) setGoogleLoading(false);
+        }
+      }
+    }
+    checkExistingClerkSession();
+    return () => {
+      isCancelled = true;
+    };
+  }, [clerkUser, clerkSession, clerk?.session, isAuthenticated]);
 
   const [mode, setMode] = useState("signin");
   const [fullName, setFullName] = useState("");
@@ -222,50 +438,150 @@ export default function AuthScreen() {
     setGoogleLoading(true);
     setError(null);
 
+    // Helper: sync with Tryvia backend and update auth store
+    const syncAndNavigate = async (userEmail, userFullName) => {
+      const cleanEmail = String(userEmail || "").trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes("@")) return false;
+      const cleanName = String(userFullName || "").trim();
+
+      try {
+        const result = await ClerkService.syncOAuthUser(cleanEmail, cleanName);
+        if (result.status !== "failed" && result.user && result.token) {
+          await setAuthUser(result.token, result.user);
+          if (result.user?.role === "VENDOR") {
+            router.replace("/vendor");
+          } else {
+            router.replace("/(tabs)");
+          }
+          return true;
+        }
+        if (result.status === "failed") {
+          setError(result.error || "Google Sign-In failed during server sync.");
+        }
+      } catch (syncErr) {
+        console.error("syncAndNavigate error:", syncErr);
+        setError("Unable to connect to Tryvia server. Please check your internet connection.");
+      }
+      return false;
+    };
+
     try {
-      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
-        redirectUrl: Linking.createURL('/(tabs)'),
+      // 1. If user already has an active Clerk session with email, sync immediately
+      let profile = await resolveClerkProfile(clerk, null, null, 2);
+      if (profile.email) {
+        const synced = await syncAndNavigate(profile.email, profile.fullName);
+        if (synced) return;
+      }
+
+      // 2. Prepare redirect URL explicitly with scheme: 'mobile' and path: 'oauth-native-callback'
+      const redirectUrl = Linking.createURL("/oauth-native-callback", {
+        scheme: "mobile",
       });
 
-      if (createdSessionId) {
-        await setActive({ session: createdSessionId });
+      // 3. Execute OAuth flow
+      let flowResult = null;
+      try {
+        flowResult = await startOAuthFlow({ redirectUrl });
+      } catch (flowErr) {
+        console.warn("startOAuthFlow caught error:", flowErr);
+        const errMsg = (
+          flowErr?.errors?.[0]?.message ||
+          flowErr?.message ||
+          JSON.stringify(flowErr) ||
+          ""
+        ).toLowerCase();
 
-        let email = "";
-        let fullName = "";
+        const isSessionExists =
+          errMsg.includes("already signed in") ||
+          errMsg.includes("session_exists") ||
+          flowErr?.errors?.[0]?.code === "session_exists";
 
-        if (signUp?.emailAddress) {
-          email = signUp.emailAddress;
-          fullName = signUp.firstName ? `${signUp.firstName} ${signUp.lastName || ""}`.trim() : "";
-        } else if (signIn?.identifier) {
-          email = signIn.identifier;
-        }
+        if (isSessionExists) {
+          // User already has an active session in Clerk!
+          // Seamlessly resolve user profile and log them into Tryvia!
+          profile = await resolveClerkProfile(clerk, null, null, 10);
+          if (profile.email) {
+            const synced = await syncAndNavigate(profile.email, profile.fullName);
+            if (synced) return;
+          }
 
-        if (email) {
-          const result = await ClerkService.syncOAuthUser(email, fullName);
+          // If session could not be resolved, clear ghost session and retry once
+          try {
+            await tokenCache.clearToken("__clerk_client_jwt");
+            await tokenCache.clearToken("clerk_session_token");
+            await clerk.signOut();
+            if (clerk.client?.removeSessions) {
+              await clerk.client.removeSessions();
+            }
+          } catch (_) {}
 
-          if (result.status === "failed") {
-            setError(result.error || "Google Sign-In failed during backend sync.");
-            setGoogleLoading(false);
+          await new Promise((r) => setTimeout(r, 600));
+
+          try {
+            flowResult = await startOAuthFlow({ redirectUrl });
+          } catch (retryErr) {
+            const retryMsg = (
+              retryErr?.errors?.[0]?.message ||
+              retryErr?.message ||
+              ""
+            ).toLowerCase();
+            if (!retryMsg.includes("cancel") && !retryMsg.includes("dismiss")) {
+              setError(
+                retryErr?.errors?.[0]?.message ||
+                  retryErr?.message ||
+                  "Google Sign-In failed."
+              );
+            }
             return;
           }
-
-          if (result.user && result.token) {
-            await setAuthUser(result.token, result.user);
-            if (result.user?.role === "VENDOR") {
-              router.replace("/vendor");
-            } else if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace("/(tabs)");
-            }
-          }
+        } else if (errMsg.includes("cancel") || errMsg.includes("dismiss")) {
+          setError(null);
+          return;
         } else {
-          setError("Unable to retrieve email from Google Sign-In.");
+          setError(
+            flowErr?.errors?.[0]?.message ||
+              flowErr?.message ||
+              "Google Sign-In was interrupted."
+          );
+          return;
         }
+      }
+
+      const { createdSessionId, signIn, signUp, setActive } = flowResult || {};
+      const sessionId =
+        createdSessionId || signIn?.createdSessionId || signUp?.createdSessionId;
+
+      if (sessionId && setActive) {
+        await setActive({ session: sessionId });
+      }
+
+      // 4. Resolve email and name across all layers (even if browser dismissed without deep link)
+      profile = await resolveClerkProfile(clerk, sessionId, flowResult, 20);
+
+      if (profile.email) {
+        const synced = await syncAndNavigate(profile.email, profile.fullName);
+        if (!synced) {
+          setError("Account sync failed. Please try again.");
+        }
+      } else {
+        // If user explicitly pressed cancel in the browser popup and no session exists, don't show error
+        if (flowResult?.authSessionResult?.type === "cancel") {
+          setError(null);
+          return;
+        }
+        // If email could not be obtained, clear token to prevent ghost session
+        try {
+          await tokenCache.clearToken("__clerk_client_jwt");
+          await tokenCache.clearToken("clerk_session_token");
+          await clerk.signOut();
+        } catch (_) {}
+        setError("Unable to retrieve email from Google. Please try again.");
       }
     } catch (err) {
       console.error("OAuth error:", err);
-      setError(err?.message || "Google Sign-In failed.");
+      setError(
+        err?.errors?.[0]?.message || err?.message || "Google Sign-In failed."
+      );
     } finally {
       setGoogleLoading(false);
     }

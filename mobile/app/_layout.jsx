@@ -1,8 +1,9 @@
 import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect, useState, useRef } from "react";
-import { ClerkProvider } from "@clerk/clerk-expo";
+import { ClerkProvider, useUser, useSession, useClerk } from "@clerk/clerk-expo";
 import { tokenCache } from "../src/utils/tokenCache";
+import { ClerkService } from "../src/services/clerkService";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -45,6 +46,58 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function ClerkAuthSyncBridge() {
+  const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isUserLoaded } = useUser();
+  const { session: clerkSession, isLoaded: isSessionLoaded } = useSession();
+  const clerk = useClerk();
+  const { isAuthenticated, login: setAuthUser } = useAuthStore();
+  const isSyncingRef = useRef(false);
+
+  useEffect(() => {
+    if ((!isUserLoaded && !isSessionLoaded) || isSyncingRef.current || isAuthenticated) return;
+
+    let email =
+      clerkUser?.primaryEmailAddress?.emailAddress ||
+      clerkUser?.emailAddresses?.[0]?.emailAddress ||
+      clerkSession?.publicUserData?.identifier ||
+      clerk?.session?.publicUserData?.identifier;
+
+    if (!email && clerk?.client?.sessions) {
+      for (const s of clerk.client.sessions) {
+        if (s.publicUserData?.identifier && s.publicUserData.identifier.includes("@")) {
+          email = s.publicUserData.identifier;
+          break;
+        }
+      }
+    }
+
+    if (!email || !email.includes("@")) return;
+
+    const fullName =
+      clerkUser?.fullName ||
+      `${clerkUser?.firstName || ""} ${clerkUser?.lastName || ""}`.trim() ||
+      clerkSession?.publicUserData?.firstName ||
+      clerk?.session?.publicUserData?.firstName ||
+      "";
+
+    isSyncingRef.current = true;
+    ClerkService.syncOAuthUser(email, fullName)
+      .then(async (result) => {
+        if (result.status !== "failed" && result.user && result.token) {
+          await setAuthUser(result.token, result.user);
+        }
+      })
+      .catch((err) => {
+        console.warn("ClerkAuthSyncBridge background sync error:", err);
+      })
+      .finally(() => {
+        isSyncingRef.current = false;
+      });
+  }, [isUserLoaded, isSessionLoaded, isClerkSignedIn, clerkUser, clerkSession, clerk?.session, isAuthenticated]);
+
+  return null;
+}
 
 function RootLayoutNav() {
   const { isLoading, restoreToken } = useAuthStore();
@@ -110,6 +163,7 @@ function RootLayoutNav() {
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+      <ClerkAuthSyncBridge />
       <GestureHandlerRootView style={styles.root}>
         <QueryClientProvider client={queryClient}>
         <Stack screenOptions={{ headerShown: false }}>

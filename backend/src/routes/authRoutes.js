@@ -127,7 +127,7 @@ router.post("/register", authLimiter, validate(registerSchema), async (req, res)
 const syncSchema = z.object({
   body: z.object({
     email: z.string().trim().email("Valid email required"),
-    full_name: z.string().trim().min(1).max(100).optional(),
+    full_name: z.string().trim().max(100).optional().or(z.literal("")),
   })
 });
 

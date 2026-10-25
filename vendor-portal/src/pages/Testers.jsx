@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -9,6 +9,7 @@ export default function Testers() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
   const navigate = useNavigate();
 
   const fetchProducts = async () => {
@@ -33,6 +34,25 @@ export default function Testers() {
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     (p.productId && p.productId.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const handleDeleteTester = async (tester) => {
+    const confirmMessage = `Are you sure you want to remove "${tester.name}"? This action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setDeletingId(tester._id);
+      const token = localStorage.getItem("vendor_token");
+      await axios.delete(`${API_URL}/vendor/testers/${tester._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProducts(prev => prev.filter(p => p._id !== tester._id));
+    } catch (err) {
+      console.error("Failed to delete tester:", err);
+      alert(err.response?.data?.detail || "Failed to remove tester. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -111,9 +131,14 @@ export default function Testers() {
                         <span className="font-medium text-text-primary">{product.stockTester || 0}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-text-secondary hover:text-primary-main hover:bg-primary-light rounded-lg transition-colors">
-                        <Edit className="w-4 h-4" />
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button 
+                        onClick={() => handleDeleteTester(product)}
+                        disabled={deletingId === product._id}
+                        className="p-2 text-text-secondary hover:text-state-error hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Remove tester"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />
                       </button>
                     </td>
                   </tr>

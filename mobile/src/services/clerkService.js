@@ -149,6 +149,7 @@ export class ClerkService {
    * Sign Out
    */
   static async signOut() {
+    await tokenCache.clearToken("__clerk_client_jwt");
     await tokenCache.clearToken("clerk_session_token");
   }
 }

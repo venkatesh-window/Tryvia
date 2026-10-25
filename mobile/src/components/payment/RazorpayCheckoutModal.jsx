@@ -30,6 +30,7 @@ import { PremiumButton } from "../ui/PremiumButton";
 import { useCartStore } from "../../store/useCartStore";
 import { useOrderStore } from "../../store/useOrderStore";
 import { useAuthStore } from "../../store/useAuthStore";
+import { getItemAsync } from "../../utils/storage";
 import { theme } from "../../theme/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { paymentService } from "../../api/services/paymentService";
@@ -78,7 +79,7 @@ export const RazorpayCheckoutModal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState("");
   const [razorpayKeyId, setRazorpayKeyId] = useState(
-    process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TEzhol7UoZqx9M",
+    process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_Ts39KVg3HhvFAj",
   );
 
   useEffect(() => {
@@ -128,16 +129,16 @@ export const RazorpayCheckoutModal = ({
         backendOrder.shippingAddress ||
         backendOrder.shipping_address ||
         deliveryAddress,
-      items: items.map((i) => ({
-        id: String(i.id),
-        name: i.product.name,
-        brand: i.product.brand?.name || "TRYVIA",
+      items: (items || []).map((i) => ({
+        id: String(i?.id || Math.random()),
+        name: i?.product?.name || "Luxury Fragrance",
+        brand: i?.product?.brand?.name || i?.product?.brand || "TRYVIA",
         imageUrl:
-          i.product.image_url ||
+          i?.product?.image_url ||
           "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80",
-        type: i.type,
-        quantity: i.quantity,
-        price: i.price,
+        type: i?.type || "full",
+        quantity: i?.quantity || 1,
+        price: i?.price || 0,
       })),
     };
   };
@@ -158,9 +159,9 @@ export const RazorpayCheckoutModal = ({
       // 1. Create Razorpay Order on backend
       const rzpOrder = await paymentService.createPaymentOrder({
         items: orderInputs,
-        apply_wallet_credit_id: appliedWalletCredit?.id || null,
+        apply_wallet_credit_id: appliedWalletCredit?.id || undefined,
         use_wallet: walletDeduction > 0,
-        shipping_address: deliveryAddress || null,
+        shipping_address: deliveryAddress || undefined,
       });
 
       // Case A: 100% covered by wallet credit (Zero-value checkout)
@@ -179,92 +180,104 @@ export const RazorpayCheckoutModal = ({
       }
 
       // Case B: Standard Web Browser Checkout (Web SDK popup)
-      if (
-        Platform.OS === "web" &&
-        typeof window !== "undefined" &&
-        window.Razorpay
-      ) {
-        const options = {
-          key: rzpOrder.key_id || razorpayKeyId,
-          amount: rzpOrder.amount,
-          currency: rzpOrder.currency || "INR",
-          name: "TRYVIA",
-          description: "Haute Parfumerie & Luxury Formulations",
-          image:
-            "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=200",
-          order_id: rzpOrder.razorpay_order_id,
-          prefill: {
-            name: user?.fullName || rzpOrder.customer?.name || "TryVia Member",
-            email: user?.email || rzpOrder.customer?.email || "",
-            contact: user?.phone || rzpOrder.customer?.contact || "",
-          },
-          theme: {
-            color: "#1A1918",
-          },
-          handler: async (response) => {
-            setProcessingStep(
-              "Verifying cryptographic signature with Razorpay...",
-            );
-            try {
-              const verifyRes = await paymentService.verifyPayment({
-                razorpay_order_id:
-                  response.razorpay_order_id ||
-                  rzpOrder.razorpay_order_id ||
-                  "",
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                order_id: rzpOrder.order_id,
-                payment_instrument: "Razorpay Checkout",
-              });
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        if (!window.Razorpay) {
+          setProcessingStep("Loading Razorpay SDK...");
+          await loadRazorpayWebScript();
+        }
 
-              if (walletDeduction > 0) {
-                deductWalletBalance(walletDeduction);
-              }
-
-              const formatted = formatFinalOrder(
-                verifyRes.order,
-                "Razorpay Checkout",
-              );
-              useOrderStore.setState((state) => ({
-                orders: [formatted, ...state.orders],
-              }));
-              clearCart();
-              setIsProcessing(false);
-              onSuccess(formatted);
-            } catch (err) {
-              console.error(
-                "Payment signature verification failed:",
-                err?.response?.data || err?.message,
-              );
-              setIsProcessing(false);
-              const errMsg =
-                err?.response?.data?.detail ||
-                err?.message ||
-                "Payment signature could not be verified.";
-              Alert.alert("Verification Failed", errMsg);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setIsProcessing(false);
+        if (window.Razorpay) {
+          const options = {
+            key: rzpOrder.key_id || razorpayKeyId,
+            amount: rzpOrder.amount,
+            currency: rzpOrder.currency || "INR",
+            name: "TRYVIA",
+            description: "Haute Parfumerie & Luxury Formulations",
+            image:
+              "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=200",
+            order_id: rzpOrder.razorpay_order_id,
+            prefill: {
+              name: user?.fullName || rzpOrder.customer?.name || "TryVia Member",
+              email: user?.email || rzpOrder.customer?.email || "",
+              contact: user?.phone || rzpOrder.customer?.contact || "",
             },
-          },
-        };
+            theme: {
+              color: "#1A1918",
+            },
+            handler: async (response) => {
+              setProcessingStep(
+                "Verifying cryptographic signature with Razorpay...",
+              );
+              try {
+                const verifyRes = await paymentService.verifyPayment({
+                  razorpay_order_id:
+                    response.razorpay_order_id ||
+                    rzpOrder.razorpay_order_id ||
+                    "",
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  order_id: rzpOrder.order_id,
+                  payment_instrument: "Razorpay Checkout",
+                });
 
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-        return;
+                if (walletDeduction > 0) {
+                  deductWalletBalance(walletDeduction);
+                }
+
+                const formatted = formatFinalOrder(
+                  verifyRes.order,
+                  "Razorpay Checkout",
+                );
+                useOrderStore.setState((state) => ({
+                  orders: [formatted, ...state.orders],
+                }));
+                clearCart();
+                setIsProcessing(false);
+                onSuccess(formatted);
+              } catch (err) {
+                console.error(
+                  "Payment signature verification failed:",
+                  err?.response?.data || err?.message,
+                );
+                setIsProcessing(false);
+                const errMsg =
+                  err?.response?.data?.detail ||
+                  err?.message ||
+                  "Payment signature could not be verified.";
+                Alert.alert("Verification Failed", errMsg);
+              }
+            },
+            modal: {
+              ondismiss: () => {
+                setIsProcessing(false);
+              },
+            },
+          };
+
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+          return;
+        }
       }
 
       // Case C: Native Mobile Checkout (iOS / Android)
       setProcessingStep("Opening secure Razorpay payment window...");
+      let token = useAuthStore.getState().token;
+      if (!token) {
+        token = await getItemAsync("tryvia_jwt_token");
+      }
+
+      const redirectUrl = Linking.createURL("payment-callback");
+
       const sessionUrl = paymentService.getCheckoutSessionUrl(
         rzpOrder.order_id,
+        token,
+        redirectUrl,
       );
 
       const result = await WebBrowser.openAuthSessionAsync(
         sessionUrl,
-        "tryvia://payment-callback",
+        redirectUrl,
       );
 
       if (result.type === "success" && result.url) {
@@ -346,10 +359,15 @@ export const RazorpayCheckoutModal = ({
         message: error?.message,
       });
       setIsProcessing(false);
-      const errMsg =
+      let errMsg =
         error?.response?.data?.detail ||
         error?.message ||
         "Unable to complete Razorpay payment.";
+
+      if (errMsg.toLowerCase().includes("authentication failed")) {
+        errMsg =
+          "Razorpay Gateway Authentication Failed: The RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET configured on the backend is invalid or expired. Please update your Razorpay API keys in the dashboard.";
+      }
       Alert.alert("Payment Error", errMsg);
     }
   };

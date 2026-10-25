@@ -42,6 +42,34 @@ router.get("/testers", async (req, res) => {
   }
 });
 
+// GET /api/v1/products/store/:slug
+router.get("/store/:slug", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    // Only fetch APPROVED vendors
+    const vendor = await Vendor.findOne({ slug, status: "APPROVED" }).select(
+      "storeName description logo banner slug createdAt",
+    );
+    if (!vendor) {
+      res.status(404).json({ detail: "Store not found or not active" });
+      return;
+    }
+    // Only fetch ACTIVE products for this vendor
+    const products = await Product.find({
+      vendor: vendor._id,
+      status: "ACTIVE",
+    })
+      .populate("brand")
+      .populate("category");
+    res.json({
+      vendor: vendor.toJSON(),
+      products: products.map((p) => p.toJSON()),
+    });
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
 // GET /api/v1/products/:id
 router.get("/:id", async (req, res) => {
   try {
@@ -114,32 +142,5 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/v1/products/store/:slug
-router.get("/store/:slug", async (req, res) => {
-  try {
-    const slug = req.params.slug;
-    // Only fetch APPROVED vendors
-    const vendor = await Vendor.findOne({ slug, status: "APPROVED" }).select(
-      "storeName description logo banner slug createdAt",
-    );
-    if (!vendor) {
-      res.status(404).json({ detail: "Store not found or not active" });
-      return;
-    }
-    // Only fetch ACTIVE products for this vendor
-    const products = await Product.find({
-      vendor: vendor._id,
-      status: "ACTIVE",
-    })
-      .populate("brand")
-      .populate("category");
-    res.json({
-      vendor: vendor.toJSON(),
-      products: products.map((p) => p.toJSON()),
-    });
-  } catch (error) {
-    res.status(500).json({ detail: error.message });
-  }
-});
 
 export default router;

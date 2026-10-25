@@ -45,7 +45,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// Security headers with tailored CSP for Razorpay checkout & image CDNs
+// Security headers with tailored CSP for Razorpay checkout, 3DS banking OTP iframes, & image CDNs
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -55,16 +55,18 @@ app.use(
           "'self'",
           "'unsafe-inline'",
           "https://checkout.razorpay.com",
+          "https://cdn.razorpay.com",
         ],
         frameSrc: [
           "'self'",
-          "https://api.razorpay.com",
-          "https://checkout.razorpay.com",
+          "https:",
+          "data:",
+          "blob:",
         ],
         connectSrc: [
           "'self'",
-          "https://api.razorpay.com",
-          "https://lumberjack.razorpay.com",
+          "https:",
+          "wss:",
         ],
         imgSrc: [
           "'self'",
@@ -77,6 +79,7 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
+    crossOriginOpenerPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );

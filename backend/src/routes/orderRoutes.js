@@ -19,10 +19,10 @@ const orderSchema = z.object({
       product_id: z.string().or(z.number()),
       quantity: z.coerce.number().int().min(1).default(1),
       item_type: z.enum(["full", "tester"]).optional()
-    })).min(1),
-    paymentMethod: z.string().optional(),
-    apply_wallet_credit_id: z.boolean().or(z.string()).or(z.number()).optional(),
-    use_wallet: z.boolean().optional(),
+    }).passthrough()).min(1),
+    paymentMethod: z.string().nullable().optional(),
+    apply_wallet_credit_id: z.boolean().or(z.string()).or(z.number()).nullable().optional(),
+    use_wallet: z.boolean().nullable().optional(),
     shippingAddress: z.object({
       fullName: z.string().optional(),
       street: z.string().optional(),
@@ -31,7 +31,7 @@ const orderSchema = z.object({
       zipCode: z.string().optional(),
       country: z.string().optional(),
       phone: z.string().optional(),
-    }).passthrough().optional()
+    }).passthrough().nullable().optional()
   }).passthrough()
 });
 

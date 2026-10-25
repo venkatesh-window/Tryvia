@@ -16,8 +16,12 @@ export const paymentService = {
     return response.data;
   },
 
-  getCheckoutSessionUrl(orderId) {
+  getCheckoutSessionUrl(orderId, token, callbackUrl) {
     const base = getBaseUrl();
-    return `${base}/payments/checkout-session/${orderId}`;
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
+    const callbackParam = callbackUrl
+      ? `${token ? "&" : "?"}callback_url=${encodeURIComponent(callbackUrl)}`
+      : "";
+    return `${base}/payments/checkout-session/${orderId}${tokenParam}${callbackParam}`;
   },
 };

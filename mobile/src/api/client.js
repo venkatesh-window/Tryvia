@@ -12,32 +12,7 @@ export const getBaseUrl = () => {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
-  if (Platform.OS === "web") {
-    const hostname =
-      typeof window !== "undefined" && window.location?.hostname
-        ? window.location.hostname
-        : "localhost";
-    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
-      return "https://tryvia-ta57.onrender.com/api/v1";
-    }
-    return `http://${hostname}:8000/api/v1`;
-  }
-
-  // Extract host IP from Expo Go / Metro bundler on mobile in development
-  const hostUri =
-    Constants.expoConfig?.hostUri ||
-    Constants.manifest?.debuggerHost ||
-    Constants.manifest2?.extra?.expoGo?.debuggerHost ||
-    Constants.manifest2?.extra?.expoClient?.hostUri;
-
-  if (hostUri && typeof hostUri === "string") {
-    const host = hostUri.split(":")[0];
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:8000/api/v1`;
-    }
-  }
-
-  // Production Render Backend fallback for standalone APK / release builds
+  // Authoritative Render Production Backend
   return "https://tryvia-ta57.onrender.com/api/v1";
 };
 
@@ -45,7 +20,7 @@ const BASE_URL = getBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 8000,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },

@@ -3,12 +3,13 @@ import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://tryvia-ta57.onrender.com/api/v1';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
   const navigate = useNavigate();
 
   const fetchProducts = async () => {
@@ -33,6 +34,25 @@ export default function Products() {
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     (p.productId && p.productId.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const handleDeleteProduct = async (product) => {
+    const confirmMessage = `Are you sure you want to remove "${product.name}"? This action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setDeletingId(product._id);
+      const token = localStorage.getItem("vendor_token");
+      await axios.delete(`${API_URL}/vendor/products/${product._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProducts(prev => prev.filter(p => p._id !== product._id));
+    } catch (err) {
+      console.error("Failed to delete product:", err);
+      alert(err.response?.data?.detail || "Failed to remove product. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -116,9 +136,14 @@ export default function Products() {
                         <span className="text-text-secondary">Tester:</span> <span className="font-medium text-text-primary">{product.stockTester || 0}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-text-secondary hover:text-primary-main hover:bg-primary-light rounded-lg transition-colors">
-                        <Edit className="w-4 h-4" />
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button 
+                        onClick={() => handleDeleteProduct(product)}
+                        disabled={deletingId === product._id}
+                        className="p-2 text-text-secondary hover:text-state-error hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Remove product"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />
                       </button>
                     </td>
                   </tr>
