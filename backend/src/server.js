@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
+import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { validateEnv } from "./config/env.js";
 import { connectDB } from "./config/db.js";
@@ -83,6 +84,27 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
+
+// Gzip & Brotli HTTP response compression (saves bandwidth, reduces socket memory)
+app.use(
+  compression({
+    threshold: 1024,
+  }),
+);
+
+// Load shedding: prevent server from crashing when RAM is close to exhaustion
+app.use((req, res, next) => {
+  const mem = process.memoryUsage();
+  const heapUsageRatio = mem.heapUsed / mem.heapTotal;
+  // If memory is critically high (>92%) and request is non-essential read, shed load safely
+  if (heapUsageRatio > 0.92 && req.method === "GET" && req.path !== "/" && !req.path.startsWith("/api/v1/payments")) {
+    res.setHeader("Retry-After", "2");
+    return res.status(503).json({
+      detail: "Server is experiencing high traffic. Please retry in a moment.",
+    });
+  }
+  next();
+});
 
 // Apply a general rate limit to all requests
 const generalLimiter = rateLimit({
@@ -199,10 +221,43 @@ app.get("/", (req, res) => {
 // Centralized Error Handling
 app.use(errorHandler);
 
+// Global process-level safety nets to prevent unhandled rejections from terminating the process
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("⚠️ Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("💥 Uncaught Exception:", err);
+});
+
 // Start Server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 TryVia Express Server running at http://localhost:${PORT}`);
   console.log(`📡 API Base URL: http://localhost:${PORT}${API_PREFIX}`);
 });
+
+// Graceful Shutdown on SIGTERM / SIGINT
+const handleGracefulShutdown = (signal) => {
+  console.log(`\n🛑 Received ${signal}. Closing server gracefully...`);
+  server.close(async () => {
+    console.log("🔒 HTTP server closed.");
+    try {
+      const { closeDB } = await import("./config/db.js");
+      await closeDB();
+      console.log("🔌 Database connections closed cleanly.");
+    } catch (e) {
+      console.error("Error closing database during shutdown:", e);
+    }
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error("⚠️ Forceful shutdown after 10s timeout.");
+    process.exit(1);
+  }, 10000).unref();
+};
+
+process.on("SIGTERM", () => handleGracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => handleGracefulShutdown("SIGINT"));
 
 export default app;

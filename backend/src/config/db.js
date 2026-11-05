@@ -27,7 +27,22 @@ export const connectDB = async () => {
       throw new Error("MONGODB_URI environment variable is not defined");
     }
 
-    const conn = await mongoose.connect(mongoURI);
+    const conn = await mongoose.connect(mongoURI, {
+      maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE, 10) || 100,
+      minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE, 10) || 10,
+      socketTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      heartbeatFrequencyMS: 10000,
+    });
+
+    mongoose.connection.on("error", (err) => {
+      console.error("⚠️ MongoDB runtime connection error:", err?.message || err);
+    });
+
+    mongoose.connection.on("disconnected", () => {
+      console.warn("⚠️ MongoDB disconnected. Mongoose will attempt to reconnect automatically.");
+    });
+
     console.log(
       `✅ MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`,
     );

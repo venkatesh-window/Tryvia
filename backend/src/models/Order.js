@@ -112,4 +112,8 @@ const OrderSchema = new Schema(
   },
 );
 
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ razorpayOrderId: 1 });
+OrderSchema.index({ status: 1 });
+
 export const Order = mongoose.model("Order", OrderSchema);

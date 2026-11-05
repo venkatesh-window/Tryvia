@@ -56,4 +56,10 @@ const ProductSchema = new Schema(
   },
 );
 
+// High-performance compound indexes for rapid query resolution under heavy load
+ProductSchema.index({ status: 1, category: 1 });
+ProductSchema.index({ status: 1, brand: 1 });
+ProductSchema.index({ status: 1, stockTester: 1 });
+ProductSchema.index({ name: "text", description: "text" });
+
 export const Product = mongoose.model("Product", ProductSchema);

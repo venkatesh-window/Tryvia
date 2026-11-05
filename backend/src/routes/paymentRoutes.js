@@ -84,6 +84,35 @@ async function grantTesterUpgradeCredits(orderItems, userId) {
   }
 }
 
+// High-concurrency helper: Batch fetches all products for cart items in 1 query with .lean()
+async function loadProductsBatch(items) {
+  const numericIds = [];
+  const objectIds = [];
+
+  for (const item of items) {
+    if (!item?.product_id) continue;
+    if (!isNaN(Number(item.product_id))) {
+      numericIds.push(Number(item.product_id));
+    } else if (mongoose.Types.ObjectId.isValid(item.product_id)) {
+      objectIds.push(item.product_id);
+    }
+  }
+
+  const queryOr = [];
+  if (numericIds.length > 0) queryOr.push({ numericId: { $in: numericIds } });
+  if (objectIds.length > 0) queryOr.push({ _id: { $in: objectIds } });
+
+  if (queryOr.length === 0) return new Map();
+
+  const products = await Product.find({ $or: queryOr }).lean();
+  const map = new Map();
+  for (const p of products) {
+    if (p.numericId !== undefined) map.set(String(p.numericId), p);
+    if (p._id) map.set(p._id.toString(), p);
+  }
+  return map;
+}
+
 // GET /api/v1/payments/config - Returns Razorpay public Key ID
 router.get("/config", (_req, res) => {
   res.json({
@@ -102,18 +131,14 @@ router.post("/checkout/calculate", authenticate, validate(checkoutSchema), async
     let miniProductsTotal = 0;
     let subtotal = 0;
 
+    const productMap = await loadProductsBatch(items);
+
     for (const item of items) {
       if (!item.product_id) continue;
       const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
       const itemType = item.item_type === "tester" ? "tester" : "full";
 
-      let productDoc;
-      if (!isNaN(Number(item.product_id))) {
-        productDoc = await Product.findOne({ numericId: Number(item.product_id) });
-      } else if (mongoose.Types.ObjectId.isValid(item.product_id)) {
-        productDoc = await Product.findById(item.product_id);
-      }
-      
+      const productDoc = productMap.get(String(item.product_id));
       if (!productDoc) continue;
 
       const unitPrice = itemType === "tester" ? productDoc.testerPrice : productDoc.fullPrice;
@@ -188,6 +213,9 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
 
     let subtotal = 0;
     const orderItems = [];
+    const uniqueVendors = new Set();
+
+    const productMap = await loadProductsBatch(items);
 
     for (const item of items) {
       if (!item.product_id) {
@@ -200,14 +228,7 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
       const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
       const itemType = item.item_type === "tester" ? "tester" : "full";
 
-      let productDoc;
-      if (!isNaN(Number(item.product_id))) {
-        productDoc = await Product.findOne({
-          numericId: Number(item.product_id),
-        });
-      } else if (mongoose.Types.ObjectId.isValid(item.product_id)) {
-        productDoc = await Product.findById(item.product_id);
-      }
+      const productDoc = productMap.get(String(item.product_id));
 
       if (!productDoc) {
         res
@@ -218,6 +239,11 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
         return;
       }
 
+      // Collect vendor reference for cross-portal order routing
+      if (productDoc.vendor) {
+        uniqueVendors.add(productDoc.vendor.toString());
+      }
+
       // Authoritative unit price from database
       const unitPrice =
         itemType === "tester" ? productDoc.testerPrice : productDoc.fullPrice;
@@ -226,13 +252,16 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
       subtotal += totalPrice;
 
       orderItems.push({
+        orderItemId: `TRY-ITEM-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         product: productDoc._id,
+        vendorId: productDoc.vendorId,
         itemType,
         quantity,
         unitPrice,
         totalPrice,
         platformFee: 0,
         vendorEarnings: 0,
+        itemStatus: "PENDING",
       });
     }
 
@@ -323,9 +352,17 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
       return;
     }
 
+    const orderId = `TRY-ORD-${numericId.toString().padStart(6, '0')}`;
+    const vendorStatuses = Array.from(uniqueVendors).map((vId) => ({
+      vendor: new mongoose.Types.ObjectId(vId),
+      status: "PENDING",
+      history: [{ status: "PENDING", changedAt: new Date() }],
+    }));
+
     // Save preliminary order in PENDING status
     const order = new Order({
       numericId,
+      orderId,
       user: user._id,
       items: orderItems,
       subtotal,
@@ -335,6 +372,7 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
       taxAmount,
       totalAmount,
       status: "PENDING",
+      vendorStatuses,
       paymentMethod: "Razorpay Online",
       appliedCreditId: apply_wallet_credit_id ? 1 : undefined,
       shippingAddress: shipping_address || undefined,
@@ -455,6 +493,14 @@ router.post("/verify", paymentLimiter, authenticate, async (req, res) => {
     order.razorpayOrderId = razorpay_order_id;
     order.razorpayPaymentId = razorpay_payment_id;
     order.razorpaySignature = razorpay_signature;
+    order.status = "PAID";
+    if (order.vendorStatuses && order.vendorStatuses.length > 0) {
+      order.vendorStatuses.forEach((vs) => {
+        vs.status = "PAID";
+        vs.history = vs.history || [];
+        vs.history.push({ status: "PAID", changedAt: new Date() });
+      });
+    }
     await order.save();
 
     await fulfillOrder(order._id);
@@ -754,6 +800,13 @@ router.post("/webhook", async (req, res) => {
         if (order && order.status !== "PAID") {
           order.razorpayPaymentId = paymentEntity.id;
           order.status = "PAID";
+          if (order.vendorStatuses && order.vendorStatuses.length > 0) {
+            order.vendorStatuses.forEach((vs) => {
+              vs.status = "PAID";
+              vs.history = vs.history || [];
+              vs.history.push({ status: "PAID", changedAt: new Date() });
+            });
+          }
           await order.save();
           await fulfillOrder(order._id);
         }
