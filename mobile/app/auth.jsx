@@ -167,17 +167,42 @@ function extractClerkProfile(source) {
   // Check top level
   checkDirect(source);
 
-  // Check common nested objects
+  // Check common nested objects and API response structures
   if (!foundEmail || !foundName) checkDirect(source.user);
   if (!foundEmail || !foundName) checkDirect(source.session);
   if (!foundEmail || !foundName) checkDirect(source.publicUserData);
   if (!foundEmail || !foundName) checkDirect(source.public_user_data);
 
-  // Fallback: deep scan handling prototype getters
+  // Check Clerk FAPI response structures ({ response: { sessions: [...] } })
+  if (source?.response) {
+    checkDirect(source.response);
+    if (Array.isArray(source.response.sessions)) {
+      for (const s of source.response.sessions) {
+        checkDirect(s);
+        checkDirect(s.user);
+        checkDirect(s.publicUserData);
+        checkDirect(s.public_user_data);
+        if (foundEmail) break;
+      }
+    }
+  }
+
+  // Check sessions array directly
+  if (!foundEmail && Array.isArray(source?.sessions)) {
+    for (const s of source.sessions) {
+      checkDirect(s);
+      checkDirect(s.user);
+      checkDirect(s.publicUserData);
+      checkDirect(s.public_user_data);
+      if (foundEmail) break;
+    }
+  }
+
+  // Fallback: deep scan handling prototype getters and nested collections
   if (!foundEmail) {
     const visited = new Set();
     function walk(curr, depth) {
-      if (!curr || depth > 5 || foundEmail || visited.has(curr)) return;
+      if (!curr || depth > 12 || foundEmail || visited.has(curr)) return;
       if (typeof curr === "string") {
         if (isValidEmail(curr)) foundEmail = curr.trim().toLowerCase();
         return;
@@ -220,6 +245,13 @@ function extractClerkProfile(source) {
 
 // Multi-phase asynchronous profile resolver that activates existing sessions and polls for profile data
 async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSources = {}, maxAttempts = 15) {
+  // Upfront client refresh so in-memory client has latest sessions from server
+  try {
+    if (clerk?.client?.fetch) {
+      await clerk.client.fetch();
+    }
+  } catch (_) {}
+
   for (let i = 0; i < maxAttempts; i++) {
     // 1. From extraSources (e.g. clerkUser, clerkSession from React hooks)
     if (extraSources?.clerkUser) {
@@ -366,7 +398,7 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSour
 
   // 8. Direct FAPI query using cached client JWT
   try {
-    const clientJwt = await tokenCache.getToken("__clerk_client_jwt");
+    const clientJwt = (await tokenCache.getToken("__clerk_client_jwt")) || (await tokenCache.getToken("clerk_session_token"));
     if (clientJwt) {
       const resp = await fetch(
         "https://amazing-humpback-4840.clerk.accounts.dev/v1/client?_is_native=1",
@@ -380,7 +412,15 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSour
       if (resp.ok) {
         const data = await resp.json();
         const r = extractClerkProfile(data);
-        if (r.email) return r;
+        if (r.email) {
+          const sid = data.response?.last_active_session_id || data.response?.sessions?.[0]?.id;
+          if (sid && clerk?.setActive) {
+            try {
+              await clerk.setActive({ session: sid });
+            } catch (_) {}
+          }
+          return r;
+        }
       }
     }
   } catch (_) {}
@@ -437,7 +477,7 @@ export default function AuthScreen() {
     let isCancelled = false;
     async function checkExistingClerkSession() {
       if (isAuthenticated) return;
-      const profile = await resolveClerkProfile(clerk, null, null, { clerkUser, clerkSession }, 3);
+      const profile = await resolveClerkProfile(clerk, null, null, { clerkUser, clerkSession }, 8);
 
       if (profile.email && !isCancelled) {
         setGoogleLoading(true);
@@ -767,7 +807,7 @@ export default function AuthScreen() {
             activeSid,
             null,
             { clerkUser, clerkSession },
-            10
+            12
           );
 
           if (profile.email) {
@@ -775,14 +815,21 @@ export default function AuthScreen() {
             if (synced) return;
           }
 
-          // If session could not be resolved, clear ghost session and retry once
+          // If session could not be resolved, clear ghost session from server and cache
+          try {
+            if (typeof clerk?.client?.removeSessions === "function") {
+              await clerk.client.removeSessions();
+            }
+          } catch (_) {}
           try {
             await clerk.signOut();
+          } catch (_) {}
+          try {
             await tokenCache.clearToken("__clerk_client_jwt");
             await tokenCache.clearToken("clerk_session_token");
           } catch (_) {}
 
-          await new Promise((r) => setTimeout(r, 600));
+          await new Promise((r) => setTimeout(r, 400));
 
           try {
             flowResult = await startOAuthFlow({ redirectUrl });
@@ -798,17 +845,25 @@ export default function AuthScreen() {
                 null,
                 null,
                 { clerkUser, clerkSession },
-                5
+                6
               );
               if (profile.email) {
                 const synced = await syncAndNavigate(profile.email, profile.fullName);
                 if (synced) return;
               }
-              setError(
-                retryErr?.errors?.[0]?.message ||
-                  retryErr?.message ||
-                  "Google Sign-In failed."
-              );
+              // NEVER display "You're already signed in." as an error to the user!
+              if (
+                retryMsg.includes("already signed in") ||
+                retryMsg.includes("session_exists")
+              ) {
+                setError(null);
+              } else {
+                setError(
+                  retryErr?.errors?.[0]?.message ||
+                    retryErr?.message ||
+                    "Google Sign-In failed."
+                );
+              }
             }
             return;
           }
@@ -861,6 +916,21 @@ export default function AuthScreen() {
           flowResult?.authSessionResult?.type === "cancel" ||
           flowResult?.authSessionResult?.type === "dismiss"
         ) {
+          // Check if session was created despite the browser dismissal
+          try {
+            if (clerk?.client?.fetch) await clerk.client.fetch();
+          } catch (_) {}
+          profile = await resolveClerkProfile(
+            clerk,
+            sessionId,
+            flowResult,
+            { clerkUser, clerkSession },
+            6
+          );
+          if (profile.email) {
+            const synced = await syncAndNavigate(profile.email, profile.fullName);
+            if (synced) return;
+          }
           setError(null);
           return;
         }
@@ -872,7 +942,7 @@ export default function AuthScreen() {
             sessionId,
             flowResult,
             { clerkUser, clerkSession },
-            5
+            6
           );
           if (profile.email) {
             const synced = await syncAndNavigate(profile.email, profile.fullName);
@@ -896,13 +966,16 @@ export default function AuthScreen() {
             null,
             null,
             { clerkUser, clerkSession },
-            5
+            6
           );
           if (profile.email) {
             const synced = await syncAndNavigate(profile.email, profile.fullName);
             if (synced) return;
           }
         } catch (_) {}
+        // Never set error banner to "You're already signed in."
+        setError(null);
+        return;
       }
       if (!msg.includes("cancel") && !msg.includes("dismiss")) {
         setError(

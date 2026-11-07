@@ -41,7 +41,8 @@ const MENU_ITEMS = [
 
 export default function ProfileScreen() {
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { signOut } = useClerk();
+  const clerk = useClerk();
+  const { signOut } = clerk;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState(null);
@@ -49,16 +50,23 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (params.openWallet === "true") {
-      setActiveModal("wallet");
-      // Reset the param so it doesn't re-trigger unintentionally if the user navigates back
-      router.setParams({ openWallet: "" });
+      const timer = setTimeout(() => {
+        setActiveModal("wallet");
+        router.setParams({ openWallet: "" });
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [params.openWallet]);
+  }, [params.openWallet, router]);
 
   const handleLogout = async () => {
     if (Platform.OS === "ios") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    try {
+      if (clerk?.client?.removeSessions) {
+        await clerk.client.removeSessions();
+      }
+    } catch (_) {}
     try {
       await signOut();
     } catch (err) {
