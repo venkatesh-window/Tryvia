@@ -14,6 +14,18 @@ export const validate = (schema) => async (req, res, next) => {
     
     next();
   } catch (error) {
-    res.status(400).json({ detail: "Validation failed", errors: error.errors });
+    const errorDetails = error.errors
+      ? error.errors
+          .map((e) => {
+            const field = e.path ? e.path.filter((p) => p !== "body").join(".") : "";
+            return field ? `${field}: ${e.message}` : e.message;
+          })
+          .join(", ")
+      : error.message;
+
+    res.status(400).json({
+      detail: `Validation failed: ${errorDetails || "Invalid input data"}`,
+      errors: error.errors,
+    });
   }
 };

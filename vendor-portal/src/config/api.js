@@ -3,6 +3,17 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'https://tryvia-ta57.onrender.com/api/v1';
 
 export const getApiErrorMessage = (err, fallback = "An error occurred. Please try again.") => {
+  // Extract and format specific validation errors if present
+  if (err?.response?.data?.errors && Array.isArray(err.response.data.errors) && err.response.data.errors.length > 0) {
+    const formattedFields = err.response.data.errors
+      .map((e) => {
+        const fieldName = e.path ? e.path.filter((p) => p !== "body").join(".") : "";
+        return fieldName ? `${fieldName}: ${e.message}` : e.message;
+      })
+      .join("; ");
+    return `Validation error: ${formattedFields}`;
+  }
+
   if (err?.response?.data?.detail) {
     return err.response.data.detail;
   }

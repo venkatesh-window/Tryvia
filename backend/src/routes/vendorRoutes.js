@@ -5,6 +5,8 @@ import { VendorLedger } from "../models/VendorLedger.js";
 import { getVendorBalances } from "./payoutRoutes.js";
 import { Vendor } from "../models/Vendor.js";
 import { Product } from "../models/Product.js";
+import { Category } from "../models/Category.js";
+import { Brand } from "../models/Brand.js";
 import { Order } from "../models/Order.js";
 import { User } from "../models/User.js";
 import multer from "multer";
@@ -409,12 +411,88 @@ router.get("/products", getVendor, async (req, res) => {
   }
 });
 
+export const resolveCategory = async (categoryInput) => {
+  if (!categoryInput || !String(categoryInput).trim()) {
+    let defaultCat = await Category.findOne({ slug: "general" });
+    if (!defaultCat) {
+      const count = await Category.countDocuments();
+      defaultCat = await Category.create({
+        numericId: count + 1,
+        name: "General",
+        slug: "general",
+        description: "General Category",
+      });
+    }
+    return defaultCat._id;
+  }
+
+  const trimmed = String(categoryInput).trim();
+  if (mongoose.Types.ObjectId.isValid(trimmed) && trimmed.length === 24) {
+    const existing = await Category.findById(trimmed);
+    if (existing) return existing._id;
+  }
+
+  const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cat";
+  let cat = await Category.findOne({
+    $or: [{ name: new RegExp(`^${trimmed}$`, "i") }, { slug }],
+  });
+
+  if (!cat) {
+    const count = await Category.countDocuments();
+    cat = await Category.create({
+      numericId: count + 1,
+      name: trimmed,
+      slug: `${slug}-${Date.now().toString(36)}`,
+      description: trimmed,
+    });
+  }
+  return cat._id;
+};
+
+export const resolveBrand = async (brandInput) => {
+  if (!brandInput || !String(brandInput).trim()) {
+    let defaultBrand = await Brand.findOne({ slug: "generic" });
+    if (!defaultBrand) {
+      const count = await Brand.countDocuments();
+      defaultBrand = await Brand.create({
+        numericId: count + 1,
+        name: "Generic",
+        slug: "generic",
+        description: "Generic Brand",
+      });
+    }
+    return defaultBrand._id;
+  }
+
+  const trimmed = String(brandInput).trim();
+  if (mongoose.Types.ObjectId.isValid(trimmed) && trimmed.length === 24) {
+    const existing = await Brand.findById(trimmed);
+    if (existing) return existing._id;
+  }
+
+  const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "brand";
+  let brand = await Brand.findOne({
+    $or: [{ name: new RegExp(`^${trimmed}$`, "i") }, { slug }],
+  });
+
+  if (!brand) {
+    const count = await Brand.countDocuments();
+    brand = await Brand.create({
+      numericId: count + 1,
+      name: trimmed,
+      slug: `${slug}-${Date.now().toString(36)}`,
+      description: trimmed,
+    });
+  }
+  return brand._id;
+};
+
 const productSchema = z.object({
   body: z.object({
-    name: z.string().min(1).trim(),
-    description: z.string().min(1).trim(),
-    fullPrice: z.coerce.number().min(0).default(0),
-    stockFull: z.coerce.number().int().min(0).default(0),
+    name: z.string().min(1, "Product name is required").trim(),
+    description: z.string().trim().optional().default(""),
+    fullPrice: z.coerce.number().min(0, "Full price cannot be negative").default(0),
+    stockFull: z.coerce.number().int().min(0, "Stock cannot be negative").default(0),
     category: z.string().optional(),
     brand: z.string().optional(),
     status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]).optional(),
@@ -423,7 +501,7 @@ const productSchema = z.object({
     sampleSize: z.string().optional(),
     usageInstructions: z.string().optional(),
     claims: z.string().optional(),
-  })
+  }),
 });
 
 // POST /api/v1/vendor/products
@@ -462,6 +540,10 @@ router.post(
           imageUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
         }
       }
+
+      const resolvedCategory = await resolveCategory(category);
+      const resolvedBrand = await resolveBrand(brand);
+
       const count = await Product.countDocuments();
       const numericId = count + 1000;
       const productId = `TRY-PRD-${numericId.toString().padStart(6, '0')}`;
@@ -475,8 +557,8 @@ router.post(
         stockFull: stockFull ? Number(stockFull) : 0,
         stockTester: 0,
         imageUrl,
-        category,
-        brand,
+        category: resolvedCategory,
+        brand: resolvedBrand,
         vendor: vendor._id,
         vendorId: vendor.vendorId, // From vendor document
         status: status || "ACTIVE",
@@ -786,12 +868,12 @@ router.get("/testers", getVendor, async (req, res) => {
 
 const testerSchema = z.object({
   body: z.object({
-    name: z.string().min(1).trim(),
-    description: z.string().min(1).trim(),
-    fullPrice: z.coerce.number().min(0).default(0),
-    testerPrice: z.coerce.number().min(0).default(0),
-    stockFull: z.coerce.number().int().min(0).default(0),
-    stockTester: z.coerce.number().int().min(0).default(0),
+    name: z.string().min(1, "Tester name is required").trim(),
+    description: z.string().trim().optional().default(""),
+    fullPrice: z.coerce.number().min(0, "Full price cannot be negative").default(0),
+    testerPrice: z.coerce.number().min(0, "Tester price cannot be negative").default(0),
+    stockFull: z.coerce.number().int().min(0, "Stock cannot be negative").default(0),
+    stockTester: z.coerce.number().int().min(0, "Tester stock cannot be negative").default(0),
     category: z.string().optional(),
     brand: z.string().optional(),
     status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]).optional(),
@@ -800,7 +882,7 @@ const testerSchema = z.object({
     sampleSize: z.string().optional(),
     usageInstructions: z.string().optional(),
     claims: z.string().optional(),
-  })
+  }),
 });
 
 // POST /api/v1/vendor/testers
@@ -838,6 +920,10 @@ router.post(
           imageUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
         }
       }
+
+      const resolvedCategory = await resolveCategory(category);
+      const resolvedBrand = await resolveBrand(brand);
+
       const count = await Product.countDocuments();
       const numericId = count + 1000;
       const productId = `TRY-PRD-${numericId.toString().padStart(6, '0')}`;
@@ -851,8 +937,8 @@ router.post(
         stockFull: stockFull ? Number(stockFull) : 0,
         stockTester: stockTester ? Number(stockTester) : 0,
         imageUrl,
-        category,
-        brand,
+        category: resolvedCategory,
+        brand: resolvedBrand,
         vendor: vendor._id,
         vendorId: vendor.vendorId,
         status: status || "ACTIVE",

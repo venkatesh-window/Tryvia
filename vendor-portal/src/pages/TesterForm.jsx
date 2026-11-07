@@ -39,8 +39,6 @@ export default function TesterForm() {
         ]);
         setCategories(catRes.data);
         setBrands(brandRes.data);
-        if (catRes.data.length > 0) setFormData(prev => ({ ...prev, category: catRes.data[0]._id }));
-        if (brandRes.data.length > 0) setFormData(prev => ({ ...prev, brand: brandRes.data[0]._id }));
       } catch (e) {
         console.error("Failed to load metadata", e);
       }
@@ -263,35 +261,46 @@ export default function TesterForm() {
             </div>
             
             <div className="bg-background-paper p-6 rounded-2xl shadow-card border border-border-light space-y-5">
-              <h3 className="font-semibold text-text-primary font-body border-b border-border-light pb-3">Classification</h3>
+              <div>
+                <h3 className="font-semibold text-text-primary font-body border-b border-border-light pb-2">Classification</h3>
+                <p className="text-xs text-text-secondary mt-1">Enter your category and brand manually. You can type any name, or select from suggestions.</p>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Category *</label>
-                  <select
+                  <input
+                    type="text"
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
+                    placeholder="Enter category (e.g. Skincare, Fragrance, Makeup)"
                     required
+                    list="tester-categories-list"
                     className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body"
-                  >
+                  />
+                  <datalist id="tester-categories-list">
                     {categories.map(c => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
+                      <option key={c._id || c.id} value={c.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5 font-body">Brand *</label>
-                  <select
+                  <input
+                    type="text"
                     name="brand"
                     value={formData.brand}
                     onChange={handleChange}
+                    placeholder="Enter brand name (e.g. Dior, Kiehl's, My Brand)"
                     required
+                    list="tester-brands-list"
                     className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-background-default focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all font-body"
-                  >
+                  />
+                  <datalist id="tester-brands-list">
                     {brands.map(b => (
-                      <option key={b._id} value={b._id}>{b.name}</option>
+                      <option key={b._id || b.id} value={b.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
             </div>
