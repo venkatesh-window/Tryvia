@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, ShoppingCart, DollarSign, AlertCircle, Truck, RefreshCw } from "lucide-react";
+import { Package, ShoppingCart, DollarSign, AlertCircle, Truck, RefreshCw, Clock } from "lucide-react";
 import axios from "axios";
 import { API_URL, getApiErrorMessage } from "../config/api";
 
@@ -7,9 +7,12 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isPending, setIsPending] = useState(false);
 
   const fetchDashboard = async () => {
     setLoading(true);
+    setIsPending(false);
+    setError("");
     try {
       const token = localStorage.getItem("vendor_token");
       const res = await axios.get(`${API_URL}/vendor/dashboard`, {
@@ -17,7 +20,12 @@ export default function Dashboard() {
       });
       setMetrics(res.data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to load dashboard metrics"));
+      const errMsg = err.response?.data?.detail || "";
+      if (errMsg.toLowerCase().includes("pending") || err.response?.status === 403) {
+        setIsPending(true);
+      } else {
+        setError(getApiErrorMessage(err, "Failed to load dashboard metrics"));
+      }
     } finally {
       setLoading(false);
     }
@@ -31,6 +39,36 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="w-8 h-8 animate-spin text-primary-main" />
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <div className="max-w-2xl mx-auto my-8 p-8 bg-amber-50/70 border border-amber-200 rounded-2xl shadow-card text-center space-y-4">
+        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+          <Clock className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-brand font-bold text-text-primary">Application Under Review</h2>
+        <p className="text-text-secondary font-body max-w-md mx-auto text-sm leading-relaxed">
+          Your vendor application has been submitted successfully and is currently in <strong className="text-amber-700">PENDING</strong> status awaiting verification by the TRYVIA Administration team.
+        </p>
+        <div className="bg-white/80 p-4 rounded-xl border border-amber-100 text-xs text-text-secondary text-left space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-text-primary">Status:</span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Pending Admin Approval</span>
+          </div>
+          <p>Once approved by an admin in the Admin Dashboard, all vendor portal capabilities (product uploads, tester submissions, and order fulfillment) will automatically unlock.</p>
+        </div>
+        <div className="pt-2">
+          <button
+            onClick={fetchDashboard}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-main hover:bg-primary-dark text-white rounded-xl text-sm font-semibold shadow-glow transition-all"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Check Approval Status
+          </button>
+        </div>
       </div>
     );
   }

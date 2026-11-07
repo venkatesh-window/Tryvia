@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, Lock, Loader2, Edit } from "lucide-react";
+import { Lock, Loader2, CheckCircle, XCircle, Store, AlertCircle } from "lucide-react";
 import axios from "axios";
 import { API_URL, getApiErrorMessage } from "../config/api";
 
@@ -9,13 +9,15 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const [activeTab, setActiveTab] = useState("PRODUCTS");
+  const [activeTab, setActiveTab] = useState("VENDORS");
   const [productsOrders, setProductsOrders] = useState([]);
   const [minisOrders, setMinisOrders] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [updatingVendorId, setUpdatingVendorId] = useState(null);
 
   useEffect(() => {
     if (token) {
-      fetchOrders();
+      fetchData();
     }
   }, [token]);
 
@@ -38,21 +40,23 @@ export default function Admin() {
     }
   };
 
-  const fetchOrders = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const [prodRes, minisRes] = await Promise.all([
+      const [prodRes, minisRes, vendorRes] = await Promise.all([
         axios.get(`${API_URL}/admin/orders/products`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/admin/orders/minis`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_URL}/admin/orders/minis`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_URL}/admin/vendors`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
       ]);
       setProductsOrders(prodRes.data);
       setMinisOrders(minisRes.data);
+      setVendors(vendorRes.data);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         setToken(null);
         localStorage.removeItem("admin_token");
       }
-      console.error("Failed to load orders");
+      console.error("Failed to load admin data", err);
     } finally {
       setLoading(false);
     }
@@ -64,9 +68,24 @@ export default function Admin() {
         { status: newStatus, itemId }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchOrders(); // Refresh after update
+      fetchData();
     } catch (err) {
       alert("Failed to update status");
+    }
+  };
+
+  const updateVendorStatus = async (vendorId, newStatus) => {
+    try {
+      setUpdatingVendorId(vendorId);
+      await axios.patch(`${API_URL}/admin/vendors/${vendorId}/status`,
+        { status: newStatus, reason: `Admin marked as ${newStatus}` },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchData();
+    } catch (err) {
+      alert(getApiErrorMessage(err, "Failed to update vendor status"));
+    } finally {
+      setUpdatingVendorId(null);
     }
   };
 
@@ -99,6 +118,8 @@ export default function Admin() {
     );
   }
 
+  const pendingCount = vendors.filter(v => v.status === "PENDING").length;
+
   return (
     <div className="min-h-screen bg-background-default p-8 font-body text-text-primary">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -110,6 +131,17 @@ export default function Admin() {
         </div>
 
         <div className="flex gap-4 border-b border-border-light">
+          <button
+            onClick={() => setActiveTab("VENDORS")}
+            className={`pb-4 px-4 font-medium border-b-2 transition-all flex items-center gap-2 ${activeTab === "VENDORS" ? "border-primary-main text-primary-main" : "border-transparent text-text-secondary hover:text-text-primary"}`}
+          >
+            VENDORS
+            {pendingCount > 0 && (
+              <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                {pendingCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => setActiveTab("PRODUCTS")}
             className={`pb-4 px-4 font-medium border-b-2 transition-all ${activeTab === "PRODUCTS" ? "border-primary-main text-primary-main" : "border-transparent text-text-secondary hover:text-text-primary"}`}
@@ -127,6 +159,85 @@ export default function Admin() {
         {loading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary-main" />
+          </div>
+        ) : activeTab === "VENDORS" ? (
+          <div className="bg-background-paper rounded-2xl shadow-card border border-border-light overflow-hidden">
+            <table className="w-full text-left font-body text-sm">
+              <thead className="bg-background-surface/30 text-text-secondary">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Store & Contact</th>
+                  <th className="px-6 py-4 font-medium">GST / Location</th>
+                  <th className="px-6 py-4 font-medium">Applied Date</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
+                  <th className="px-6 py-4 font-medium text-right">Approval Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-light">
+                {vendors.map(v => (
+                  <tr key={v._id || v.id} className="hover:bg-background-surface/50">
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-text-primary">{v.storeName || v.store_name}</div>
+                      <div className="text-xs text-text-secondary mt-0.5">{v.email} • {v.phone || "No phone"}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium">{v.gst || "No GST"}</div>
+                      <div className="text-xs text-text-secondary">{v.address || "No address"}</div>
+                    </td>
+                    <td className="px-6 py-4 text-text-secondary">
+                      {v.createdAt ? new Date(v.createdAt).toLocaleDateString() : "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        v.status === "APPROVED" ? "bg-green-100 text-green-700" :
+                        v.status === "PENDING" ? "bg-orange-100 text-orange-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {v.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {updatingVendorId === (v._id || v.id) ? (
+                        <Loader2 className="w-5 h-5 animate-spin inline-block text-primary-main" />
+                      ) : v.status === "PENDING" ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => updateVendorStatus(v._id || v.id, "APPROVED")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => updateVendorStatus(v._id || v.id, "REJECTED")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Reject
+                          </button>
+                        </div>
+                      ) : v.status === "APPROVED" ? (
+                        <button
+                          onClick={() => updateVendorStatus(v._id || v.id, "SUSPENDED")}
+                          className="px-3 py-1.5 text-xs text-text-secondary hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          Suspend
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateVendorStatus(v._id || v.id, "APPROVED")}
+                          className="px-3 py-1.5 text-xs text-primary-main hover:bg-primary-light rounded-lg transition-colors font-medium"
+                        >
+                          Re-approve
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {vendors.length === 0 && (
+                  <tr><td colSpan="5" className="text-center p-8 text-text-secondary">No vendors found</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         ) : activeTab === "PRODUCTS" ? (
           <div className="bg-background-paper rounded-2xl shadow-card border border-border-light overflow-hidden">

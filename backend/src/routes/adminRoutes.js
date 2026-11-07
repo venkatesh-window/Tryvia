@@ -148,6 +148,22 @@ router.patch("/minis/orders/:id/status", requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/v1/admin/vendors
+router.get("/vendors", requireAdmin, async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status) {
+      filter.status = req.query.status.toUpperCase();
+    }
+    const vendors = await Vendor.find(filter)
+      .populate("user", "fullName email phone role")
+      .sort({ createdAt: -1 });
+    res.json(vendors.map((v) => v.toJSON()));
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
 // PATCH /api/v1/admin/vendors/:id/status
 router.patch("/vendors/:id/status", requireAdmin, async (req, res) => {
   try {
@@ -156,7 +172,14 @@ router.patch("/vendors/:id/status", requireAdmin, async (req, res) => {
       res.status(400).json({ detail: "Invalid vendor status" });
       return;
     }
-    const vendor = await Vendor.findById(req.params.id);
+    let vendor;
+    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      vendor = await Vendor.findById(req.params.id);
+    } else if (!isNaN(Number(req.params.id))) {
+      vendor = await Vendor.findOne({ numericId: Number(req.params.id) });
+    } else {
+      vendor = await Vendor.findOne({ vendorId: req.params.id });
+    }
     if (!vendor) {
       res.status(404).json({ detail: "Vendor not found" });
       return;
