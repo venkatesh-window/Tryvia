@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
+import v8 from "v8";
 import { validateEnv } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -92,12 +93,14 @@ app.use(
   }),
 );
 
-// Load shedding: prevent server from crashing when RAM is close to exhaustion
+// Load shedding: prevent server from crashing only when RAM is truly close to physical container exhaustion
 app.use((req, res, next) => {
+  const heapStats = v8.getHeapStatistics();
+  const heapUsageRatio = heapStats.used_heap_size / heapStats.heap_size_limit;
   const mem = process.memoryUsage();
-  const heapUsageRatio = mem.heapUsed / mem.heapTotal;
-  // If memory is critically high (>92%) and request is non-essential read, shed load safely
-  if (heapUsageRatio > 0.92 && req.method === "GET" && req.path !== "/" && !req.path.startsWith("/api/v1/payments")) {
+  const isRssCritical = mem.rss > 480 * 1024 * 1024; // >480MB on 512MB container
+
+  if ((heapUsageRatio > 0.95 || isRssCritical) && req.method === "GET" && req.path !== "/" && !req.path.startsWith("/api/v1/payments")) {
     res.setHeader("Retry-After", "2");
     return res.status(503).json({
       detail: "Server is experiencing high traffic. Please retry in a moment.",
