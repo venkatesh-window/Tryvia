@@ -4,12 +4,15 @@ import { useEffect, useState, useRef } from "react";
 import { ClerkProvider, useUser, useSession, useClerk } from "@clerk/clerk-expo";
 import { tokenCache } from "../src/utils/tokenCache";
 import { ClerkService } from "../src/services/clerkService";
+import { initClerkWeb } from "../src/utils/clerkWeb";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 if (!publishableKey) {
   throw new Error("Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env");
 }
+
+initClerkWeb(publishableKey);
 import { Stack, ErrorBoundary } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useAuthStore } from "../src/store/useAuthStore";
@@ -170,7 +173,12 @@ function RootLayoutNav() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+    <ClerkProvider
+      tokenCache={tokenCache}
+      publishableKey={publishableKey}
+      clerkJSUrl="https://amazing-humpback-4840.clerk.accounts.dev/npm/@clerk/clerk-js@5.128.0/dist/clerk.browser.js"
+      scriptLoadTimeout={60000}
+    >
       <ClerkAuthSyncBridge />
       <GestureHandlerRootView style={styles.root}>
         <QueryClientProvider client={queryClient}>
