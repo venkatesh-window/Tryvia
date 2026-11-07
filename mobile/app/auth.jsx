@@ -41,7 +41,7 @@ import { GoogleIcon } from "../src/components/ui/GoogleIcon";
 import { ClerkService } from "../src/services/clerkService";
 import { tokenCache } from "../src/utils/tokenCache";
 import * as Haptics from "expo-haptics";
-import { useOAuth, useClerk, useUser, useSession } from "@clerk/clerk-expo";
+import { useOAuth, useClerk, useUser, useSession, useSignIn } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 
@@ -231,7 +231,26 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSour
       if (r.email) return r;
     }
 
-    // 2. From flowResult
+    // 2. Direct check on window.Clerk in Web environment
+    if (typeof window !== "undefined" && window.Clerk) {
+      try {
+        if (window.Clerk.user) {
+          const r = extractClerkProfile(window.Clerk.user);
+          if (r.email) return r;
+        }
+        if (window.Clerk.session) {
+          const r = extractClerkProfile(window.Clerk.session);
+          if (r.email) return r;
+        }
+        const winSessions = window.Clerk.client?.sessions || [];
+        for (const s of winSessions) {
+          const r = extractClerkProfile(s);
+          if (r.email) return r;
+        }
+      } catch (_) {}
+    }
+
+    // 3. From flowResult
     if (flowResult) {
       let r = extractClerkProfile(flowResult);
       if (r.email) return r;
@@ -245,19 +264,21 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSour
       }
     }
 
-    // 3. From clerk.user (the most authoritative source in Clerk)
-    if (clerk?.user) {
-      const r = extractClerkProfile(clerk.user);
-      if (r.email) return r;
-    }
+    // 4. From clerk.user (the most authoritative source in Clerk)
+    try {
+      if (clerk?.user) {
+        const r = extractClerkProfile(clerk.user);
+        if (r.email) return r;
+      }
+    } catch (_) {}
 
-    // 4. From clerk.session
-    if (clerk?.session) {
-      const r = extractClerkProfile(clerk.session);
-      if (r.email) return r;
+    // 5. From clerk.session
+    try {
+      if (clerk?.session) {
+        const r = extractClerkProfile(clerk.session);
+        if (r.email) return r;
 
-      // Try reading JWT token from active session
-      try {
+        // Try reading JWT token from active session
         if (typeof clerk.session.getToken === "function") {
           const tok = await clerk.session.getToken();
           if (tok) {
@@ -266,73 +287,75 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSour
             if (tokProfile.email) return tokProfile;
           }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
-    // 5. From clerk.client.sessions
-    const allSessions = [
-      ...(clerk?.client?.sessions || []),
-      ...(clerk?.client?.signedInSessions || []),
-    ];
+    // 6. From clerk.client.sessions (guarded so getter never throws)
+    try {
+      const allSessions = [
+        ...(clerk?.client?.sessions || []),
+        ...(clerk?.client?.signedInSessions || []),
+      ];
 
-    if (allSessions.length > 0) {
-      const sortedSessions = [...allSessions].sort((a, b) => {
-        if (targetSessionId) {
-          if (a.id === targetSessionId) return -1;
-          if (b.id === targetSessionId) return 1;
-        }
-        if (clerk?.client?.lastActiveSessionId) {
-          if (a.id === clerk.client.lastActiveSessionId) return -1;
-          if (b.id === clerk.client.lastActiveSessionId) return 1;
-        }
-        return 0;
-      });
-
-      for (const s of sortedSessions) {
-        const r = extractClerkProfile(s);
-        if (r.email) {
-          if (clerk?.setActive && s.id && clerk.session?.id !== s.id) {
-            try {
-              await clerk.setActive({ session: s.id });
-            } catch (_) {}
+      if (allSessions.length > 0) {
+        const sortedSessions = [...allSessions].sort((a, b) => {
+          if (targetSessionId) {
+            if (a.id === targetSessionId) return -1;
+            if (b.id === targetSessionId) return 1;
           }
-          return r;
-        }
+          if (clerk?.client?.lastActiveSessionId) {
+            if (a.id === clerk.client.lastActiveSessionId) return -1;
+            if (b.id === clerk.client.lastActiveSessionId) return 1;
+          }
+          return 0;
+        });
 
-        try {
-          if (typeof s.getToken === "function") {
-            const tok = await s.getToken();
-            if (tok) {
-              const decoded = decodeJwt(tok);
-              const tokProfile = extractClerkProfile(decoded);
-              if (tokProfile.email) {
-                if (clerk?.setActive && s.id && clerk.session?.id !== s.id) {
-                  try {
-                    await clerk.setActive({ session: s.id });
-                  } catch (_) {}
+        for (const s of sortedSessions) {
+          const r = extractClerkProfile(s);
+          if (r.email) {
+            if (clerk?.setActive && s.id && clerk.session?.id !== s.id) {
+              try {
+                await clerk.setActive({ session: s.id });
+              } catch (_) {}
+            }
+            return r;
+          }
+
+          try {
+            if (typeof s.getToken === "function") {
+              const tok = await s.getToken();
+              if (tok) {
+                const decoded = decodeJwt(tok);
+                const tokProfile = extractClerkProfile(decoded);
+                if (tokProfile.email) {
+                  if (clerk?.setActive && s.id && clerk.session?.id !== s.id) {
+                    try {
+                      await clerk.setActive({ session: s.id });
+                    } catch (_) {}
+                  }
+                  return tokProfile;
                 }
-                return tokProfile;
               }
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
       }
-    }
 
-    // 6. If we have sessions but no active session, activate it
-    if (clerk?.client?.sessions?.length && !clerk.session && clerk?.setActive) {
-      try {
+      // If we have sessions but no active session, activate it
+      if (clerk?.client?.sessions?.length && !clerk.session && clerk?.setActive) {
         const sid = targetSessionId || clerk.client.lastActiveSessionId || clerk.client.sessions[0]?.id;
         if (sid) {
           await clerk.setActive({ session: sid });
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     // 7. Refresh clerk client state from server
-    if (clerk?.client?.fetch && i % 2 === 1) {
+    if (i % 2 === 1) {
       try {
-        await clerk.client.fetch();
+        if (clerk?.client?.fetch) {
+          await clerk.client.fetch();
+        }
       } catch (_) {}
     }
 
@@ -367,6 +390,7 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSour
 
 export default function AuthScreen() {
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+  const { signIn } = useSignIn();
   const clerk = useClerk();
   const { user: clerkUser } = useUser();
   const { session: clerkSession } = useSession();
@@ -631,10 +655,74 @@ export default function AuthScreen() {
         if (synced) return;
       }
 
-      // 2. Prepare redirect URL cleanly for native environment
+      // 2. On Web: Use full-page redirect to prevent COOP / popup blocker issues
+      if (Platform.OS === "web") {
+        const origin =
+          typeof window !== "undefined" && window.location?.origin
+            ? window.location.origin
+            : "";
+        const callbackUrl = `${origin}/oauth-native-callback`;
+
+        const redirectFn =
+          signIn?.authenticateWithRedirect ||
+          (typeof window !== "undefined" &&
+            window.Clerk?.client?.signIn?.authenticateWithRedirect);
+
+        if (typeof redirectFn === "function") {
+          try {
+            await redirectFn.call(signIn || window.Clerk.client.signIn, {
+              strategy: "oauth_google",
+              redirectUrl: callbackUrl,
+              redirectUrlComplete: callbackUrl,
+            });
+            return;
+          } catch (redirectErr) {
+            console.warn("authenticateWithRedirect error:", redirectErr);
+            const errCode = redirectErr?.errors?.[0]?.code || "";
+            const errMsg = (
+              redirectErr?.errors?.[0]?.message ||
+              redirectErr?.message ||
+              ""
+            ).toLowerCase();
+
+            // If session already exists in Clerk, resolve profile and sign in seamlessly!
+            if (
+              errCode === "session_exists" ||
+              errMsg.includes("already signed in") ||
+              errMsg.includes("session_exists")
+            ) {
+              profile = await resolveClerkProfile(
+                clerk,
+                null,
+                null,
+                { clerkUser, clerkSession },
+                6
+              );
+              if (profile.email) {
+                const synced = await syncAndNavigate(profile.email, profile.fullName);
+                if (synced) return;
+              }
+
+              // If profile still couldn't be resolved, sign out of ghost session and retry redirect
+              try {
+                if (typeof clerk?.signOut === "function") await clerk.signOut();
+              } catch (_) {}
+
+              await redirectFn.call(signIn || window.Clerk.client.signIn, {
+                strategy: "oauth_google",
+                redirectUrl: callbackUrl,
+                redirectUrlComplete: callbackUrl,
+              });
+              return;
+            }
+          }
+        }
+      }
+
+      // 3. Prepare redirect URL cleanly for native environment
       const redirectUrl = Linking.createURL("oauth-native-callback");
 
-      // 3. Execute OAuth flow
+      // 4. Execute native OAuth flow
       let flowResult = null;
       try {
         flowResult = await startOAuthFlow({ redirectUrl });
@@ -656,15 +744,17 @@ export default function AuthScreen() {
 
         if (isSessionExists) {
           // User already has an active session in Clerk!
-          // Seamlessly resolve user profile and log them into Tryvia!
           try {
             if (clerk?.client?.fetch) await clerk.client.fetch();
           } catch (_) {}
 
-          const activeSid =
-            clerk?.session?.id ||
-            clerk?.client?.lastActiveSessionId ||
-            clerk?.client?.sessions?.[0]?.id;
+          let activeSid = null;
+          try {
+            activeSid =
+              clerk?.session?.id ||
+              clerk?.client?.lastActiveSessionId ||
+              clerk?.client?.sessions?.[0]?.id;
+          } catch (_) {}
 
           if (activeSid && clerk?.setActive && clerk?.session?.id !== activeSid) {
             try {
@@ -690,9 +780,6 @@ export default function AuthScreen() {
             await clerk.signOut();
             await tokenCache.clearToken("__clerk_client_jwt");
             await tokenCache.clearToken("clerk_session_token");
-            if (clerk.client?.removeSessions) {
-              await clerk.client.removeSessions();
-            }
           } catch (_) {}
 
           await new Promise((r) => setTimeout(r, 600));
@@ -706,24 +793,16 @@ export default function AuthScreen() {
               ""
             ).toLowerCase();
             if (!retryMsg.includes("cancel") && !retryMsg.includes("dismiss")) {
-              if (
-                retryMsg.includes("already signed in") ||
-                retryMsg.includes("session_exists")
-              ) {
-                try {
-                  if (clerk?.client?.fetch) await clerk.client.fetch();
-                  profile = await resolveClerkProfile(
-                    clerk,
-                    null,
-                    null,
-                    { clerkUser, clerkSession },
-                    5
-                  );
-                  if (profile.email) {
-                    const synced = await syncAndNavigate(profile.email, profile.fullName);
-                    if (synced) return;
-                  }
-                } catch (_) {}
+              profile = await resolveClerkProfile(
+                clerk,
+                null,
+                null,
+                { clerkUser, clerkSession },
+                5
+              );
+              if (profile.email) {
+                const synced = await syncAndNavigate(profile.email, profile.fullName);
+                if (synced) return;
               }
               setError(
                 retryErr?.errors?.[0]?.message ||
@@ -746,9 +825,16 @@ export default function AuthScreen() {
         }
       }
 
-      const { createdSessionId, signIn, signUp, setActive } = flowResult || {};
+      const {
+        createdSessionId,
+        signIn: flowSignIn,
+        signUp: flowSignUp,
+        setActive,
+      } = flowResult || {};
       const sessionId =
-        createdSessionId || signIn?.createdSessionId || signUp?.createdSessionId;
+        createdSessionId ||
+        flowSignIn?.createdSessionId ||
+        flowSignUp?.createdSessionId;
 
       if (sessionId && setActive) {
         try {
@@ -756,7 +842,7 @@ export default function AuthScreen() {
         } catch (_) {}
       }
 
-      // 4. Resolve email and name across all layers (even if browser dismissed without deep link)
+      // 5. Resolve email and name across all layers
       profile = await resolveClerkProfile(
         clerk,
         sessionId,
@@ -771,7 +857,6 @@ export default function AuthScreen() {
           setError("Account sync failed. Please try again.");
         }
       } else {
-        // If user explicitly pressed cancel in the browser popup and no session exists, don't show error
         if (
           flowResult?.authSessionResult?.type === "cancel" ||
           flowResult?.authSessionResult?.type === "dismiss"
@@ -780,7 +865,6 @@ export default function AuthScreen() {
           return;
         }
 
-        // Try one final reload from Clerk
         try {
           if (clerk?.client?.fetch) await clerk.client.fetch();
           profile = await resolveClerkProfile(
@@ -800,13 +884,13 @@ export default function AuthScreen() {
       }
     } catch (err) {
       console.error("OAuth error:", err);
-      const msg = err?.errors?.[0]?.message || err?.message || "Google Sign-In failed.";
+      const msg = (err?.errors?.[0]?.message || err?.message || "").toLowerCase();
       if (
-        msg.toLowerCase().includes("already signed in") ||
-        msg.toLowerCase().includes("session_exists")
+        msg.includes("already signed in") ||
+        msg.includes("session_exists") ||
+        err?.errors?.[0]?.code === "session_exists"
       ) {
         try {
-          if (clerk?.client?.fetch) await clerk.client.fetch();
           profile = await resolveClerkProfile(
             clerk,
             null,
@@ -820,7 +904,11 @@ export default function AuthScreen() {
           }
         } catch (_) {}
       }
-      setError(msg);
+      if (!msg.includes("cancel") && !msg.includes("dismiss")) {
+        setError(
+          err?.errors?.[0]?.message || err?.message || "Google Sign-In failed."
+        );
+      }
     } finally {
       setGoogleLoading(false);
     }
