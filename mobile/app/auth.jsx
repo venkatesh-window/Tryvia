@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
+  X,
 } from "lucide-react-native";
 import { GoogleIcon } from "../src/components/ui/GoogleIcon";
 import { ClerkService } from "../src/services/clerkService";
@@ -576,56 +577,91 @@ export default function AuthScreen() {
 
       {/* Google Sign-In Quick-Connect Modal */}
       <Modal visible={showGoogleSetupModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <GoogleIcon size={32} />
-              <Typography style={styles.modalTitle}>
-                Connect with Google
-              </Typography>
-              <Typography style={styles.modalSub}>
-                Enter your Google account email below to connect and sign in immediately:
-              </Typography>
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowGoogleSetupModal(false)}
+          />
 
-            <View style={[styles.inputWrapper, { width: "100%", marginBottom: 16 }]}>
-              <Mail size={18} color="#8E8A85" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="your.email@gmail.com"
-                placeholderTextColor="#B0AAA2"
-                value={googleTestEmail}
-                onChangeText={setGoogleTestEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
+          <View style={styles.googleModalCard}>
+            {/* Top Right Close Button */}
             <TouchableOpacity
-              style={styles.submitBtn}
-              activeOpacity={0.85}
-              disabled={googleLoading}
-              onPress={handleFastGoogleConnect}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Typography style={styles.submitBtnText}>
-                  Sign In with Google Account
-                </Typography>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ marginTop: 14, padding: 8, alignItems: "center" }}
+              style={styles.googleModalClose}
+              activeOpacity={0.7}
               onPress={() => setShowGoogleSetupModal(false)}
             >
-              <Typography style={{ fontSize: 13, color: "#8E8A85", fontFamily: "Inter_500Medium" }}>
-                Cancel
-              </Typography>
+              <X size={16} color="#8E8A85" strokeWidth={2} />
             </TouchableOpacity>
+
+            {/* Centered Brand Emblem */}
+            <View style={styles.googleBadge}>
+              <GoogleIcon size={26} />
+            </View>
+
+            {/* Heading & Subtitle */}
+            <Typography style={styles.googleModalTitle}>
+              Connect Google Account
+            </Typography>
+            <Typography style={styles.googleModalSub}>
+              Enter your Google email to synchronize your luxury profile and unlocked rewards:
+            </Typography>
+
+            {/* Pixel-Perfect Aligned Form */}
+            <View style={styles.googleFormContainer}>
+              <Typography style={styles.googleFieldLabel}>
+                GOOGLE EMAIL ADDRESS
+              </Typography>
+              <View style={styles.googleInputRow}>
+                <Mail
+                  size={18}
+                  color="#8E8A85"
+                  strokeWidth={1.75}
+                  style={styles.googleInputIcon}
+                />
+                <TextInput
+                  style={styles.googleTextInput}
+                  placeholder="yourname@gmail.com"
+                  placeholderTextColor="#B0AAA2"
+                  value={googleTestEmail}
+                  onChangeText={setGoogleTestEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.googleSubmitButton}
+                activeOpacity={0.85}
+                disabled={googleLoading}
+                onPress={handleFastGoogleConnect}
+              >
+                {googleLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <GoogleIcon size={18} />
+                    <Typography style={styles.googleSubmitText}>
+                      Continue with Google
+                    </Typography>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Verified Privacy Note */}
+              <View style={styles.googleFooterNote}>
+                <ShieldCheck size={13} color="#CB6D73" strokeWidth={2} />
+                <Typography style={styles.googleFooterText}>
+                  Secure TryVia authentication
+                </Typography>
+              </View>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Email Verification Modal */}
@@ -958,5 +994,128 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EFEBE5",
     marginBottom: 20,
+  },
+  googleModalCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingVertical: 26,
+    paddingHorizontal: 22,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#EFEBE5",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 28,
+    elevation: 10,
+    position: "relative",
+  },
+  googleModalClose: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F8F6F2",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  googleBadge: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#EAE5DF",
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  googleModalTitle: {
+    fontSize: 22,
+    fontFamily: "CormorantGaramond_700Bold",
+    color: "#1A1918",
+    textAlign: "center",
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
+  googleModalSub: {
+    fontSize: 12.5,
+    fontFamily: "Inter_400Regular",
+    color: "#8E8A85",
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+  googleFormContainer: {
+    width: "100%",
+    marginTop: 20,
+  },
+  googleFieldLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#8E8A85",
+    letterSpacing: 1.1,
+    marginBottom: 8,
+  },
+  googleInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F6F2",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#EFEBE5",
+    width: "100%",
+    height: 50,
+  },
+  googleInputIcon: {
+    marginRight: 10,
+  },
+  googleTextInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: "#1A1918",
+    padding: 0,
+  },
+  googleSubmitButton: {
+    width: "100%",
+    height: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1A1918",
+    borderRadius: 14,
+    marginTop: 14,
+    gap: 10,
+  },
+  googleSubmitText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+  googleFooterNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 14,
+    gap: 6,
+  },
+  googleFooterText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#A8A29E",
   },
 });

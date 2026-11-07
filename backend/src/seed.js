@@ -211,7 +211,7 @@ export async function seed() {
       email: "test@tryvia.com",
       passwordHash,
       fullName: "Tester User",
-      walletBalance: 350,
+      walletBalance: 0,
       loyaltyTier: "TRYVIA BLACK",
       stars: 0,
       isActive: true,
