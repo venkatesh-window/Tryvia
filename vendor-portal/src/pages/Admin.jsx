@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Package, Lock, Loader2, Edit } from "lucide-react";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://tryvia-ta57.onrender.com/api/v1';
+import { API_URL, getApiErrorMessage } from "../config/api";
 
 export default function Admin() {
   const [password, setPassword] = useState("");
@@ -32,7 +31,7 @@ export default function Admin() {
       if (err.response?.status === 429) {
         setError("Too many attempts. Please try again later.");
       } else {
-        setError("Invalid credentials or access denied.");
+        setError(getApiErrorMessage(err, "Invalid credentials or access denied."));
       }
     } finally {
       setLoading(false);

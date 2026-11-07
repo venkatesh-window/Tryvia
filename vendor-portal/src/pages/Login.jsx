@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Store, Loader2 } from "lucide-react";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import { API_URL, getApiErrorMessage } from "../config/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -31,7 +30,7 @@ export default function Login() {
       localStorage.setItem("vendor_user", JSON.stringify(response.data.user));
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || "Login failed");
+      setError(getApiErrorMessage(err, "Login failed"));
     } finally {
       setLoading(false);
     }

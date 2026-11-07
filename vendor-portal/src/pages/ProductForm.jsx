@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, Loader2, Image as ImageIcon, X } from "lucide-react";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import { API_URL, getApiErrorMessage } from "../config/api";
 
 export default function ProductForm() {
   const [categories, setCategories] = useState([]);
@@ -97,7 +96,7 @@ export default function ProductForm() {
       
       navigate("/products");
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to create product. Make sure category/brand references exist.");
+      setError(getApiErrorMessage(err, "Failed to create product. Make sure category/brand references exist."));
     } finally {
       setLoading(false);
     }

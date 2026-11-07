@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://tryvia-ta57.onrender.com/api/v1';
+import { API_URL, getApiErrorMessage } from "../config/api";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -48,7 +47,7 @@ export default function Products() {
       setProducts(prev => prev.filter(p => p._id !== product._id));
     } catch (err) {
       console.error("Failed to delete product:", err);
-      alert(err.response?.data?.detail || "Failed to remove product. Please try again.");
+      alert(getApiErrorMessage(err, "Failed to remove product. Please try again."));
     } finally {
       setDeletingId(null);
     }

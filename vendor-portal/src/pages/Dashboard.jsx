@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Package, ShoppingCart, DollarSign, AlertCircle, Truck, RefreshCw } from "lucide-react";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import { API_URL, getApiErrorMessage } from "../config/api";
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -18,7 +17,7 @@ export default function Dashboard() {
       });
       setMetrics(res.data);
     } catch (err) {
-      setError("Failed to load dashboard metrics");
+      setError(getApiErrorMessage(err, "Failed to load dashboard metrics"));
     } finally {
       setLoading(false);
     }

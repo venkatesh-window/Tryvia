@@ -137,24 +137,49 @@ if (process.env.ALLOWED_ORIGINS) {
   );
 }
 
+const isOriginAllowed = (origin) => {
+  // Allow non-browser agents (native mobile apps, backend callers, curl) without origin header
+  if (!origin) return true;
+
+  // Exact match against explicit allowlist
+  if (explicitAllowedOrigins.includes(origin)) return true;
+
+  // Localhost / Loopback with any port (Vite on 5173/5174/5175, Next.js, preview ports, etc.)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+
+  // Local private LAN IPs with any port (for mobile/Expo testing on the same Wi-Fi)
+  if (/^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin)) return true;
+
+  // All Vercel deployments (production domain, branch previews, e.g. *.vercel.app)
+  if (/^https:\/\/([a-zA-Z0-9_-]+\.)*vercel\.app$/.test(origin)) return true;
+
+  // All Render deployments (*.onrender.com)
+  if (/^https:\/\/([a-zA-Z0-9_-]+\.)*onrender\.com$/.test(origin)) return true;
+
+  // Tryvia custom domains (*.tryvia.in, *.tryvia.com)
+  if (/^https:\/\/([a-zA-Z0-9_-]+\.)*tryvia\.(in|com)$/.test(origin)) return true;
+
+  return false;
+};
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow non-browser agents (native mobile apps, backend callers) without origin header
-      if (!origin) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
-
-      // Strict exact match against allowlist
-      if (explicitAllowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("CORS policy violation: origin not allowed"));
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-razorpay-signature"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-razorpay-signature",
+      "Accept",
+      "Origin",
+      "X-Requested-With",
+    ],
   }),
 );
 

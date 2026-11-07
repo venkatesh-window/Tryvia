@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Search, ShoppingCart, Truck, Check, X } from "lucide-react";
+import { Search, ShoppingCart, Truck, Check, X, Package } from "lucide-react";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import { API_URL, getApiErrorMessage } from "../config/api";
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -140,7 +139,7 @@ function OrderModal({ order, onClose, onUpdate }) {
       onUpdate();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to update order");
+      setError(getApiErrorMessage(err, "Failed to update order"));
     } finally {
       setUpdating(false);
     }
