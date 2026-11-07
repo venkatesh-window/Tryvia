@@ -78,92 +78,249 @@ function decodeJwt(token) {
   }
 }
 
-// Recursive deep search for email and name anywhere inside an arbitrary Clerk object or response tree
-function findEmailAndName(obj, maxDepth = 6) {
+function isValidEmail(val) {
+  return (
+    typeof val === "string" &&
+    val.includes("@") &&
+    val.includes(".") &&
+    !val.includes(" ") &&
+    val.length < 120
+  );
+}
+
+// Extracts email and fullName from ANY Clerk object (User, Session, PublicUserData, JWT payload, etc.)
+function extractClerkProfile(source) {
+  if (!source) return { email: "", fullName: "" };
+
   let foundEmail = "";
   let foundName = "";
 
-  function walk(curr, depth) {
-    if (!curr || depth > maxDepth || (foundEmail && foundName)) return;
-    if (typeof curr === "string") {
-      const s = curr.trim();
-      if (!foundEmail && s.includes("@") && s.includes(".") && !s.includes(" ") && s.length < 100) {
-        foundEmail = s.toLowerCase();
+  const checkDirect = (obj) => {
+    if (!obj || typeof obj !== "object") return;
+
+    // 1. Direct email checks
+    if (!foundEmail) {
+      // primaryEmailAddress property
+      if (obj.primaryEmailAddress?.emailAddress && isValidEmail(obj.primaryEmailAddress.emailAddress)) {
+        foundEmail = obj.primaryEmailAddress.emailAddress;
+      } else if (obj.primary_email_address?.email_address && isValidEmail(obj.primary_email_address.email_address)) {
+        foundEmail = obj.primary_email_address.email_address;
       }
-      return;
-    }
-    if (typeof curr !== "object") return;
 
-    if (Array.isArray(curr)) {
-      for (const item of curr) walk(item, depth + 1);
-      return;
-    }
+      // emailAddresses array
+      if (!foundEmail && Array.isArray(obj.emailAddresses)) {
+        for (const item of obj.emailAddresses) {
+          const addr = item?.emailAddress || (typeof item === "string" ? item : null);
+          if (isValidEmail(addr)) {
+            foundEmail = addr;
+            break;
+          }
+        }
+      }
+      if (!foundEmail && Array.isArray(obj.email_addresses)) {
+        for (const item of obj.email_addresses) {
+          const addr = item?.email_address || item?.emailAddress || (typeof item === "string" ? item : null);
+          if (isValidEmail(addr)) {
+            foundEmail = addr;
+            break;
+          }
+        }
+      }
 
-    if (!foundName && (curr.fullName || curr.full_name)) {
-      const n = String(curr.fullName || curr.full_name).trim();
-      if (n) foundName = n;
-    } else if (!foundName && (curr.firstName || curr.first_name)) {
-      const first = curr.firstName || curr.first_name || "";
-      const last = curr.lastName || curr.last_name || "";
-      const n = `${first} ${last}`.trim();
-      if (n) foundName = n;
-    }
+      // publicUserData identifier
+      if (!foundEmail && obj.publicUserData?.identifier && isValidEmail(obj.publicUserData.identifier)) {
+        foundEmail = obj.publicUserData.identifier;
+      }
+      if (!foundEmail && obj.public_user_data?.identifier && isValidEmail(obj.public_user_data.identifier)) {
+        foundEmail = obj.public_user_data.identifier;
+      }
 
-    if (!foundEmail && (curr.emailAddress || curr.email_address || curr.email || curr.identifier)) {
-      const val = curr.emailAddress || curr.email_address || curr.email || curr.identifier;
-      if (typeof val === "string" && val.includes("@") && val.includes(".")) {
-        foundEmail = val.trim().toLowerCase();
+      // Common email property names
+      const candidates = [obj.emailAddress, obj.email_address, obj.email, obj.identifier];
+      for (const c of candidates) {
+        if (isValidEmail(c)) {
+          foundEmail = c;
+          break;
+        }
       }
     }
 
-    for (const key of Object.keys(curr)) {
-      if (key === "clerk" || key === "_clerk" || key === "parent") continue;
-      walk(curr[key], depth + 1);
+    // 2. Direct full name checks
+    if (!foundName) {
+      if (obj.fullName || obj.full_name) {
+        const n = String(obj.fullName || obj.full_name).trim();
+        if (n && n !== "null" && n !== "undefined") foundName = n;
+      } else if (obj.firstName || obj.first_name || obj.lastName || obj.last_name) {
+        const first = obj.firstName || obj.first_name || "";
+        const last = obj.lastName || obj.last_name || "";
+        const n = `${first} ${last}`.trim();
+        if (n) foundName = n;
+      } else if (obj.publicUserData?.firstName || obj.public_user_data?.first_name) {
+        const first = obj.publicUserData?.firstName || obj.public_user_data?.first_name || "";
+        const last = obj.publicUserData?.lastName || obj.public_user_data?.last_name || "";
+        const n = `${first} ${last}`.trim();
+        if (n) foundName = n;
+      }
     }
+  };
+
+  // Check top level
+  checkDirect(source);
+
+  // Check common nested objects
+  if (!foundEmail || !foundName) checkDirect(source.user);
+  if (!foundEmail || !foundName) checkDirect(source.session);
+  if (!foundEmail || !foundName) checkDirect(source.publicUserData);
+  if (!foundEmail || !foundName) checkDirect(source.public_user_data);
+
+  // Fallback: deep scan handling prototype getters
+  if (!foundEmail) {
+    const visited = new Set();
+    function walk(curr, depth) {
+      if (!curr || depth > 5 || foundEmail || visited.has(curr)) return;
+      if (typeof curr === "string") {
+        if (isValidEmail(curr)) foundEmail = curr.trim().toLowerCase();
+        return;
+      }
+      if (typeof curr !== "object") return;
+      visited.add(curr);
+
+      checkDirect(curr);
+      if (foundEmail) return;
+
+      if (Array.isArray(curr)) {
+        for (const item of curr) walk(item, depth + 1);
+        return;
+      }
+
+      const propSet = new Set(Object.keys(curr));
+      let proto = Object.getPrototypeOf(curr);
+      if (proto && proto !== Object.prototype) {
+        for (const k of Object.getOwnPropertyNames(proto)) {
+          propSet.add(k);
+        }
+      }
+
+      for (const key of propSet) {
+        if (key === "clerk" || key === "_clerk" || key === "parent" || key === "constructor") continue;
+        try {
+          walk(curr[key], depth + 1);
+        } catch (_) {}
+      }
+    }
+
+    walk(source, 0);
   }
 
-  walk(obj, 0);
-  return { email: foundEmail, fullName: foundName };
+  return {
+    email: foundEmail ? foundEmail.trim().toLowerCase() : "",
+    fullName: foundName ? foundName.trim() : "",
+  };
 }
 
 // Multi-phase asynchronous profile resolver that activates existing sessions and polls for profile data
-async function resolveClerkProfile(clerk, targetSessionId, flowResult, maxAttempts = 15) {
+async function resolveClerkProfile(clerk, targetSessionId, flowResult, extraSources = {}, maxAttempts = 15) {
   for (let i = 0; i < maxAttempts; i++) {
-    // 1. From flowResult
+    // 1. From extraSources (e.g. clerkUser, clerkSession from React hooks)
+    if (extraSources?.clerkUser) {
+      const r = extractClerkProfile(extraSources.clerkUser);
+      if (r.email) return r;
+    }
+    if (extraSources?.clerkSession) {
+      const r = extractClerkProfile(extraSources.clerkSession);
+      if (r.email) return r;
+    }
+
+    // 2. From flowResult
     if (flowResult) {
-      const r = findEmailAndName({ signUp: flowResult.signUp, signIn: flowResult.signIn });
+      let r = extractClerkProfile(flowResult);
       if (r.email) return r;
+      if (flowResult.signIn) {
+        r = extractClerkProfile(flowResult.signIn);
+        if (r.email) return r;
+      }
+      if (flowResult.signUp) {
+        r = extractClerkProfile(flowResult.signUp);
+        if (r.email) return r;
+      }
     }
 
-    // 2. From clerk.user (the most authoritative source in Clerk)
+    // 3. From clerk.user (the most authoritative source in Clerk)
     if (clerk?.user) {
-      const r = findEmailAndName(clerk.user);
+      const r = extractClerkProfile(clerk.user);
       if (r.email) return r;
     }
 
-    // 3. From clerk.session
+    // 4. From clerk.session
     if (clerk?.session) {
-      const r = findEmailAndName(clerk.session);
+      const r = extractClerkProfile(clerk.session);
       if (r.email) return r;
+
+      // Try reading JWT token from active session
+      try {
+        if (typeof clerk.session.getToken === "function") {
+          const tok = await clerk.session.getToken();
+          if (tok) {
+            const decoded = decodeJwt(tok);
+            const tokProfile = extractClerkProfile(decoded);
+            if (tokProfile.email) return tokProfile;
+          }
+        }
+      } catch (_) {}
     }
 
-    // 4. From clerk.client.sessions
-    if (clerk?.client?.sessions && Array.isArray(clerk.client.sessions)) {
-      for (const s of clerk.client.sessions) {
-        const r = findEmailAndName(s);
+    // 5. From clerk.client.sessions
+    const allSessions = [
+      ...(clerk?.client?.sessions || []),
+      ...(clerk?.client?.signedInSessions || []),
+    ];
+
+    if (allSessions.length > 0) {
+      const sortedSessions = [...allSessions].sort((a, b) => {
+        if (targetSessionId) {
+          if (a.id === targetSessionId) return -1;
+          if (b.id === targetSessionId) return 1;
+        }
+        if (clerk?.client?.lastActiveSessionId) {
+          if (a.id === clerk.client.lastActiveSessionId) return -1;
+          if (b.id === clerk.client.lastActiveSessionId) return 1;
+        }
+        return 0;
+      });
+
+      for (const s of sortedSessions) {
+        const r = extractClerkProfile(s);
         if (r.email) {
-          if (clerk.setActive && s.id && clerk.session?.id !== s.id) {
+          if (clerk?.setActive && s.id && clerk.session?.id !== s.id) {
             try {
               await clerk.setActive({ session: s.id });
             } catch (_) {}
           }
           return r;
         }
+
+        try {
+          if (typeof s.getToken === "function") {
+            const tok = await s.getToken();
+            if (tok) {
+              const decoded = decodeJwt(tok);
+              const tokProfile = extractClerkProfile(decoded);
+              if (tokProfile.email) {
+                if (clerk?.setActive && s.id && clerk.session?.id !== s.id) {
+                  try {
+                    await clerk.setActive({ session: s.id });
+                  } catch (_) {}
+                }
+                return tokProfile;
+              }
+            }
+          }
+        } catch (_) {}
       }
     }
 
-    // 5. If we have sessions but no active session, activate it
-    if (clerk?.client?.sessions?.length && !clerk.session && clerk.setActive) {
+    // 6. If we have sessions but no active session, activate it
+    if (clerk?.client?.sessions?.length && !clerk.session && clerk?.setActive) {
       try {
         const sid = targetSessionId || clerk.client.lastActiveSessionId || clerk.client.sessions[0]?.id;
         if (sid) {
@@ -172,7 +329,7 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, maxAttemp
       } catch (_) {}
     }
 
-    // 6. Refresh clerk client state from server
+    // 7. Refresh clerk client state from server
     if (clerk?.client?.fetch && i % 2 === 1) {
       try {
         await clerk.client.fetch();
@@ -184,7 +341,7 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, maxAttemp
     }
   }
 
-  // 7. Direct FAPI query using cached client JWT
+  // 8. Direct FAPI query using cached client JWT
   try {
     const clientJwt = await tokenCache.getToken("__clerk_client_jwt");
     if (clientJwt) {
@@ -199,7 +356,7 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, maxAttemp
       );
       if (resp.ok) {
         const data = await resp.json();
-        const r = findEmailAndName(data);
+        const r = extractClerkProfile(data);
         if (r.email) return r;
       }
     }
@@ -211,12 +368,27 @@ async function resolveClerkProfile(clerk, targetSessionId, flowResult, maxAttemp
 export default function AuthScreen() {
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
   const clerk = useClerk();
-  const { signOut } = clerk;
   const { user: clerkUser } = useUser();
   const { session: clerkSession } = useSession();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user: authUser, isAuthenticated, login: setAuthUser } = useAuthStore();
+
+  const [mode, setMode] = useState("signin");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Verification modal state
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [signUpId, setSignUpId] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
 
   // Warm up native in-app browser for fastest OAuth popup experience
   useEffect(() => {
@@ -241,7 +413,7 @@ export default function AuthScreen() {
     let isCancelled = false;
     async function checkExistingClerkSession() {
       if (isAuthenticated) return;
-      const profile = await resolveClerkProfile(clerk, null, null, 3);
+      const profile = await resolveClerkProfile(clerk, null, null, { clerkUser, clerkSession }, 3);
 
       if (profile.email && !isCancelled) {
         setGoogleLoading(true);
@@ -267,22 +439,6 @@ export default function AuthScreen() {
       isCancelled = true;
     };
   }, [clerkUser, clerkSession, clerk?.session, isAuthenticated]);
-
-  const [mode, setMode] = useState("signin");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Verification modal state
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [signUpId, setSignUpId] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [verifyLoading, setVerifyLoading] = useState(false);
 
   // Switcher sliding animation
   const switcherWidth = width - 40; // 20px padding on each side
@@ -465,18 +621,18 @@ export default function AuthScreen() {
       return false;
     };
 
+    let profile = null;
+
     try {
       // 1. If user already has an active Clerk session with email, sync immediately
-      let profile = await resolveClerkProfile(clerk, null, null, 2);
+      profile = await resolveClerkProfile(clerk, null, null, { clerkUser, clerkSession }, 2);
       if (profile.email) {
         const synced = await syncAndNavigate(profile.email, profile.fullName);
         if (synced) return;
       }
 
-      // 2. Prepare redirect URL explicitly with scheme: 'mobile' and path: 'oauth-native-callback'
-      const redirectUrl = Linking.createURL("/oauth-native-callback", {
-        scheme: "mobile",
-      });
+      // 2. Prepare redirect URL cleanly for native environment
+      const redirectUrl = Linking.createURL("oauth-native-callback");
 
       // 3. Execute OAuth flow
       let flowResult = null;
@@ -493,13 +649,37 @@ export default function AuthScreen() {
 
         const isSessionExists =
           errMsg.includes("already signed in") ||
+          errMsg.includes("already signedin") ||
+          errMsg.includes("already_signed_in") ||
           errMsg.includes("session_exists") ||
           flowErr?.errors?.[0]?.code === "session_exists";
 
         if (isSessionExists) {
           // User already has an active session in Clerk!
           // Seamlessly resolve user profile and log them into Tryvia!
-          profile = await resolveClerkProfile(clerk, null, null, 10);
+          try {
+            if (clerk?.client?.fetch) await clerk.client.fetch();
+          } catch (_) {}
+
+          const activeSid =
+            clerk?.session?.id ||
+            clerk?.client?.lastActiveSessionId ||
+            clerk?.client?.sessions?.[0]?.id;
+
+          if (activeSid && clerk?.setActive && clerk?.session?.id !== activeSid) {
+            try {
+              await clerk.setActive({ session: activeSid });
+            } catch (_) {}
+          }
+
+          profile = await resolveClerkProfile(
+            clerk,
+            activeSid,
+            null,
+            { clerkUser, clerkSession },
+            10
+          );
+
           if (profile.email) {
             const synced = await syncAndNavigate(profile.email, profile.fullName);
             if (synced) return;
@@ -507,9 +687,9 @@ export default function AuthScreen() {
 
           // If session could not be resolved, clear ghost session and retry once
           try {
+            await clerk.signOut();
             await tokenCache.clearToken("__clerk_client_jwt");
             await tokenCache.clearToken("clerk_session_token");
-            await clerk.signOut();
             if (clerk.client?.removeSessions) {
               await clerk.client.removeSessions();
             }
@@ -526,6 +706,25 @@ export default function AuthScreen() {
               ""
             ).toLowerCase();
             if (!retryMsg.includes("cancel") && !retryMsg.includes("dismiss")) {
+              if (
+                retryMsg.includes("already signed in") ||
+                retryMsg.includes("session_exists")
+              ) {
+                try {
+                  if (clerk?.client?.fetch) await clerk.client.fetch();
+                  profile = await resolveClerkProfile(
+                    clerk,
+                    null,
+                    null,
+                    { clerkUser, clerkSession },
+                    5
+                  );
+                  if (profile.email) {
+                    const synced = await syncAndNavigate(profile.email, profile.fullName);
+                    if (synced) return;
+                  }
+                } catch (_) {}
+              }
               setError(
                 retryErr?.errors?.[0]?.message ||
                   retryErr?.message ||
@@ -552,11 +751,19 @@ export default function AuthScreen() {
         createdSessionId || signIn?.createdSessionId || signUp?.createdSessionId;
 
       if (sessionId && setActive) {
-        await setActive({ session: sessionId });
+        try {
+          await setActive({ session: sessionId });
+        } catch (_) {}
       }
 
       // 4. Resolve email and name across all layers (even if browser dismissed without deep link)
-      profile = await resolveClerkProfile(clerk, sessionId, flowResult, 20);
+      profile = await resolveClerkProfile(
+        clerk,
+        sessionId,
+        flowResult,
+        { clerkUser, clerkSession },
+        20
+      );
 
       if (profile.email) {
         const synced = await syncAndNavigate(profile.email, profile.fullName);
@@ -565,23 +772,55 @@ export default function AuthScreen() {
         }
       } else {
         // If user explicitly pressed cancel in the browser popup and no session exists, don't show error
-        if (flowResult?.authSessionResult?.type === "cancel") {
+        if (
+          flowResult?.authSessionResult?.type === "cancel" ||
+          flowResult?.authSessionResult?.type === "dismiss"
+        ) {
           setError(null);
           return;
         }
-        // If email could not be obtained, clear token to prevent ghost session
+
+        // Try one final reload from Clerk
         try {
-          await tokenCache.clearToken("__clerk_client_jwt");
-          await tokenCache.clearToken("clerk_session_token");
-          await clerk.signOut();
+          if (clerk?.client?.fetch) await clerk.client.fetch();
+          profile = await resolveClerkProfile(
+            clerk,
+            sessionId,
+            flowResult,
+            { clerkUser, clerkSession },
+            5
+          );
+          if (profile.email) {
+            const synced = await syncAndNavigate(profile.email, profile.fullName);
+            if (synced) return;
+          }
         } catch (_) {}
+
         setError("Unable to retrieve email from Google. Please try again.");
       }
     } catch (err) {
       console.error("OAuth error:", err);
-      setError(
-        err?.errors?.[0]?.message || err?.message || "Google Sign-In failed."
-      );
+      const msg = err?.errors?.[0]?.message || err?.message || "Google Sign-In failed.";
+      if (
+        msg.toLowerCase().includes("already signed in") ||
+        msg.toLowerCase().includes("session_exists")
+      ) {
+        try {
+          if (clerk?.client?.fetch) await clerk.client.fetch();
+          profile = await resolveClerkProfile(
+            clerk,
+            null,
+            null,
+            { clerkUser, clerkSession },
+            5
+          );
+          if (profile.email) {
+            const synced = await syncAndNavigate(profile.email, profile.fullName);
+            if (synced) return;
+          }
+        } catch (_) {}
+      }
+      setError(msg);
     } finally {
       setGoogleLoading(false);
     }

@@ -30,6 +30,7 @@ import { PaymentMethodsModal } from "../../src/components/profile/PaymentMethods
 import { AccountSettingsModal } from "../../src/components/profile/AccountSettingsModal";
 import { WalletModal } from "../../src/components/profile/WalletModal";
 import { useClerk } from "@clerk/clerk-expo";
+import { tokenCache } from "../../src/utils/tokenCache";
 
 const MENU_ITEMS = [
   { key: "orders", icon: Package, label: "My Orders" },
@@ -63,6 +64,10 @@ export default function ProfileScreen() {
     } catch (err) {
       console.warn("Clerk signOut error during logout:", err);
     }
+    try {
+      await tokenCache.clearToken("__clerk_client_jwt");
+      await tokenCache.clearToken("clerk_session_token");
+    } catch (_) {}
     await logout();
   };
 

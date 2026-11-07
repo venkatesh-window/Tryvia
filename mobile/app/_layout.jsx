@@ -69,6 +69,14 @@ function ClerkAuthSyncBridge() {
           email = s.publicUserData.identifier;
           break;
         }
+        if (s.user?.primaryEmailAddress?.emailAddress) {
+          email = s.user.primaryEmailAddress.emailAddress;
+          break;
+        }
+        if (Array.isArray(s.user?.emailAddresses) && s.user.emailAddresses[0]?.emailAddress) {
+          email = s.user.emailAddresses[0].emailAddress;
+          break;
+        }
       }
     }
 
@@ -184,6 +192,10 @@ function RootLayoutNav() {
             options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
           <Stack.Screen name="cart" options={{ presentation: "modal" }} />
+          <Stack.Screen
+            name="oauth-native-callback"
+            options={{ presentation: "transparentModal", animation: "none" }}
+          />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>
