@@ -29,8 +29,6 @@ import { WishlistModal } from "../../src/components/profile/WishlistModal";
 import { PaymentMethodsModal } from "../../src/components/profile/PaymentMethodsModal";
 import { AccountSettingsModal } from "../../src/components/profile/AccountSettingsModal";
 import { WalletModal } from "../../src/components/profile/WalletModal";
-import { useClerk } from "@clerk/clerk-expo";
-import { tokenCache } from "../../src/utils/tokenCache";
 
 const MENU_ITEMS = [
   { key: "orders", icon: Package, label: "My Orders" },
@@ -41,8 +39,6 @@ const MENU_ITEMS = [
 
 export default function ProfileScreen() {
   const { user, isAuthenticated, logout } = useAuthStore();
-  const clerk = useClerk();
-  const { signOut } = clerk;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState(null);
@@ -62,20 +58,6 @@ export default function ProfileScreen() {
     if (Platform.OS === "ios") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    try {
-      if (clerk?.client?.removeSessions) {
-        await clerk.client.removeSessions();
-      }
-    } catch (_) {}
-    try {
-      await signOut();
-    } catch (err) {
-      console.warn("Clerk signOut error during logout:", err);
-    }
-    try {
-      await tokenCache.clearToken("__clerk_client_jwt");
-      await tokenCache.clearToken("clerk_session_token");
-    } catch (_) {}
     await logout();
   };
 

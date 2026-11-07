@@ -1,7 +1,6 @@
 import { authService } from "../api/services/authService";
-import { tokenCache } from "../utils/tokenCache";
 
-export class ClerkService {
+export class AuthService {
   /**
    * Authoritative Sign In with Email & Password
    */
@@ -161,8 +160,10 @@ export class ClerkService {
    * Sign Out
    */
   static async signOut() {
-    await tokenCache.clearToken("__clerk_client_jwt");
-    await tokenCache.clearToken("clerk_session_token");
+    // No-op (JWT token is cleared by useAuthStore)
   }
 }
+
+export const ClerkService = AuthService;
+export default AuthService;
 
