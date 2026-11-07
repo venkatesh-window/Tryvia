@@ -105,7 +105,7 @@ export default function OAuthNativeCallback() {
             if (result.user?.role === "VENDOR") {
               router.replace("/vendor");
             } else {
-              router.replace("/(tabs)");
+              router.replace("/(tabs)/profile");
             }
             return;
           }
@@ -116,13 +116,13 @@ export default function OAuthNativeCallback() {
 
       // If already authenticated or sync finished
       if (isAuthenticated && !isCancelled) {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/profile");
         return;
       }
 
       // Fallback
       if (!isCancelled) {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/profile");
       }
     }
 

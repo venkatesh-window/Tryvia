@@ -43,7 +43,7 @@ import { tokenCache } from "../src/utils/tokenCache";
 import * as Haptics from "expo-haptics";
 import { useOAuth, useClerk, useUser, useSession, useSignIn } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
+import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -467,10 +467,10 @@ export default function AuthScreen() {
       if (authUser?.role === "VENDOR") {
         router.replace("/vendor");
       } else {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/profile");
       }
     }
-  }, [isAuthenticated, authUser]);
+  }, [isAuthenticated, authUser, router]);
 
   // Auto-sync any existing Clerk session when the auth screen opens
   useEffect(() => {
@@ -488,7 +488,7 @@ export default function AuthScreen() {
             if (result.user?.role === "VENDOR") {
               router.replace("/vendor");
             } else {
-              router.replace("/(tabs)");
+              router.replace("/(tabs)/profile");
             }
           }
         } catch (err) {
@@ -502,7 +502,7 @@ export default function AuthScreen() {
     return () => {
       isCancelled = true;
     };
-  }, [clerkUser, clerkSession, clerk?.session, isAuthenticated]);
+  }, [clerk, clerkUser, clerkSession, isAuthenticated, router, setAuthUser]);
 
   // Switcher sliding animation
   const switcherWidth = width - 40; // 20px padding on each side
@@ -574,10 +574,8 @@ export default function AuthScreen() {
 
       if (result.user?.role === "VENDOR") {
         router.replace("/vendor");
-      } else if (router.canGoBack()) {
-        router.back();
       } else {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/profile");
       }
     } catch (err) {
       console.error("Sign in error:", err);
@@ -638,10 +636,8 @@ export default function AuthScreen() {
 
       if (result.user?.role === "VENDOR") {
         router.replace("/vendor");
-      } else if (router.canGoBack()) {
-        router.back();
       } else {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/profile");
       }
     } catch (err) {
       console.error("Sign up error:", err);
@@ -671,7 +667,7 @@ export default function AuthScreen() {
           if (result.user?.role === "VENDOR") {
             router.replace("/vendor");
           } else {
-            router.replace("/(tabs)");
+            router.replace("/(tabs)/profile");
           }
           return true;
         }
@@ -760,7 +756,9 @@ export default function AuthScreen() {
       }
 
       // 3. Prepare redirect URL cleanly for native environment
-      const redirectUrl = Linking.createURL("oauth-native-callback");
+      const redirectUrl = AuthSession.makeRedirectUri({
+        path: "oauth-native-callback",
+      });
 
       // 4. Execute native OAuth flow
       let flowResult = null;
@@ -1024,7 +1022,7 @@ export default function AuthScreen() {
             style={styles.backBtn}
             activeOpacity={0.7}
             onPress={() =>
-              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              router.canGoBack() ? router.back() : router.replace("/(tabs)/profile")
             }
           >
             <ArrowLeft size={20} color="#1A1918" strokeWidth={2} />

@@ -31,6 +31,10 @@ export class ClerkService {
             email: loginRes.user.email,
             fullName: loginRes.user.full_name || cleanEmail.split("@")[0],
             role: loginRes.user.role || "CUSTOMER",
+            walletBalance: loginRes.user.wallet_balance ?? 0,
+            points: loginRes.user.points ?? 0,
+            loyaltyTier: loginRes.user.loyalty_tier || "TRYVIA MEMBER",
+            tryviaStars: loginRes.user.stars ?? 0,
           },
         };
       }
@@ -84,6 +88,10 @@ export class ClerkService {
             email: regRes.user.email,
             fullName: regRes.user.full_name || cleanName,
             role: regRes.user.role || role,
+            walletBalance: regRes.user.wallet_balance ?? 0,
+            points: regRes.user.points ?? 0,
+            loyaltyTier: regRes.user.loyalty_tier || "TRYVIA MEMBER",
+            tryviaStars: regRes.user.stars ?? 0,
           },
         };
       }
@@ -124,6 +132,10 @@ export class ClerkService {
             email: syncRes.user.email,
             fullName: syncRes.user.full_name || email.split("@")[0],
             role: syncRes.user.role || "CUSTOMER",
+            walletBalance: syncRes.user.wallet_balance ?? 0,
+            points: syncRes.user.points ?? 0,
+            loyaltyTier: syncRes.user.loyalty_tier || "TRYVIA MEMBER",
+            tryviaStars: syncRes.user.stars ?? 0,
           },
         };
       }

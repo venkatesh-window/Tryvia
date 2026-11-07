@@ -12,7 +12,43 @@ export const useAuthStore = create((set) => ({
 
   login: async (token, user) => {
     await setItemAsync(TOKEN_KEY, token);
-    set({ token, user, isAuthenticated: true });
+    const normalizedUser = {
+      id: user?.id || 1,
+      email: user?.email || "",
+      fullName: user?.fullName || user?.full_name || user?.email?.split("@")[0] || "Member",
+      role: user?.role || "CUSTOMER",
+      phone: user?.phone || "",
+      loyaltyTier: user?.loyaltyTier || user?.loyalty_tier || "TRYVIA MEMBER",
+      walletBalance: user?.walletBalance ?? user?.wallet_balance ?? 0,
+      points: user?.points ?? 0,
+      tryviaStars: user?.tryviaStars ?? user?.stars ?? 0,
+      address: user?.address || null,
+      preferences: user?.preferences || {},
+    };
+    set({ token, user: normalizedUser, isAuthenticated: true });
+
+    // Refresh full profile in background from /auth/me
+    try {
+      const fullMe = await authService.getMe();
+      if (fullMe) {
+        set((state) => ({
+          user: {
+            ...state.user,
+            id: fullMe.id || state.user?.id,
+            email: fullMe.email || state.user?.email,
+            fullName: fullMe.full_name || state.user?.fullName,
+            role: fullMe.role || state.user?.role,
+            phone: fullMe.phone || state.user?.phone,
+            loyaltyTier: fullMe.loyalty_tier || state.user?.loyaltyTier,
+            walletBalance: fullMe.wallet_balance ?? state.user?.walletBalance ?? 0,
+            points: fullMe.points ?? state.user?.points ?? 0,
+            tryviaStars: fullMe.stars ?? state.user?.tryviaStars ?? 0,
+            address: fullMe.address || state.user?.address,
+            preferences: fullMe.preferences || state.user?.preferences,
+          },
+        }));
+      }
+    } catch (_) {}
   },
 
   logout: async () => {
@@ -29,7 +65,7 @@ export const useAuthStore = create((set) => ({
       if (token) {
         try {
           user = await authService.getMe();
-        } catch (err) {
+        } catch (_err) {
           await deleteItemAsync(TOKEN_KEY);
           token = null;
         }
@@ -62,7 +98,7 @@ export const useAuthStore = create((set) => ({
           isLoading: false,
         });
       }
-    } catch (e) {
+    } catch (_e) {
       set({
         token: null,
         user: null,
