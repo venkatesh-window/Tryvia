@@ -17,6 +17,7 @@ import returnRoutes from "./routes/returnRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import storefrontRoutes from "./routes/storefrontRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { nosqlSanitize } from "./middleware/nosqlSanitize.js";
 import { setup } from "./test_setup.js";
@@ -74,9 +75,7 @@ app.use(
           "'self'",
           "data:",
           "blob:",
-          "https://images.unsplash.com",
-          "https://res.cloudinary.com",
-          "https://cdn.razorpay.com",
+          "https:",
         ],
         styleSrc: ["'self'", "'unsafe-inline'"],
       },
@@ -238,13 +237,16 @@ app.use(`${API_PREFIX}/payments`, paymentRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 
 // Health Check
-app.get("/", (req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
     message: "Welcome to the TRYVIA MERN API",
     status: "online",
     version: "1.0.0",
   });
 });
+
+// Public Storefront & Compliance Pages
+app.use("/", storefrontRoutes);
 
 // Centralized Error Handling
 app.use(errorHandler);
