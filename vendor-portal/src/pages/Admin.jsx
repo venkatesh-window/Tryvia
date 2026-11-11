@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Lock, Loader2, CheckCircle, XCircle, Store, AlertCircle } from "lucide-react";
+import { Lock, Loader2, CheckCircle, XCircle, Store, AlertCircle, Trash2, Search, Package } from "lucide-react";
 import axios from "axios";
 import { API_URL, getApiErrorMessage } from "../config/api";
 
@@ -14,6 +14,10 @@ export default function Admin() {
   const [minisOrders, setMinisOrders] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [updatingVendorId, setUpdatingVendorId] = useState(null);
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogFilter, setCatalogFilter] = useState("ALL");
+  const [deletingProductId, setDeletingProductId] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -43,14 +47,16 @@ export default function Admin() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [prodRes, minisRes, vendorRes] = await Promise.all([
+      const [prodRes, minisRes, vendorRes, catalogRes] = await Promise.all([
         axios.get(`${API_URL}/admin/orders/products`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/admin/orders/minis`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/admin/vendors`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
+        axios.get(`${API_URL}/admin/vendors`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/admin/products`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
       ]);
       setProductsOrders(prodRes.data);
       setMinisOrders(minisRes.data);
       setVendors(vendorRes.data);
+      setCatalogItems(catalogRes.data);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         setToken(null);
@@ -89,6 +95,26 @@ export default function Admin() {
     }
   };
 
+  const handleDeleteCatalogItem = async (item) => {
+    const itemId = item._id || item.id;
+    const typeLabel = item.isTester ? "tester" : "product";
+    if (!window.confirm(`Are you sure you want to remove "${item.name}" (${typeLabel}) from the app? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingProductId(itemId);
+      await axios.delete(`${API_URL}/admin/products/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCatalogItems(prev => prev.filter(p => (p._id || p.id) !== itemId));
+    } catch (err) {
+      alert(getApiErrorMessage(err, `Failed to remove ${typeLabel}`));
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
+
   if (!token) {
     return (
       <div className="flex h-screen items-center justify-center bg-background-default">
@@ -119,6 +145,20 @@ export default function Admin() {
   }
 
   const pendingCount = vendors.filter(v => v.status === "PENDING").length;
+  const catalogProductsCount = catalogItems.filter(item => !item.isTester).length;
+  const catalogTestersCount = catalogItems.filter(item => item.isTester || item.stockTester > 0).length;
+  const filteredCatalogItems = catalogItems.filter(item => {
+    if (catalogFilter === "PRODUCTS" && item.isTester) return false;
+    if (catalogFilter === "TESTERS" && !item.isTester && !(item.stockTester > 0)) return false;
+    if (!catalogSearch.trim()) return true;
+    const q = catalogSearch.trim().toLowerCase();
+    return (
+      (item.name || "").toLowerCase().includes(q) ||
+      (item.productId || "").toLowerCase().includes(q) ||
+      (item.brand?.name || "").toLowerCase().includes(q) ||
+      (item.vendor?.storeName || "").toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="min-h-screen bg-background-default p-8 font-body text-text-primary">
@@ -130,7 +170,7 @@ export default function Admin() {
           </button>
         </div>
 
-        <div className="flex gap-4 border-b border-border-light">
+        <div className="flex flex-wrap gap-4 border-b border-border-light">
           <button
             onClick={() => setActiveTab("VENDORS")}
             className={`pb-4 px-4 font-medium border-b-2 transition-all flex items-center gap-2 ${activeTab === "VENDORS" ? "border-primary-main text-primary-main" : "border-transparent text-text-secondary hover:text-text-primary"}`}
@@ -153,6 +193,15 @@ export default function Admin() {
             className={`pb-4 px-4 font-medium border-b-2 transition-all ${activeTab === "MINIS" ? "border-primary-main text-primary-main" : "border-transparent text-text-secondary hover:text-text-primary"}`}
           >
             MINIS
+          </button>
+          <button
+            onClick={() => setActiveTab("CATALOG")}
+            className={`pb-4 px-4 font-medium border-b-2 transition-all flex items-center gap-2 ${activeTab === "CATALOG" ? "border-primary-main text-primary-main" : "border-transparent text-text-secondary hover:text-text-primary"}`}
+          >
+            PRODUCTS & TESTERS
+            <span className="bg-background-surface text-text-secondary text-xs px-2 py-0.5 rounded-full font-semibold">
+              {catalogItems.length}
+            </span>
           </button>
         </div>
 
@@ -275,6 +324,153 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+          </div>
+        ) : activeTab === "CATALOG" ? (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+                <input
+                  type="text"
+                  placeholder="Search product, tester, brand, or vendor..."
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-background-paper border border-border-light rounded-xl text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main transition-all"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCatalogFilter("ALL")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${catalogFilter === "ALL" ? "bg-primary-main text-white border-primary-main" : "bg-background-paper text-text-secondary border-border-light hover:text-text-primary"}`}
+                >
+                  All ({catalogItems.length})
+                </button>
+                <button
+                  onClick={() => setCatalogFilter("PRODUCTS")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${catalogFilter === "PRODUCTS" ? "bg-primary-main text-white border-primary-main" : "bg-background-paper text-text-secondary border-border-light hover:text-text-primary"}`}
+                >
+                  Products ({catalogProductsCount})
+                </button>
+                <button
+                  onClick={() => setCatalogFilter("TESTERS")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${catalogFilter === "TESTERS" ? "bg-primary-main text-white border-primary-main" : "bg-background-paper text-text-secondary border-border-light hover:text-text-primary"}`}
+                >
+                  Testers ({catalogTestersCount})
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-background-paper rounded-2xl shadow-card border border-border-light overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-body text-sm">
+                  <thead className="bg-background-surface/30 text-text-secondary">
+                    <tr>
+                      <th className="px-6 py-4 font-medium">Product / Tester</th>
+                      <th className="px-6 py-4 font-medium">Type</th>
+                      <th className="px-6 py-4 font-medium">Vendor / Brand</th>
+                      <th className="px-6 py-4 font-medium">Price & Stock</th>
+                      <th className="px-6 py-4 font-medium">Status</th>
+                      <th className="px-6 py-4 font-medium text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light">
+                    {filteredCatalogItems.map(item => {
+                      const itemId = item._id || item.id;
+                      const isRemoving = deletingProductId === itemId;
+                      return (
+                        <tr key={itemId} className="hover:bg-background-surface/50">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              {item.imageUrl || item.image_url ? (
+                                <img
+                                  src={item.imageUrl || item.image_url}
+                                  alt={item.name}
+                                  className="w-11 h-11 rounded-lg object-cover bg-background-surface border border-border-light shrink-0"
+                                />
+                              ) : (
+                                <div className="w-11 h-11 rounded-lg bg-background-surface border border-border-light flex items-center justify-center shrink-0">
+                                  <Package className="w-5 h-5 text-text-secondary" />
+                                </div>
+                              )}
+                              <div>
+                                <div className="font-semibold text-text-primary">{item.name}</div>
+                                <div className="text-xs text-text-secondary mt-0.5">
+                                  {item.productId || (item.numericId ? `TRY-PRD-${String(item.numericId).padStart(6, "0")}` : itemId)}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.isTester ? (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                Tester
+                              </span>
+                            ) : item.stockTester > 0 ? (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                                Product + Tester
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                                Product
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-text-primary">{item.vendor?.storeName || "Platform / Seeded"}</div>
+                            <div className="text-xs text-text-secondary mt-0.5">
+                              {item.brand?.name || "No brand"}{item.category?.name ? ` • ${item.category.name}` : ""}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {(!item.isTester || item.fullPrice > 0 || item.stockFull > 0) && (
+                              <div className="text-xs">
+                                <span className="text-text-secondary">Full:</span>{" "}
+                                <span className="font-semibold text-text-primary">₹{item.fullPrice || 0}</span>{" "}
+                                <span className="text-text-secondary">({item.stockFull || 0} left)</span>
+                              </div>
+                            )}
+                            {(item.isTester || item.stockTester > 0 || item.testerPrice > 0) && (
+                              <div className="text-xs mt-0.5">
+                                <span className="text-text-secondary">Tester:</span>{" "}
+                                <span className="font-semibold text-text-primary">₹{item.testerPrice || 0}</span>{" "}
+                                <span className="text-text-secondary">({item.stockTester || 0} left)</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              item.status === "ACTIVE" ? "bg-green-100 text-green-700" :
+                              item.status === "OUT_OF_STOCK" ? "bg-red-100 text-red-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {item.status || "ACTIVE"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={() => handleDeleteCatalogItem(item)}
+                              disabled={isRemoving}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
+                              title="Remove from app"
+                            >
+                              {isRemoving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredCatalogItems.length === 0 && (
+                      <tr><td colSpan="6" className="text-center p-8 text-text-secondary">No products or testers found</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="bg-background-paper rounded-2xl shadow-card border border-border-light overflow-hidden">

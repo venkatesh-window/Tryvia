@@ -19,6 +19,10 @@ const getOrSetCache = async (key, ttlMs, fetchFn) => {
   return data;
 };
 
+export const clearProductCache = () => {
+  memoryCache.clear();
+};
+
 // Fast transformation helpers without heavy Mongoose Document overhead
 const formatItem = (item) => {
   if (!item) return null;

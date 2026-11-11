@@ -3,8 +3,10 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { Order } from "../models/Order.js";
 import { Vendor } from "../models/Vendor.js";
+import { Product } from "../models/Product.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { adminLimiter } from "../middleware/rateLimiter.js";
+import { clearProductCache } from "./productRoutes.js";
 
 const router = Router();
 
@@ -202,6 +204,67 @@ router.patch("/vendors/:id/status", requireAdmin, async (req, res) => {
       details: { status, reason },
     });
     res.json({ detail: "Vendor status updated successfully", vendor: vendor.toJSON() });
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// GET /api/v1/admin/products
+router.get("/products", requireAdmin, async (req, res) => {
+  try {
+    const products = await Product.find()
+      .populate("brand", "name")
+      .populate("category", "name")
+      .populate("vendor", "storeName email vendorId")
+      .sort({ createdAt: -1 });
+    res.json(products.map((p) => p.toJSON()));
+  } catch (error) {
+    res.status(500).json({ detail: error.message });
+  }
+});
+
+// DELETE /api/v1/admin/products/:id
+router.delete("/products/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = typeof req.params.id === "string" ? req.params.id.trim() : "";
+    let query;
+    if (/^[0-9a-fA-F]{24}$/.test(id)) {
+      query = { _id: id };
+    } else if (id !== "" && !isNaN(Number(id))) {
+      query = { numericId: Number(id) };
+    } else {
+      query = { productId: id };
+    }
+
+    const product = await Product.findOneAndDelete(query);
+    if (!product) {
+      res.status(404).json({ detail: "Product or tester not found" });
+      return;
+    }
+
+    clearProductCache();
+
+    await AuditLog.create({
+      actorRole: "SUPER_ADMIN",
+      action: "DELETE_PRODUCT",
+      targetType: "Product",
+      targetId: product._id.toString(),
+      ipAddress: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+      details: {
+        name: product.name,
+        productId: product.productId,
+        numericId: product.numericId,
+        isTester: Boolean(product.isTester),
+      },
+    });
+
+    res.json({
+      detail: product.isTester
+        ? "Tester removed successfully"
+        : "Product removed successfully",
+      id: product._id,
+    });
   } catch (error) {
     res.status(500).json({ detail: error.message });
   }
