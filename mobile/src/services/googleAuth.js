@@ -1,14 +1,16 @@
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import { authService } from "../api/services/authService";
+import { getBaseUrl } from "../api/client";
 
 WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Initiates direct Google OAuth 2.0 flow without any third-party middleman (e.g. Clerk).
- * 1. Opens Google's authorization endpoint directly.
+ * 1. Opens Google's authorization endpoint using our HTTPS backend callback bridge
+ *    so a single Google Web OAuth Client ID works across APK, Play Store AAB, Expo Go, iOS, and Web.
  * 2. Fetches verified user identity from Google UserInfo API (https://www.googleapis.com/oauth2/v3/userinfo).
- * 3. Syncs with TryVia backend /api/v1/auth/sync to issue a genuine JWT access token and load the customer profile.
+ * 3. Syncs with TryVia backend /api/v1/auth/sync with google_access_token verification.
  */
 export async function signInWithGoogleDirect() {
   const clientId =
@@ -16,14 +18,15 @@ export async function signInWithGoogleDirect() {
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
     process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
-  const redirectUri = AuthSession.makeRedirectUri({
+  const appRedirectUri = AuthSession.makeRedirectUri({
     path: "oauth-native-callback",
   });
+  const httpsBridgeUri = `${getBaseUrl()}/auth/google/callback`;
 
   if (!clientId) {
     return {
       status: "missing_client_id",
-      redirectUri,
+      redirectUri: httpsBridgeUri,
     };
   }
 
@@ -31,12 +34,13 @@ export async function signInWithGoogleDirect() {
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
       `?client_id=${encodeURIComponent(clientId)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&redirect_uri=${encodeURIComponent(httpsBridgeUri)}` +
       `&response_type=token` +
       `&scope=${encodeURIComponent("openid email profile")}` +
-      `&prompt=select_account`;
+      `&prompt=select_account` +
+      `&state=${encodeURIComponent(appRedirectUri)}`;
 
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, appRedirectUri);
 
     if (result.type !== "success" || !result.url) {
       return {
@@ -44,9 +48,20 @@ export async function signInWithGoogleDirect() {
       };
     }
 
-    // Extract access_token from redirect URL fragment or query params
+    // Extract access_token or error from redirect URL fragment or query params
     const rawFragment = result.url.split("#")[1] || result.url.split("?")[1] || "";
     const params = new URLSearchParams(rawFragment);
+    const oauthError = params.get("error");
+    if (oauthError) {
+      if (oauthError === "access_denied") {
+        return { status: "cancelled" };
+      }
+      return {
+        status: "failed",
+        error: `Google authentication returned: ${oauthError}`,
+      };
+    }
+
     const accessToken = params.get("access_token");
 
     if (!accessToken) {
@@ -84,10 +99,11 @@ export async function signInWithGoogleDirect() {
       };
     }
 
-    // Synchronize with Tryvia backend
+    // Synchronize with Tryvia backend (passing google_access_token for server verification)
     const syncRes = await authService.sync({
       email,
       fullName,
+      google_access_token: accessToken,
     });
 
     if (!syncRes?.access_token) {

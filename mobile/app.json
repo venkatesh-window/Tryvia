@@ -10,7 +10,7 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "supportsTablet": false,
-      "bundleIdentifier": "com.tryvia",
+      "bundleIdentifier": "com.tryvia.app",
       "buildNumber": "1",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "TryVia needs photo library access so vendors can upload product photos.",
@@ -26,7 +26,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.tryvia",
+      "package": "com.tryvia.app",
       "versionCode": 2,
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",

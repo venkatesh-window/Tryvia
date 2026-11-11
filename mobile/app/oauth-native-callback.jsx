@@ -35,6 +35,7 @@ export default function OAuthNativeCallback() {
                 const syncRes = await authService.sync({
                   email: googleUser.email,
                   fullName: googleUser.name || googleUser.email.split("@")[0],
+                  google_access_token: accessToken,
                 });
                 if (syncRes?.access_token) {
                   await setAuthUser(syncRes.access_token, syncRes.user);

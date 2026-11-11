@@ -19,6 +19,9 @@ dist/
 web-build/
 **/web-build/
 *.jks
+*.keystore
+keystore.properties
+**/keystore.properties
 *.p8
 *.p12
 *.key

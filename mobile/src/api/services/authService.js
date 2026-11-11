@@ -44,6 +44,9 @@ export const authService = {
     const response = await apiClient.post("/auth/sync", {
       email: cleanEmail,
       ...(cleanName ? { full_name: cleanName } : {}),
+      ...(payload.google_access_token
+        ? { google_access_token: payload.google_access_token }
+        : {}),
     });
     return TokenResponseSchema.parse(response.data);
   },

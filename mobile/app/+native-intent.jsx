@@ -13,6 +13,9 @@ export function redirectSystemPath({ path, initial }) {
         path.includes("status=cancelled") || path.includes("status=failed");
       return isCancelledOrFailed ? "/(tabs)" : "/(tabs)/orders";
     }
+    if (typeof path === "string" && path.includes("oauth-native-callback") && !initial) {
+      return null;
+    }
   } catch {
     return path;
   }
