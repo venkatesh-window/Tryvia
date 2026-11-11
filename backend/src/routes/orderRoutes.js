@@ -8,6 +8,10 @@ import { WalletRule } from "../models/WalletRule.js";
 import { User } from "../models/User.js";
 import { SystemConfig } from "../models/SystemConfig.js";
 import { fulfillOrder } from "../utils/orderHelper.js";
+import { syncUserWalletBalance } from "../utils/walletHelper.js";
+import { getNextNumericId } from "../utils/idGenerator.js";
+import { clearProductCache } from "./productRoutes.js";
+import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
 import { z } from "zod";
 import { validate } from "../middleware/validation.js";
 
@@ -133,43 +137,55 @@ router.post("/", authenticate, validate(orderSchema), async (req, res) => {
       .filter((item) => item.itemType === "tester")
       .reduce((acc, item) => acc + item.totalPrice, 0);
 
-    let walletBalanceBefore = user.walletBalance || 0;
-    let validWalletBalance = walletBalanceBefore;
+    const validWalletBalance = await syncUserWalletBalance(user._id);
+    let walletBalanceBefore = validWalletBalance;
     let maximumWalletUsage = 0;
     let walletUsed = 0;
     let productAmount = originalProductsTotal;
-    let platformFee = 10;
-    let deliveryCharge = 40;
-    let totalAmount = subtotal;
 
     if (useWallet && validWalletBalance > 0 && originalProductsTotal > 0) {
       maximumWalletUsage = originalProductsTotal * 0.60;
       walletUsed = Math.min(validWalletBalance, maximumWalletUsage);
       productAmount = originalProductsTotal - walletUsed;
     }
-    
-    totalAmount = productAmount + platformFee + deliveryCharge + miniProductsTotal;
+
+    let platformFee = 0;
+    let deliveryCharge = 0;
+    let taxAmount = 0;
+    let totalAmount = 0;
+
+    if (originalProductsTotal > 0) {
+      platformFee = 10;
+      deliveryCharge += 40;
+      totalAmount += productAmount + platformFee + 40;
+    }
+
+    if (miniProductsTotal > 0) {
+      if (miniProductsTotal < 200) {
+        res.status(400).json({ detail: "Minimum tester order value is ₹200." });
+        return;
+      }
+      taxAmount = miniProductsTotal * 0.18;
+      deliveryCharge += 40;
+      totalAmount += miniProductsTotal + taxAmount + 40;
+    }
 
     const remainingWallet = walletBalanceBefore - walletUsed;
     let walletDiscount = walletUsed;
 
-    const orderCount = await Order.countDocuments();
-    const numericId = 8920 + orderCount + 1;
+    const numericId = await getNextNumericId(Order, "order", 8920);
     const orderId = `TRY-ORD-${numericId.toString().padStart(6, '0')}`;
     const resolvedShippingAddress =
       shippingAddress || req.body.shipping_address || req.body.shippingAddress || undefined;
 
-    // Only mark order PAID immediately if the calculated total is 0 (100% wallet covered)
-    const orderStatus = totalAmount <= 0 ? "PAID" : "PENDING";
+    const shouldAutoFulfill = totalAmount <= 0;
 
     const vendorStatuses = Array.from(uniqueVendors).map((vId) => ({
       vendor: new mongoose.Types.ObjectId(vId),
-      status: orderStatus,
-      history: [{ status: orderStatus, changedAt: new Date() }],
+      status: "PENDING",
+      history: [{ status: "PENDING", changedAt: new Date() }],
     }));
 
-    // For simplicity we use the same generated orderId to update item's orderItemId to have true TRY-ORD connection if we wanted, but TRY-ITEM is fine.
-    
     const order = new Order({
       numericId,
       orderId,
@@ -179,10 +195,11 @@ router.post("/", authenticate, validate(orderSchema), async (req, res) => {
       walletDiscount,
       platformFee,
       deliveryCharge,
+      taxAmount,
       totalAmount,
-      status: orderStatus,
+      status: "PENDING",
       paymentMethod:
-        paymentMethod || "Tryvia Pay",
+        paymentMethod || req.body.payment_method || "Tryvia Pay",
       appliedCreditId: apply_wallet_credit_id ? 1 : undefined,
       shippingAddress: resolvedShippingAddress,
       vendorStatuses,
@@ -195,9 +212,11 @@ router.post("/", authenticate, validate(orderSchema), async (req, res) => {
 
     await order.save();
 
-    // If order is PAID, fulfill it immediately!
-    if (order.status === "PAID") {
+    // If order is 100% covered (zero payable), fulfill atomically so credits/stock/status update properly
+    if (shouldAutoFulfill) {
       await fulfillOrder(order._id);
+      clearProductCache();
+      clearStorefrontCatalogCache();
     }
 
 

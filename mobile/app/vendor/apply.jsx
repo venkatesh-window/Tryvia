@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 
 export default function VendorApplyScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, updateProfile } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
@@ -59,6 +59,7 @@ export default function VendorApplyScreen() {
 
     try {
       await apiClient.post("/vendor/apply", form);
+      updateProfile({ role: "VENDOR" });
       setStatus("PENDING");
     } catch (err) {
       setError(

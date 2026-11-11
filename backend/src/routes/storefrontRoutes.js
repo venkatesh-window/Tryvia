@@ -123,6 +123,14 @@ let catalogCache = {
   categories: null,
 };
 
+export const clearStorefrontCatalogCache = () => {
+  catalogCache = {
+    timestamp: 0,
+    products: null,
+    categories: null,
+  };
+};
+
 function escapeHtml(value) {
   if (value === null || value === undefined) return "";
   return String(value)

@@ -14,9 +14,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://tryvia-r6z3.onrender.com/api/v1",
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_YW1hemluZy1odW1wYmFjay00ODQwLmNsZXJrLmFjY291bnRzLmRldiQ",
-        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_live_TW7v1CfSr4elly"
+        "EXPO_PUBLIC_API_URL": "https://tryvia-ta57.onrender.com/api/v1",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_live_TxGs1q8B5XFUBj"
       }
     },
     "production": {
@@ -24,9 +23,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://tryvia-r6z3.onrender.com/api/v1",
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_YW1hemluZy1odW1wYmFjay00ODQwLmNsZXJrLmFjY291bnRzLmRldiQ",
-        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_live_TW7v1CfSr4elly"
+        "EXPO_PUBLIC_API_URL": "https://tryvia-ta57.onrender.com/api/v1",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_live_TxGs1q8B5XFUBj"
       },
       "autoIncrement": true
     }

@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.tryvia"
+      "package": "com.tryvia",
+      "versionCode": 2
     },
     "web": {
       "output": "single",

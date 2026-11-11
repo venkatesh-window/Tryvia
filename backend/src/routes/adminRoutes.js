@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { Order } from "../models/Order.js";
@@ -7,6 +8,7 @@ import { Product } from "../models/Product.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { adminLimiter } from "../middleware/rateLimiter.js";
 import { clearProductCache } from "./productRoutes.js";
+import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
 
 const router = Router();
 
@@ -99,13 +101,22 @@ router.get("/orders/minis", requireAdmin, async (req, res) => {
 router.patch("/minis/orders/:id/status", requireAdmin, async (req, res) => {
   try {
     const { status, trackingNumber, itemId } = req.body;
-    
-    if (!["PENDING", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"].includes(status) && status !== "ACCEPTED") {
-       // Note: frontend might send "ACCEPTED", which we can map to "PROCESSING" or just use "PROCESSING" directly.
-       // The prompt says "Pending -> Accepted -> Processing -> Shipped -> Delivered".
+    const allowedStatuses = ["PENDING", "ACCEPTED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"];
+    if (!allowedStatuses.includes(status)) {
+      res.status(400).json({ detail: "Invalid tester order status" });
+      return;
     }
 
-    const order = await Order.findById(req.params.id);
+    const rawId = typeof req.params.id === "string" ? req.params.id.trim() : "";
+    let order = null;
+    if (mongoose.Types.ObjectId.isValid(rawId)) {
+      order = await Order.findById(rawId);
+    } else if (rawId !== "" && !isNaN(Number(rawId))) {
+      order = await Order.findOne({ numericId: Number(rawId) });
+    } else if (rawId) {
+      order = await Order.findOne({ orderId: rawId });
+    }
+
     if (!order) {
       res.status(404).json({ detail: "Order not found" });
       return;
@@ -243,6 +254,7 @@ router.delete("/products/:id", requireAdmin, async (req, res) => {
     }
 
     clearProductCache();
+    clearStorefrontCatalogCache();
 
     await AuditLog.create({
       actorRole: "SUPER_ADMIN",

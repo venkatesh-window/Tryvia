@@ -6,16 +6,17 @@ export const validate = (schema) => async (req, res, next) => {
       query: req.query,
       params: req.params,
     });
-    
-    // Replace req properties with validated ones (strips unexpected fields if schema uses .strip())
-    req.body = validatedData.body;
-    req.query = validatedData.query;
-    req.params = validatedData.params;
-    
+
+    // Only replace req properties that the schema explicitly validated
+    if (validatedData.body !== undefined) req.body = validatedData.body;
+    if (validatedData.query !== undefined) req.query = validatedData.query;
+    if (validatedData.params !== undefined) req.params = validatedData.params;
+
     next();
   } catch (error) {
-    const errorDetails = error.errors
-      ? error.errors
+    const issues = error.issues || error.errors;
+    const errorDetails = Array.isArray(issues)
+      ? issues
           .map((e) => {
             const field = e.path ? e.path.filter((p) => p !== "body").join(".") : "";
             return field ? `${field}: ${e.message}` : e.message;
@@ -25,7 +26,7 @@ export const validate = (schema) => async (req, res, next) => {
 
     res.status(400).json({
       detail: `Validation failed: ${errorDetails || "Invalid input data"}`,
-      errors: error.errors,
+      errors: issues,
     });
   }
 };

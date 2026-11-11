@@ -23,7 +23,7 @@ import {
 } from "lucide-react-native";
 
 export default function VendorLayout() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -100,16 +100,17 @@ export default function VendorLayout() {
       <View style={styles.sidebarFooter}>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigateTo("/vendor/settings")}
+          onPress={() => navigateTo("/vendor/store")}
         >
           <Settings size={20} color="#8E8A85" />
           <Typography style={styles.navText}>Settings</Typography>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => {
+          onPress={async () => {
             setIsSidebarOpen(false);
-            router.replace("/");
+            await logout();
+            router.replace("/(tabs)");
           }}
         >
           <LogOut size={20} color="#8E8A85" />

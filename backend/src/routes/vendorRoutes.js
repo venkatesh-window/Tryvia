@@ -14,6 +14,9 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { z } from "zod";
 import { validate } from "../middleware/validation.js";
+import { clearProductCache } from "./productRoutes.js";
+import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
+import { getNextNumericId } from "../utils/idGenerator.js";
 
 const isCloudinaryConfigured =
   process.env.CLOUDINARY_API_KEY &&
@@ -90,9 +93,11 @@ router.post("/apply", async (req, res) => {
     }
     const { storeName, description, email, phone, address, slug, gst, pan } =
       req.body;
-    const count = await Vendor.countDocuments();
+    const numericId = await getNextNumericId(Vendor, "vendor", 5000);
+    const vendorId = `TRY-VND-${numericId.toString().padStart(6, "0")}`;
     const vendor = new Vendor({
-      numericId: count + 5000,
+      numericId,
+      vendorId,
       user: req.user?._id,
       storeName,
       description,
@@ -190,16 +195,42 @@ router.put("/profile", getVendor, async (req, res) => {
       slug,
       gst,
       pan,
+      payoutAccount,
     } = req.body;
-    if (storeName) vendor.storeName = storeName;
-    if (description) vendor.description = description;
-    if (phone) vendor.phone = phone;
-    if (address) vendor.address = address;
-    if (logo) vendor.logo = logo;
-    if (banner) vendor.banner = banner;
-    if (slug) vendor.slug = slug;
-    if (gst) vendor.gst = gst;
-    if (pan) vendor.pan = pan;
+    if (storeName !== undefined && String(storeName).trim()) {
+      vendor.storeName = String(storeName).trim();
+    }
+    if (description !== undefined) vendor.description = description;
+    if (phone !== undefined) vendor.phone = phone;
+    if (address !== undefined) vendor.address = address;
+    if (logo !== undefined) vendor.logo = logo;
+    if (banner !== undefined) vendor.banner = banner;
+    if (slug !== undefined && String(slug).trim()) {
+      vendor.slug = String(slug).trim();
+    }
+    if (gst !== undefined) vendor.gst = gst;
+    if (pan !== undefined) vendor.pan = pan;
+    if (payoutAccount && typeof payoutAccount === "object") {
+      const existing = vendor.payoutAccount || {};
+      const rawAcc = typeof payoutAccount.accountNumber === "string"
+        ? payoutAccount.accountNumber.trim()
+        : "";
+      const isMasked = rawAcc.includes("*") || rawAcc.toUpperCase().includes("XXXX");
+      vendor.payoutAccount = {
+        accountName: payoutAccount.accountName !== undefined
+          ? String(payoutAccount.accountName).trim()
+          : existing.accountName,
+        accountNumber: !isMasked && rawAcc
+          ? rawAcc
+          : existing.accountNumber,
+        bankName: payoutAccount.bankName !== undefined
+          ? String(payoutAccount.bankName).trim()
+          : existing.bankName,
+        ifsc: payoutAccount.ifsc !== undefined
+          ? String(payoutAccount.ifsc).trim().toUpperCase()
+          : existing.ifsc,
+      };
+    }
     await vendor.save();
     res.json(vendor.toJSON());
   } catch (error) {
@@ -415,9 +446,9 @@ export const resolveCategory = async (categoryInput) => {
   if (!categoryInput || !String(categoryInput).trim()) {
     let defaultCat = await Category.findOne({ slug: "general" });
     if (!defaultCat) {
-      const count = await Category.countDocuments();
+      const numericId = await getNextNumericId(Category, "category", 0);
       defaultCat = await Category.create({
-        numericId: count + 1,
+        numericId,
         name: "General",
         slug: "general",
         description: "General Category",
@@ -432,15 +463,16 @@ export const resolveCategory = async (categoryInput) => {
     if (existing) return existing._id;
   }
 
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cat";
   let cat = await Category.findOne({
-    $or: [{ name: new RegExp(`^${trimmed}$`, "i") }, { slug }],
+    $or: [{ name: new RegExp(`^${escaped}$`, "i") }, { slug }],
   });
 
   if (!cat) {
-    const count = await Category.countDocuments();
+    const numericId = await getNextNumericId(Category, "category", 0);
     cat = await Category.create({
-      numericId: count + 1,
+      numericId,
       name: trimmed,
       slug: `${slug}-${Date.now().toString(36)}`,
       description: trimmed,
@@ -453,9 +485,9 @@ export const resolveBrand = async (brandInput) => {
   if (!brandInput || !String(brandInput).trim()) {
     let defaultBrand = await Brand.findOne({ slug: "generic" });
     if (!defaultBrand) {
-      const count = await Brand.countDocuments();
+      const numericId = await getNextNumericId(Brand, "brand", 0);
       defaultBrand = await Brand.create({
-        numericId: count + 1,
+        numericId,
         name: "Generic",
         slug: "generic",
         description: "Generic Brand",
@@ -470,15 +502,16 @@ export const resolveBrand = async (brandInput) => {
     if (existing) return existing._id;
   }
 
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "brand";
   let brand = await Brand.findOne({
-    $or: [{ name: new RegExp(`^${trimmed}$`, "i") }, { slug }],
+    $or: [{ name: new RegExp(`^${escaped}$`, "i") }, { slug }],
   });
 
   if (!brand) {
-    const count = await Brand.countDocuments();
+    const numericId = await getNextNumericId(Brand, "brand", 0);
     brand = await Brand.create({
-      numericId: count + 1,
+      numericId,
       name: trimmed,
       slug: `${slug}-${Date.now().toString(36)}`,
       description: trimmed,
@@ -492,7 +525,10 @@ const productSchema = z.object({
     name: z.string().min(1, "Product name is required").trim(),
     description: z.string().trim().optional().default(""),
     fullPrice: z.coerce.number().min(0, "Full price cannot be negative").default(0),
+    testerPrice: z.coerce.number().min(0, "Tester price cannot be negative").optional().default(0),
     stockFull: z.coerce.number().int().min(0, "Stock cannot be negative").default(0),
+    stockTester: z.coerce.number().int().min(0, "Tester stock cannot be negative").optional().default(0),
+    imageUrl: z.string().trim().optional(),
     category: z.string().optional(),
     brand: z.string().optional(),
     status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]).optional(),
@@ -544,8 +580,7 @@ router.post(
       const resolvedCategory = await resolveCategory(category);
       const resolvedBrand = await resolveBrand(brand);
 
-      const count = await Product.countDocuments();
-      const numericId = count + 1000;
+      const numericId = await getNextNumericId(Product, "product", 1000);
       const productId = `TRY-PRD-${numericId.toString().padStart(6, '0')}`;
       const product = new Product({
         numericId,
@@ -553,9 +588,9 @@ router.post(
         name,
         description,
         fullPrice: fullPrice ? Number(fullPrice) : 0,
-        testerPrice: 0,
+        testerPrice: testerPrice ? Number(testerPrice) : 0,
         stockFull: stockFull ? Number(stockFull) : 0,
-        stockTester: 0,
+        stockTester: stockTester ? Number(stockTester) : 0,
         imageUrl,
         category: resolvedCategory,
         brand: resolvedBrand,
@@ -569,6 +604,8 @@ router.post(
         claims,
       });
       await product.save();
+      clearProductCache();
+      clearStorefrontCatalogCache();
       res.json(product.toJSON());
     } catch (error) {
       res.status(500).json({ detail: error.message });
@@ -580,6 +617,10 @@ router.post(
 router.get("/products/:id", getVendor, async (req, res) => {
   try {
     const vendor = req.vendor;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ detail: "Invalid product ID" });
+      return;
+    }
     const product = await Product.findOne({
       _id: req.params.id,
       vendor: vendor._id,
@@ -604,6 +645,7 @@ const updateProductSchema = z.object({
     testerPrice: z.coerce.number().min(0).optional(),
     stockFull: z.coerce.number().int().min(0).optional(),
     stockTester: z.coerce.number().int().min(0).optional(),
+    imageUrl: z.string().trim().optional(),
     status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]).optional(),
     ingredients: z.string().optional(),
     sizeQuantity: z.string().optional(),
@@ -631,6 +673,8 @@ router.put("/products/:id", getVendor, validate(updateProductSchema), async (req
       res.status(404).json({ detail: "Product not found" });
       return;
     }
+    clearProductCache();
+    clearStorefrontCatalogCache();
     res.json(product.toJSON());
   } catch (error) {
     res.status(500).json({ detail: error.message });
@@ -657,6 +701,8 @@ router.delete("/products/:id", getVendor, async (req, res) => {
       return;
     }
 
+    clearProductCache();
+    clearStorefrontCatalogCache();
     res.json({ detail: "Product removed successfully", id: product._id });
   } catch (error) {
     res.status(500).json({ detail: error.message });
@@ -710,6 +756,10 @@ router.get("/orders", getVendor, async (req, res) => {
 router.get("/orders/:id", getVendor, async (req, res) => {
   try {
     const vendor = req.vendor;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ detail: "Invalid order ID" });
+      return;
+    }
     const products = await Product.find({ vendor: vendor._id }, "_id");
     const productIds = products.map((p) => p._id);
     const order = await Order.findOne({
@@ -759,12 +809,17 @@ router.get("/orders/:id", getVendor, async (req, res) => {
 router.patch("/orders/:id/status", getVendor, async (req, res) => {
   try {
     const vendor = req.vendor;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ detail: "Invalid order ID" });
+      return;
+    }
     const { status, trackingNumber, shippingPartner } = req.body;
     if (
       ![
         "PENDING",
         "PAID",
         "PROCESSING",
+        "PACKED",
         "SHIPPED",
         "DELIVERED",
         "CANCELLED",
@@ -810,11 +865,14 @@ router.patch("/orders/:id/status", getVendor, async (req, res) => {
         order.vendorStatuses[vStatusIndex].shippingPartner = shippingPartner;
     }
     
+    // Map vendor-level "PAID" to valid OrderItem itemStatus enum "PROCESSING"
+    const mappedItemStatus = status === "PAID" ? "PROCESSING" : status;
+
     // Also update individual item statuses for this vendor
     order.items.forEach(item => {
       const itemProductId = item.product?._id || item.product;
-      if (productIds.some(id => id.equals(itemProductId))) {
-        item.itemStatus = status;
+      if (itemProductId && productIds.some(id => id.equals(itemProductId))) {
+        item.itemStatus = mappedItemStatus;
         if (trackingNumber || shippingPartner || status === 'SHIPPED') {
           item.shipment = item.shipment || {};
           if (shippingPartner) item.shipment.courier = shippingPartner;
@@ -826,26 +884,31 @@ router.patch("/orders/:id/status", getVendor, async (req, res) => {
     await order.save();
     // Create ledger entries if order is DELIVERED and wasn't already
     if (status === "DELIVERED" && oldStatus !== "DELIVERED") {
-      const vendorItems = order.items.filter((i) =>
-        productIds.some((id) => id.equals(i.product)),
-      );
-      for (const item of vendorItems) {
-        const ledgerEntry = new VendorLedger({
-          vendor: vendor._id,
-          order: order._id,
-          orderItemProduct: item.product,
-          type: "SALE",
-          amount: item.vendorEarnings,
-          platformFee: item.platformFee,
-          status: "PENDING", // Will become AVAILABLE after settlement delay (e.g. 7 days), or we can set it to AVAILABLE right away if configured. For Phase 4, we use PENDING, and a cron job would mark it AVAILABLE, but for demo we can just make it AVAILABLE. Wait, let's keep it PENDING and they can't withdraw yet. No, let's make it AVAILABLE so they can withdraw for testing. Let's make it AVAILABLE.
-          reference: order.numericId.toString(),
-          notes: `Order delivered for ${item.quantity}x`,
-        });
-        // We will override to AVAILABLE so it can be tested easily in Phase 4.
-        ledgerEntry.status = "AVAILABLE";
-        await ledgerEntry.save();
+      const existingSale = await VendorLedger.findOne({
+        vendor: vendor._id,
+        order: order._id,
+        type: "SALE",
+      }).lean();
+
+      if (!existingSale) {
+        const vendorItems = order.items.filter(
+          (i) => i.product && productIds.some((id) => id.equals(i.product)),
+        );
+        for (const item of vendorItems) {
+          const ledgerEntry = new VendorLedger({
+            vendor: vendor._id,
+            order: order._id,
+            orderItemProduct: item.product,
+            type: "SALE",
+            amount: item.vendorEarnings,
+            platformFee: item.platformFee,
+            status: "AVAILABLE",
+            reference: order.numericId.toString(),
+            notes: `Order delivered for ${item.quantity}x`,
+          });
+          await ledgerEntry.save();
+        }
       }
-      // Also send a notification to the customer if needed, but we don't have customer notifications yet.
     }
     res.json({ detail: "Status updated successfully", status });
   } catch (error) {
@@ -874,6 +937,7 @@ const testerSchema = z.object({
     testerPrice: z.coerce.number().min(0, "Tester price cannot be negative").default(0),
     stockFull: z.coerce.number().int().min(0, "Stock cannot be negative").default(0),
     stockTester: z.coerce.number().int().min(0, "Tester stock cannot be negative").default(0),
+    imageUrl: z.string().trim().optional(),
     category: z.string().optional(),
     brand: z.string().optional(),
     status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK"]).optional(),
@@ -924,8 +988,7 @@ router.post(
       const resolvedCategory = await resolveCategory(category);
       const resolvedBrand = await resolveBrand(brand);
 
-      const count = await Product.countDocuments();
-      const numericId = count + 1000;
+      const numericId = await getNextNumericId(Product, "product", 1000);
       const productId = `TRY-PRD-${numericId.toString().padStart(6, '0')}`;
       const product = new Product({
         numericId,
@@ -950,6 +1013,8 @@ router.post(
         isTester: true,
       });
       await product.save();
+      clearProductCache();
+      clearStorefrontCatalogCache();
       res.json(product.toJSON());
     } catch (error) {
       res.status(500).json({ detail: error.message });
@@ -977,6 +1042,8 @@ router.delete("/testers/:id", getVendor, async (req, res) => {
       return;
     }
 
+    clearProductCache();
+    clearStorefrontCatalogCache();
     res.json({ detail: "Tester removed successfully", id: product._id });
   } catch (error) {
     res.status(500).json({ detail: error.message });

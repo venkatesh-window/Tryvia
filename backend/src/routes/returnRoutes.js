@@ -70,6 +70,10 @@ router.patch(
   async (req, res) => {
     try {
       const vendor = req.vendor;
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        res.status(400).json({ detail: "Invalid return ID" });
+        return;
+      }
       const { status, note } = req.body;
       // Vendor can only APPROVE or REJECT from REQUESTED
       if (!["APPROVED", "REJECTED"].includes(status)) {
@@ -128,102 +132,153 @@ router.get("/admin", authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+const ALLOWED_RETURN_STATUSES = [
+  "REQUESTED",
+  "APPROVED",
+  "REJECTED",
+  "PICKUP_PENDING",
+  "RECEIVED",
+  "REFUNDED",
+  "CANCELLED",
+];
+
+const isTransactionUnsupported = (err) => {
+  const msg = err?.message || "";
+  return (
+    msg.includes("Transaction") ||
+    msg.includes("replica set") ||
+    msg.includes("does not support")
+  );
+};
+
+async function updateReturnStatusInternal(returnId, req, session) {
+  const { status, note } = req.body;
+  const retQuery = Return.findById(returnId);
+  if (session) retQuery.session(session);
+  const ret = await retQuery;
+  if (!ret) {
+    const err = new Error("Return not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const prevStatus = ret.status;
+  ret.status = status;
+  ret.history.push({
+    status,
+    changedBy: req.user?._id,
+    note,
+    changedAt: new Date(),
+  });
+
+  await ret.save(session ? { session } : undefined);
+
+  // Handle financial adjustments on REFUNDED (idempotent guard if already REFUNDED)
+  if (status === "REFUNDED" && prevStatus !== "REFUNDED") {
+    const prodQuery = Product.findById(ret.product);
+    if (session) prodQuery.session(session);
+    const product = await prodQuery;
+    if (product) {
+      if (ret.itemType === "full") {
+        product.stockFull += ret.quantity;
+      } else {
+        product.stockTester += ret.quantity;
+      }
+      await product.save(session ? { session } : undefined);
+    }
+
+    const ledgerEntry = new VendorLedger({
+      vendor: ret.vendor,
+      order: ret.order,
+      orderItemProduct: ret.product,
+      type: "REFUND",
+      amount: -ret.vendorEarningsRefund,
+      platformFee: -ret.platformFeeRefund,
+      status: "COMPLETED",
+      reference: ret._id.toString(),
+      notes: `Customer return refunded. Note: ${note || ""}`,
+    });
+    await ledgerEntry.save(session ? { session } : undefined);
+
+    const vendorQuery = Vendor.findById(ret.vendor);
+    if (session) vendorQuery.session(session);
+    const vendorDoc = await vendorQuery;
+    if (vendorDoc?.user) {
+      await Notification.create(
+        [
+          {
+            user: vendorDoc.user,
+            title: "Return Refunded",
+            description: `A return for order ${ret.order} has been refunded. ₹${ret.vendorEarningsRefund.toFixed(2)} has been deducted from your available balance.`,
+            type: "RETURN",
+            relatedEntityId: ret._id,
+          },
+        ],
+        session ? { session } : undefined,
+      );
+    }
+  }
+
+  await AuditLog.create(
+    [
+      {
+        actorId: req.user?._id,
+        actorRole: req.user?.role || "ADMIN",
+        action: "UPDATE_RETURN_STATUS",
+        targetType: "Return",
+        targetId: String(ret._id),
+        ipAddress: req.ip || req.headers["x-forwarded-for"],
+        userAgent: req.headers["user-agent"],
+        details: {
+          status,
+          note,
+          order: String(ret.order),
+          vendor: String(ret.vendor),
+        },
+      },
+    ],
+    session ? { session } : undefined,
+  );
+
+  return ret;
+}
+
 // PATCH /api/v1/returns/admin/:id/status
 router.patch(
   "/admin/:id/status",
   authenticate,
   requireAdmin,
   async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ detail: "Invalid return ID" });
+      return;
+    }
+    if (!ALLOWED_RETURN_STATUSES.includes(req.body?.status)) {
+      res.status(400).json({ detail: "Invalid return status" });
+      return;
+    }
+
     const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-      const { status, note } = req.body;
-      const ret = await Return.findById(req.params.id).session(session);
-      if (!ret) {
-        res.status(404).json({ detail: "Return not found" });
-        await session.abortTransaction();
-        session.endSession();
-        return;
-      }
-
-      ret.status = status;
-      ret.history.push({
-        status,
-        changedBy: req.user?._id,
-        note,
-        changedAt: new Date(),
+      let ret;
+      await session.withTransaction(async () => {
+        ret = await updateReturnStatusInternal(req.params.id, req, session);
       });
-
-      await ret.save({ session });
-
-      // Handle financial adjustments on REFUNDED
-      if (status === "REFUNDED") {
-        // 1. Restore Inventory
-        const product = await Product.findById(ret.product).session(session);
-        if (product) {
-          if (ret.itemType === "full") {
-            product.stockFull += ret.quantity;
-          } else {
-            product.stockTester += ret.quantity;
-          }
-          await product.save({ session });
-        }
-
-        // 2. Adjust Vendor Ledger
-        const ledgerEntry = new VendorLedger({
-          vendor: ret.vendor,
-          order: ret.order,
-          orderItemProduct: ret.product,
-          type: "REFUND",
-          amount: -ret.vendorEarningsRefund, // Deduct earnings back
-          platformFee: -ret.platformFeeRefund, // Adjust platform fee accounting
-          status: "COMPLETED",
-          reference: ret._id.toString(),
-          notes: `Customer return refunded. Note: ${note || ""}`,
-        });
-        await ledgerEntry.save({ session });
-
-        // Notify vendor
-        await Notification.create(
-          [
-            {
-              user: (await Vendor.findById(ret.vendor))?.user,
-              title: "Return Refunded",
-              description: `A return for order ${ret.order} has been refunded. $${ret.vendorEarningsRefund.toFixed(2)} has been deducted from your available balance.`,
-              type: "RETURN",
-              relatedEntityId: ret._id,
-            },
-          ],
-          { session },
-        );
-      }
-
-      await AuditLog.create(
-        [
-          {
-            actorId: req.user?._id,
-            actorRole: req.user?.role || "ADMIN",
-            action: "UPDATE_RETURN_STATUS",
-            targetType: "Return",
-            targetId: String(ret._id),
-            ipAddress: req.ip || req.headers["x-forwarded-for"],
-            userAgent: req.headers["user-agent"],
-            details: {
-              status,
-              note,
-              order: String(ret.order),
-              vendor: String(ret.vendor),
-            },
-          },
-        ],
-        { session },
-      );
-
-      await session.commitTransaction();
       res.json(ret.toJSON());
     } catch (error) {
-      await session.abortTransaction();
-      res.status(500).json({ detail: error.message });
+      if (isTransactionUnsupported(error)) {
+        try {
+          const ret = await updateReturnStatusInternal(req.params.id, req, null);
+          res.json(ret.toJSON());
+          return;
+        } catch (fallbackErr) {
+          res
+            .status(fallbackErr.statusCode || 500)
+            .json({ detail: fallbackErr.message });
+          return;
+        }
+      }
+      res.status(error.statusCode || 500).json({ detail: error.message });
     } finally {
       session.endSession();
     }

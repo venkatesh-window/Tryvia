@@ -79,7 +79,7 @@ export const RazorpayCheckoutModal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState("");
   const [razorpayKeyId, setRazorpayKeyId] = useState(
-    process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_Ts39KVg3HhvFAj",
+    process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_live_TxGs1q8B5XFUBj",
   );
 
   useEffect(() => {

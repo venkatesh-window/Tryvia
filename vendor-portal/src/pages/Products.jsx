@@ -82,7 +82,7 @@ export default function Products() {
             </div>
             <h3 className="text-lg font-semibold text-text-primary mb-2 font-brand">No Products Yet</h3>
             <p className="text-text-secondary font-body mb-6">Start selling on TRYVIA by adding your first product.</p>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary-main text-white font-semibold font-body rounded-xl shadow-glow hover:bg-primary-dark transition-colors">
+            <button onClick={() => navigate("/products/new")} className="flex items-center gap-2 px-4 py-2 bg-primary-main text-white font-semibold font-body rounded-xl shadow-glow hover:bg-primary-dark transition-colors">
               <Plus className="w-5 h-5" />
               Add Product
             </button>

@@ -3,9 +3,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { User } from "../models/User.js";
-import { authenticate } from "../middleware/auth.js";
+import { authenticate, requireVendor } from "../middleware/auth.js";
 import { validate } from "../middleware/validation.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { getNextNumericId } from "../utils/idGenerator.js";
 
 const router = Router();
 
@@ -94,8 +95,7 @@ router.post("/register", authLimiter, validate(registerSchema), async (req, res)
       return;
     }
 
-    const lastUser = await User.findOne().sort({ numericId: -1 });
-    const numericId = (lastUser?.numericId || 0) + 1;
+    const numericId = await getNextNumericId(User, "user", 0);
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = new User({
@@ -154,8 +154,7 @@ router.post("/sync", authLimiter, validate(syncSchema), async (req, res) => {
       }
     } else {
       // Create new customer account with random salt/hash (never static secret)
-      const lastUser = await User.findOne().sort({ numericId: -1 });
-      const numericId = (lastUser?.numericId || 0) + 1;
+      const numericId = await getNextNumericId(User, "user", 0);
       const randomSecret = (await import("crypto")).randomBytes(32).toString("hex");
       const passwordHash = await bcrypt.hash(randomSecret, 10);
 
@@ -191,19 +190,25 @@ import { syncUserWalletBalance } from "../utils/walletHelper.js";
 // GET /api/v1/auth/me
 router.get("/me", authenticate, async (req, res) => {
   if (req.user) {
-    await syncUserWalletBalance(req.user._id);
+    req.user.walletBalance = await syncUserWalletBalance(req.user._id);
   }
   res.json(req.user?.toJSON());
 });
 
 // PUT /api/v1/auth/vendor/password
-router.put("/vendor/password", authenticate, async (req, res) => {
+router.put("/vendor/password", authenticate, requireVendor, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
       res
         .status(400)
         .json({ detail: "Current password and new password are required" });
+      return;
+    }
+    if (String(newPassword).length < 8) {
+      res
+        .status(400)
+        .json({ detail: "New password must be at least 8 characters long" });
       return;
     }
     if (!req.user) {
@@ -258,8 +263,7 @@ router.post("/vendor/register", authLimiter, validate(vendorRegisterSchema), asy
       return;
     }
 
-    const lastUser = await User.findOne().sort({ numericId: -1 });
-    const numericId = (lastUser?.numericId || 0) + 1;
+    const numericId = await getNextNumericId(User, "user", 0);
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = new User({
@@ -275,8 +279,7 @@ router.post("/vendor/register", authLimiter, validate(vendorRegisterSchema), asy
     });
     await user.save();
 
-    const count = await Vendor.countDocuments();
-    const vendorNumericId = count + 5000;
+    const vendorNumericId = await getNextNumericId(Vendor, "vendor", 5000);
     const vendorId = `TRY-VND-${vendorNumericId.toString().padStart(6, '0')}`;
     const vendor = new Vendor({
       numericId: vendorNumericId,

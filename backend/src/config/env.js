@@ -19,7 +19,7 @@ export const validateEnv = () => {
     envSchema.parse(process.env);
   } catch (error) {
     console.error("❌ Invalid environment variables:");
-    console.error(error.errors);
+    console.error(error.issues || error.errors);
     process.exit(1);
   }
 };

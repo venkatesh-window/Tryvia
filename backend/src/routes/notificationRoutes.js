@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { authenticate } from "../middleware/auth.js";
 import { Notification } from "../models/Notification.js";
 
@@ -33,6 +34,10 @@ router.get("/unread-count", authenticate, async (req, res) => {
 // PATCH /api/v1/notifications/:id/read
 router.patch("/:id/read", authenticate, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(404).json({ detail: "Notification not found" });
+      return;
+    }
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, user: req.user?._id },
       { read: true },

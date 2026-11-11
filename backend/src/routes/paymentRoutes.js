@@ -3,9 +3,7 @@ import mongoose from "mongoose";
 import { authenticate } from "../middleware/auth.js";
 import { Order } from "../models/Order.js";
 import { Product } from "../models/Product.js";
-import { WalletCredit } from "../models/WalletCredit.js";
-import { WalletRule } from "../models/WalletRule.js";
-import { User } from "../models/User.js";
+import { SystemConfig } from "../models/SystemConfig.js";
 import {
   razorpayClient,
   RAZORPAY_KEY_ID,
@@ -14,6 +12,9 @@ import {
 } from "../config/razorpay.js";
 import { fulfillOrder } from "../utils/orderHelper.js";
 import { syncUserWalletBalance } from "../utils/walletHelper.js";
+import { getNextNumericId } from "../utils/idGenerator.js";
+import { clearProductCache } from "./productRoutes.js";
+import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
 import { z } from "zod";
 import { validate } from "../middleware/validation.js";
 import { paymentLimiter } from "../middleware/rateLimiter.js";
@@ -32,57 +33,6 @@ const checkoutSchema = z.object({
     shipping_address: z.any().nullable().optional(),
   }).passthrough()
 });
-
-// Helper to grant tester upgrade credits
-async function grantTesterUpgradeCredits(orderItems, userId) {
-  try {
-    const rule = (await WalletRule.findOne({ isActive: true })) || {
-      redeemPercentage: 0.9,
-      platformFeePercentage: 0.1,
-      expiryDays: 30,
-    };
-
-    const creditCount = await WalletCredit.countDocuments();
-    let currentCreditIndex = creditCount;
-
-    for (const item of orderItems) {
-      if (item.itemType === "tester") {
-        currentCreditIndex += 1;
-        const originalAmount = item.totalPrice;
-        const redeemableAmount = Math.round(
-          originalAmount * rule.redeemPercentage,
-        );
-        const fee = Math.round(originalAmount * rule.platformFeePercentage);
-
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + rule.expiryDays);
-
-        const newCredit = new WalletCredit({
-          numericId: currentCreditIndex,
-          user: userId,
-          eligibleProduct: item.product,
-          originalAmount,
-          redeemableAmount,
-          platformFee: fee,
-          status: "ACTIVE",
-          expiryDate,
-        });
-
-        await newCredit.save();
-
-        // Update user's wallet balance
-        await User.findByIdAndUpdate(userId, {
-          $inc: { walletBalance: redeemableAmount },
-        });
-      }
-    }
-  } catch (creditErr) {
-    console.error(
-      "Error granting tester upgrade credits:",
-      creditErr?.message || creditErr,
-    );
-  }
-}
 
 // High-concurrency helper: Batch fetches all products for cart items in 1 query with .lean()
 async function loadProductsBatch(items) {
@@ -216,6 +166,10 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
     const uniqueVendors = new Set();
 
     const productMap = await loadProductsBatch(items);
+    const systemConfig = (await SystemConfig.findOne().lean()) || {
+      platformCommissionRate: 0.15,
+    };
+    const commissionRate = systemConfig.platformCommissionRate ?? 0.15;
 
     for (const item of items) {
       if (!item.product_id) {
@@ -239,6 +193,27 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
         return;
       }
 
+      if (productDoc.status === "INACTIVE") {
+        res.status(400).json({
+          detail: `${productDoc.name} is currently unavailable.`,
+        });
+        return;
+      }
+
+      if (itemType === "full" && (productDoc.stockFull ?? 0) < quantity) {
+        res.status(400).json({
+          detail: `Insufficient stock for full size of ${productDoc.name}.`,
+        });
+        return;
+      }
+
+      if (itemType === "tester" && (productDoc.stockTester ?? 0) < quantity) {
+        res.status(400).json({
+          detail: `Insufficient stock for tester of ${productDoc.name}.`,
+        });
+        return;
+      }
+
       // Collect vendor reference for cross-portal order routing
       if (productDoc.vendor) {
         uniqueVendors.add(productDoc.vendor.toString());
@@ -248,6 +223,8 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
       const unitPrice =
         itemType === "tester" ? productDoc.testerPrice : productDoc.fullPrice;
       const totalPrice = unitPrice * quantity;
+      const itemPlatformFee = Math.round(totalPrice * commissionRate * 100) / 100;
+      const vendorEarnings = Math.round((totalPrice - itemPlatformFee) * 100) / 100;
 
       subtotal += totalPrice;
 
@@ -259,8 +236,8 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
         quantity,
         unitPrice,
         totalPrice,
-        platformFee: 0,
-        vendorEarnings: 0,
+        platformFee: itemPlatformFee,
+        vendorEarnings,
         itemStatus: "PENDING",
       });
     }
@@ -311,8 +288,7 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
     const remainingWallet = validWalletBalance - walletUsed;
     let walletDiscount = walletUsed;
 
-    const orderCount = await Order.countDocuments();
-    const numericId = 8920 + orderCount + 1;
+    const numericId = await getNextNumericId(Order, "order", 8920);
 
     // Standard Razorpay Gateway Order (amount in paise, minimum 100 paise = ₹1)
     const amountInPaise = Math.round(totalAmount * 100);
@@ -488,22 +464,16 @@ router.post("/verify", paymentLimiter, authenticate, async (req, res) => {
       return;
     }
 
-    // Mark order as PAID
+    // Save payment proof before fulfillment; fulfillOrder sets status = "PAID" atomically
     order.paymentMethod = payment_instrument || "Razorpay Online";
     order.razorpayOrderId = razorpay_order_id;
     order.razorpayPaymentId = razorpay_payment_id;
     order.razorpaySignature = razorpay_signature;
-    order.status = "PAID";
-    if (order.vendorStatuses && order.vendorStatuses.length > 0) {
-      order.vendorStatuses.forEach((vs) => {
-        vs.status = "PAID";
-        vs.history = vs.history || [];
-        vs.history.push({ status: "PAID", changedAt: new Date() });
-      });
-    }
     await order.save();
 
     await fulfillOrder(order._id);
+    clearProductCache();
+    clearStorefrontCatalogCache();
 
     // Populate order details for response
     const populatedOrder = await Order.findById(order._id).populate({
@@ -799,16 +769,10 @@ router.post("/webhook", async (req, res) => {
         const order = await Order.findOne({ razorpayOrderId });
         if (order && order.status !== "PAID") {
           order.razorpayPaymentId = paymentEntity.id;
-          order.status = "PAID";
-          if (order.vendorStatuses && order.vendorStatuses.length > 0) {
-            order.vendorStatuses.forEach((vs) => {
-              vs.status = "PAID";
-              vs.history = vs.history || [];
-              vs.history.push({ status: "PAID", changedAt: new Date() });
-            });
-          }
           await order.save();
           await fulfillOrder(order._id);
+          clearProductCache();
+          clearStorefrontCatalogCache();
         }
       }
     }
