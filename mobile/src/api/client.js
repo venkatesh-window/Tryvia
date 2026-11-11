@@ -27,6 +27,12 @@ export const apiClient = axios.create({
 });
 
 const TOKEN_KEY = "tryvia_jwt_token";
+const USER_KEY = "tryvia_user_profile";
+
+let unauthorizedHandler = null;
+export const setUnauthorizedHandler = (fn) => {
+  unauthorizedHandler = fn;
+};
 
 // Request Interceptor: Attach JWT token if it exists
 apiClient.interceptors.request.use(
@@ -51,13 +57,18 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const requestUrl = error.config?.url || "";
-    // Only clear token if 401 happens on a protected API route (not during login)
-    if (
-      error.response &&
-      error.response.status === 401 &&
-      !requestUrl.includes("/auth/login")
-    ) {
+    const isAuthEndpoint =
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/register") ||
+      requestUrl.includes("/auth/sync") ||
+      requestUrl.includes("/auth/vendor/register");
+    // Only clear token if 401 happens on a protected API route (not during login/register/sync)
+    if (error.response && error.response.status === 401 && !isAuthEndpoint) {
       await deleteItemAsync(TOKEN_KEY);
+      await deleteItemAsync(USER_KEY);
+      if (typeof unauthorizedHandler === "function") {
+        unauthorizedHandler();
+      }
     }
     return Promise.reject(error);
   },

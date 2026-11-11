@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ScreenContainer } from "../../src/components/ui/ScreenContainer";
 import { Typography } from "../../src/components/ui/Typography";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,6 +43,12 @@ export default function OrdersScreen() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [fetchOrders]),
+  );
 
   const handleReorder = (order) => {
     if (Platform.OS === "ios") {

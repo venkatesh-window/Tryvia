@@ -143,6 +143,35 @@ export const RazorpayCheckoutModal = ({
     };
   };
 
+  // Persist finalized paid order locally and notify parent screen
+  const finalizePaidOrder = (backendOrder, methodLabel) => {
+    if (walletDeduction > 0) {
+      deductWalletBalance(walletDeduction);
+    }
+    const formatted = formatFinalOrder(backendOrder, methodLabel);
+    useOrderStore.setState((state) => ({
+      orders: [formatted, ...state.orders.filter((o) => String(o.id) !== String(formatted.id))],
+    }));
+    clearCart();
+    setIsProcessing(false);
+    onSuccess(formatted);
+  };
+
+  // Fallback reconciliation when mobile browser closes or returns without explicit callback params
+  const attemptOrderRecovery = async (orderId, razorpayOrderId, methodLabel) => {
+    try {
+      setProcessingStep("Checking payment confirmation with server...");
+      const rec = await paymentService.reconcileOrder(orderId, razorpayOrderId);
+      if (rec?.paid && rec?.order) {
+        finalizePaidOrder(rec.order, methodLabel);
+        return true;
+      }
+    } catch (_) {
+      // Ignore recovery check error and let caller handle normal fallback
+    }
+    return false;
+  };
+
   // Launch Standard Razorpay Unified Checkout
   const handleOpenStandardRazorpay = async () => {
     setIsProcessing(true);
@@ -166,16 +195,7 @@ export const RazorpayCheckoutModal = ({
 
       // Case A: 100% covered by wallet credit (Zero-value checkout)
       if (rzpOrder.is_zero_amount && rzpOrder.order) {
-        if (walletDeduction > 0) {
-          deductWalletBalance(walletDeduction);
-        }
-        const formatted = formatFinalOrder(rzpOrder.order, "Wallet Credit");
-        useOrderStore.setState((state) => ({
-          orders: [formatted, ...state.orders],
-        }));
-        clearCart();
-        setIsProcessing(false);
-        onSuccess(formatted);
+        finalizePaidOrder(rzpOrder.order, "Wallet Credit");
         return;
       }
 
@@ -220,25 +240,19 @@ export const RazorpayCheckoutModal = ({
                   payment_instrument: "Razorpay Checkout",
                 });
 
-                if (walletDeduction > 0) {
-                  deductWalletBalance(walletDeduction);
-                }
-
-                const formatted = formatFinalOrder(
-                  verifyRes.order,
-                  "Razorpay Checkout",
-                );
-                useOrderStore.setState((state) => ({
-                  orders: [formatted, ...state.orders],
-                }));
-                clearCart();
-                setIsProcessing(false);
-                onSuccess(formatted);
+                finalizePaidOrder(verifyRes.order, "Razorpay Checkout");
               } catch (err) {
                 console.error(
                   "Payment signature verification failed:",
                   err?.response?.data || err?.message,
                 );
+                const recovered = await attemptOrderRecovery(
+                  rzpOrder.order_id,
+                  rzpOrder.razorpay_order_id,
+                  "Razorpay Checkout",
+                );
+                if (recovered) return;
+
                 setIsProcessing(false);
                 const errMsg =
                   err?.response?.data?.detail ||
@@ -318,25 +332,19 @@ export const RazorpayCheckoutModal = ({
               payment_instrument: "Razorpay Mobile",
             });
 
-            if (walletDeduction > 0) {
-              deductWalletBalance(walletDeduction);
-            }
-
-            const formatted = formatFinalOrder(
-              verifyRes.order,
-              "Razorpay Mobile",
-            );
-            useOrderStore.setState((state) => ({
-              orders: [formatted, ...state.orders],
-            }));
-            clearCart();
-            setIsProcessing(false);
-            onSuccess(formatted);
+            finalizePaidOrder(verifyRes.order, "Razorpay Mobile");
           } catch (err) {
             console.error(
               "Mobile payment verification failed:",
               err?.response?.data || err?.message,
             );
+            const recovered = await attemptOrderRecovery(
+              rzpOrder.order_id,
+              rzpOrder.razorpay_order_id,
+              "Razorpay Mobile",
+            );
+            if (recovered) return;
+
             setIsProcessing(false);
             const errMsg =
               err?.response?.data?.detail ||
@@ -347,6 +355,14 @@ export const RazorpayCheckoutModal = ({
           return;
         }
       }
+
+      // If Chrome Custom Tab closed via UPI app switch or Android dismissal, check Razorpay before giving up
+      const recovered = await attemptOrderRecovery(
+        rzpOrder.order_id,
+        rzpOrder.razorpay_order_id,
+        "Razorpay Mobile",
+      );
+      if (recovered) return;
 
       // User closed browser without completing payment
       setIsProcessing(false);

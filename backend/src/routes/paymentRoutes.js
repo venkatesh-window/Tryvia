@@ -13,6 +13,10 @@ import {
 import { fulfillOrder } from "../utils/orderHelper.js";
 import { syncUserWalletBalance } from "../utils/walletHelper.js";
 import { getNextNumericId } from "../utils/idGenerator.js";
+import {
+  reconcileOrderWithRazorpay,
+  reconcilePendingRazorpayOrdersForUser,
+} from "../utils/paymentReconcile.js";
 import { clearProductCache } from "./productRoutes.js";
 import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
 import { z } from "zod";
@@ -385,6 +389,63 @@ router.post("/create-order", paymentLimiter, authenticate, validate(checkoutSche
   }
 });
 
+async function populateOrder(orderId) {
+  return Order.findById(orderId).populate({
+    path: "items.product",
+    populate: { path: "brand" },
+  });
+}
+
+async function completeVerifiedOrder(
+  order,
+  { razorpay_order_id, razorpay_payment_id, razorpay_signature, payment_instrument },
+) {
+  if (order.razorpayOrderId && order.razorpayOrderId !== razorpay_order_id) {
+    return { errorStatus: 400, detail: "Razorpay order ID mismatch." };
+  }
+
+  const isSignatureValid = verifyRazorpaySignature(
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  );
+
+  if (!isSignatureValid) {
+    console.warn(
+      "Invalid Razorpay signature submitted for order:",
+      order.numericId,
+    );
+    return {
+      errorStatus: 400,
+      detail: "Invalid payment signature. Transaction could not be verified.",
+    };
+  }
+
+  if (order.status === "PAID") {
+    const populatedOrder = await populateOrder(order._id);
+    return {
+      alreadyPaid: true,
+      order: populatedOrder?.toJSON() || order.toJSON(),
+    };
+  }
+
+  order.paymentMethod = payment_instrument || "Razorpay Online";
+  order.razorpayOrderId = razorpay_order_id;
+  order.razorpayPaymentId = razorpay_payment_id;
+  order.razorpaySignature = razorpay_signature;
+  await order.save();
+
+  await fulfillOrder(order._id);
+  clearProductCache();
+  clearStorefrontCatalogCache();
+
+  const populatedOrder = await populateOrder(order._id);
+  return {
+    alreadyPaid: false,
+    order: populatedOrder?.toJSON() || order.toJSON(),
+  };
+}
+
 // POST /api/v1/payments/verify - Verifies HMAC-SHA256 payment signature & completes order idempotently
 router.post("/verify", paymentLimiter, authenticate, async (req, res) => {
   try {
@@ -398,16 +459,13 @@ router.post("/verify", paymentLimiter, authenticate, async (req, res) => {
     } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      res
-        .status(400)
-        .json({
-          detail:
-            "Missing required Razorpay payment credentials (order ID, payment ID, or signature)",
-        });
+      res.status(400).json({
+        detail:
+          "Missing required Razorpay payment credentials (order ID, payment ID, or signature)",
+      });
       return;
     }
 
-    // Find the order
     let query = { user: user._id };
     if (order_id) {
       if (!isNaN(Number(order_id))) {
@@ -428,69 +486,135 @@ router.post("/verify", paymentLimiter, authenticate, async (req, res) => {
       return;
     }
 
-    // Verify HMAC-SHA256 signature
-    const isSignatureValid = verifyRazorpaySignature(
+    const outcome = await completeVerifiedOrder(order, {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-    );
-
-    if (!isSignatureValid) {
-      console.warn(
-        "Invalid Razorpay signature submitted for order:",
-        order.numericId,
-      );
-      res
-        .status(400)
-        .json({
-          detail:
-            "Invalid payment signature. Transaction could not be verified.",
-        });
-      return;
-    }
-
-    // IDEMPOTENCY CHECK: If order was already marked PAID, return existing order without duplicate deduction
-    if (order.status === "PAID") {
-      const populatedOrder = await Order.findById(order._id).populate({
-        path: "items.product",
-        populate: { path: "brand" },
-      });
-
-      res.json({
-        success: true,
-        message: "Order already verified and paid",
-        order: populatedOrder?.toJSON() || order.toJSON(),
-      });
-      return;
-    }
-
-    // Save payment proof before fulfillment; fulfillOrder sets status = "PAID" atomically
-    order.paymentMethod = payment_instrument || "Razorpay Online";
-    order.razorpayOrderId = razorpay_order_id;
-    order.razorpayPaymentId = razorpay_payment_id;
-    order.razorpaySignature = razorpay_signature;
-    await order.save();
-
-    await fulfillOrder(order._id);
-    clearProductCache();
-    clearStorefrontCatalogCache();
-
-    // Populate order details for response
-    const populatedOrder = await Order.findById(order._id).populate({
-      path: "items.product",
-      populate: { path: "brand" },
+      payment_instrument,
     });
+
+    if (outcome.errorStatus) {
+      res.status(outcome.errorStatus).json({ detail: outcome.detail });
+      return;
+    }
 
     res.json({
       success: true,
-      message: "Payment verified and order confirmed successfully",
-      order: populatedOrder?.toJSON() || order.toJSON(),
+      message: outcome.alreadyPaid
+        ? "Order already verified and paid"
+        : "Payment verified and order confirmed successfully",
+      order: outcome.order,
     });
   } catch (error) {
     console.error("Payment verification error:", error);
     res
       .status(500)
       .json({ detail: error.message || "Payment verification failed" });
+  }
+});
+
+// POST /api/v1/payments/checkout-session/complete - Immediate signature-authenticated fulfillment from hosted checkout
+router.post("/checkout-session/complete", paymentLimiter, async (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      order_id,
+      payment_instrument,
+    } = req.body || {};
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      res.status(400).json({
+        detail:
+          "Missing required Razorpay payment credentials (order ID, payment ID, or signature)",
+      });
+      return;
+    }
+
+    const query = { razorpayOrderId: String(razorpay_order_id) };
+    if (order_id && !isNaN(Number(order_id))) {
+      query.numericId = Number(order_id);
+    }
+
+    const order = await Order.findOne(query);
+    if (!order) {
+      res.status(404).json({ detail: "Order record not found" });
+      return;
+    }
+
+    const outcome = await completeVerifiedOrder(order, {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      payment_instrument: payment_instrument || "Razorpay Mobile",
+    });
+
+    if (outcome.errorStatus) {
+      res.status(outcome.errorStatus).json({ detail: outcome.detail });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: outcome.alreadyPaid
+        ? "Order already verified and paid"
+        : "Payment verified and order confirmed successfully",
+    });
+  } catch (error) {
+    console.error("Hosted checkout completion error:", error);
+    res
+      .status(500)
+      .json({ detail: error.message || "Checkout verification failed" });
+  }
+});
+
+// POST /api/v1/payments/reconcile - Reconciles PENDING Razorpay order(s) directly against Razorpay API
+router.post("/reconcile", paymentLimiter, authenticate, async (req, res) => {
+  try {
+    const { order_id, razorpay_order_id } = req.body || {};
+
+    if (order_id || razorpay_order_id) {
+      const query = { user: req.user._id };
+      if (order_id && !isNaN(Number(order_id))) {
+        query.numericId = Number(order_id);
+      } else if (order_id && mongoose.Types.ObjectId.isValid(order_id)) {
+        query._id = order_id;
+      } else if (razorpay_order_id) {
+        query.razorpayOrderId = String(razorpay_order_id);
+      }
+
+      const order = await Order.findOne(query);
+      if (!order) {
+        res.status(404).json({ detail: "Order not found" });
+        return;
+      }
+
+      if (order.status === "PENDING" && order.razorpayOrderId) {
+        await reconcileOrderWithRazorpay(order);
+      }
+
+      const refreshed = await populateOrder(order._id);
+      const isPaid = refreshed?.status && refreshed.status !== "PENDING";
+      res.json({
+        success: true,
+        paid: Boolean(isPaid),
+        order: isPaid ? refreshed.toJSON() : null,
+      });
+      return;
+    }
+
+    const reconciledCount = await reconcilePendingRazorpayOrdersForUser(
+      req.user._id,
+    );
+    res.json({
+      success: true,
+      paid: reconciledCount > 0,
+      reconciledCount,
+    });
+  } catch (error) {
+    console.error("Payment reconcile error:", error);
+    res.status(500).json({ detail: error.message || "Reconciliation failed" });
   }
 });
 
@@ -551,7 +675,10 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
     const amountInPaise = Math.round(order.totalAmount * 100);
 
     const rawCallbackUrl = typeof req.query.callback_url === "string" ? req.query.callback_url.trim() : "";
-    const callbackBase = rawCallbackUrl || "tryvia://payment-callback";
+    const allowedSchemes = ["tryvia://", "mobile://", "exp://", "exp+mobile://", "https://", "http://"];
+    const callbackBase = allowedSchemes.some((scheme) => rawCallbackUrl.toLowerCase().startsWith(scheme))
+      ? rawCallbackUrl
+      : "tryvia://payment-callback";
 
     const safeAmount = escapeHtml(order.totalAmount.toFixed(2));
     const safeKeyId = JSON.stringify(RAZORPAY_KEY_ID);
@@ -686,14 +813,49 @@ router.get("/checkout-session/:orderId", authenticate, async (req, res) => {
           contact: ${safeCustomerPhone}
         },
         theme: { color: "#1A1918" },
-        handler: function (response) {
-          var targetUrl = buildCallbackUrl({
+        handler: async function (response) {
+          var statusMsg = document.getElementById('status-msg');
+          if (statusMsg) statusMsg.innerText = "Confirming your order securely...";
+          var payBtn = document.getElementById('pay-btn');
+          if (payBtn) payBtn.style.display = 'none';
+          var loader = document.getElementById('loader');
+          if (loader) loader.style.display = 'block';
+
+          var payload = {
             razorpay_order_id: response.razorpay_order_id || ${safeRzpOrderId},
             razorpay_payment_id: response.razorpay_payment_id || "",
             razorpay_signature: response.razorpay_signature || "",
-            order_id: ${safeNumericId}
+            order_id: ${safeNumericId},
+            payment_instrument: "Razorpay Mobile"
+          };
+
+          var serverVerified = false;
+          try {
+            var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 10000) : null;
+            var res = await fetch('/api/v1/payments/checkout-session/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              keepalive: true,
+              signal: controller ? controller.signal : undefined,
+              body: JSON.stringify(payload)
+            });
+            if (timeoutId) clearTimeout(timeoutId);
+            if (res && res.ok) {
+              serverVerified = true;
+            }
+          } catch (verifyErr) {
+            console.error("Hosted session verify fallback:", verifyErr);
+          }
+
+          var targetUrl = buildCallbackUrl({
+            razorpay_order_id: payload.razorpay_order_id,
+            razorpay_payment_id: payload.razorpay_payment_id,
+            razorpay_signature: payload.razorpay_signature,
+            order_id: payload.order_id,
+            verified: serverVerified ? "1" : "0"
           });
-          navigateToCallback(targetUrl, "Payment successful! Returning to TryVia...");
+          navigateToCallback(targetUrl, "Payment confirmed! Returning to TryVia...");
         },
         modal: {
           ondismiss: function () {

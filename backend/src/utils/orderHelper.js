@@ -205,7 +205,9 @@ async function fulfillOrderInternal(order, session) {
   return order;
 }
 
-export async function fulfillOrder(orderId) {
+const inFlightFulfillments = new Map();
+
+async function fulfillOrderRun(orderId) {
   const session = await mongoose.startSession();
   try {
     let result;
@@ -235,4 +237,16 @@ export async function fulfillOrder(orderId) {
   } finally {
     session.endSession();
   }
+}
+
+export async function fulfillOrder(orderId) {
+  const key = String(orderId);
+  if (inFlightFulfillments.has(key)) {
+    return inFlightFulfillments.get(key);
+  }
+  const promise = fulfillOrderRun(orderId).finally(() => {
+    inFlightFulfillments.delete(key);
+  });
+  inFlightFulfillments.set(key, promise);
+  return promise;
 }

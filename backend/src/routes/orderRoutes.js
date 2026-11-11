@@ -10,6 +10,10 @@ import { SystemConfig } from "../models/SystemConfig.js";
 import { fulfillOrder } from "../utils/orderHelper.js";
 import { syncUserWalletBalance } from "../utils/walletHelper.js";
 import { getNextNumericId } from "../utils/idGenerator.js";
+import {
+  reconcileOrderWithRazorpay,
+  reconcilePendingRazorpayOrdersForUser,
+} from "../utils/paymentReconcile.js";
 import { clearProductCache } from "./productRoutes.js";
 import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
 import { z } from "zod";
@@ -253,6 +257,9 @@ router.post("/", authenticate, validate(orderSchema), async (req, res) => {
 router.get("/", authenticate, async (req, res) => {
   try {
     const user = req.user;
+    // Recover any PENDING Razorpay orders whose payment was already captured
+    await reconcilePendingRazorpayOrdersForUser(user._id);
+
     // Do not show PENDING orders that might be failed or abandoned payments
     const orders = await Order.find({ user: req.user._id, status: { $ne: "PENDING" } })
       .populate({
@@ -303,7 +310,7 @@ router.get("/:id", authenticate, async (req, res) => {
       return;
     }
 
-    const order = await Order.findOne(query).populate({
+    let order = await Order.findOne(query).populate({
       path: "items.product",
       populate: { path: "brand" },
     });
@@ -311,6 +318,16 @@ router.get("/:id", authenticate, async (req, res) => {
     if (!order) {
       res.status(404).json({ detail: "Order not found" });
       return;
+    }
+
+    if (order.status === "PENDING" && order.razorpayOrderId) {
+      const recovered = await reconcileOrderWithRazorpay(order);
+      if (recovered) {
+        order = await Order.findOne(query).populate({
+          path: "items.product",
+          populate: { path: "brand" },
+        });
+      }
     }
 
     const responseJSON = order.toJSON();

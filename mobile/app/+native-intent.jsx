@@ -6,7 +6,12 @@
 export function redirectSystemPath({ path, initial }) {
   try {
     if (typeof path === "string" && path.includes("payment-callback")) {
-      return initial ? "/(tabs)" : null;
+      if (!initial) {
+        return null;
+      }
+      const isCancelledOrFailed =
+        path.includes("status=cancelled") || path.includes("status=failed");
+      return isCancelledOrFailed ? "/(tabs)" : "/(tabs)/orders";
     }
   } catch {
     return path;

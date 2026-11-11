@@ -16,6 +16,14 @@ export const paymentService = {
     return response.data;
   },
 
+  async reconcileOrder(orderId, razorpayOrderId) {
+    const response = await client.post("/payments/reconcile", {
+      order_id: orderId,
+      razorpay_order_id: razorpayOrderId,
+    });
+    return response.data;
+  },
+
   getCheckoutSessionUrl(orderId, token, callbackUrl) {
     const base = getBaseUrl();
     const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
