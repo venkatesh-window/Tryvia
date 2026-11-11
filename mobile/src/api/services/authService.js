@@ -47,4 +47,12 @@ export const authService = {
     });
     return TokenResponseSchema.parse(response.data);
   },
+
+  /**
+   * Permanently deletes/deactivates the currently authenticated user account
+   */
+  deleteAccount: async () => {
+    const response = await apiClient.delete("/auth/me");
+    return response.data;
+  },
 };

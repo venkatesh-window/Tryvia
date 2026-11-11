@@ -9,19 +9,21 @@ import {
   Switch,
   Platform,
   KeyboardAvoidingView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Typography } from "../ui/Typography";
 import { PremiumButton } from "../ui/PremiumButton";
 import { useAuthStore } from "../../store/useAuthStore";
-import { X, CheckCircle2, MapPin } from "lucide-react-native";
+import { X, CheckCircle2, MapPin, Trash2 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { theme } from "../../theme/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const AccountSettingsModal = ({ visible, onClose }) => {
   const insets = useSafeAreaInsets();
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile, deleteAccount } = useAuthStore();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,6 +39,7 @@ export const AccountSettingsModal = ({ visible, onClose }) => {
   const [whatsappUpdates, setWhatsappUpdates] = useState(true);
   const [exclusiveInvites, setExclusiveInvites] = useState(true);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Sync state whenever modal opens with current user profile
   useEffect(() => {
@@ -81,6 +84,46 @@ export const AccountSettingsModal = ({ visible, onClose }) => {
       setSavedSuccess(false);
       onClose();
     }, 1200);
+  };
+
+  const executeAccountDeletion = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      onClose();
+    } catch (err) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Unable to delete account right now.";
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert(msg);
+      } else {
+        Alert.alert("Account Deletion Failed", msg);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    if (isDeleting) return;
+    const message =
+      "Permanently delete your TryVia account? This disables your login, clears saved personal details, and forfeits any unredeemed TryVia Wallet credits.";
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.confirm(message)) {
+        executeAccountDeletion();
+      }
+      return;
+    }
+    Alert.alert("Delete Account", message, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete Permanently",
+        style: "destructive",
+        onPress: executeAccountDeletion,
+      },
+    ]);
   };
 
   const isAddressFilled =
@@ -331,6 +374,24 @@ export const AccountSettingsModal = ({ visible, onClose }) => {
               )}
             </View>
 
+            <TouchableOpacity
+              style={styles.deleteAccountBtn}
+              activeOpacity={0.75}
+              disabled={isDeleting}
+              onPress={handleDeleteAccount}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#D9383A" />
+              ) : (
+                <>
+                  <Trash2 size={16} color="#D9383A" strokeWidth={1.8} />
+                  <Typography style={styles.deleteAccountText}>
+                    Delete Account Permanently
+                  </Typography>
+                </>
+              )}
+            </TouchableOpacity>
+
             <View style={{ height: 40 }} />
           </ScrollView>
         </View>
@@ -461,5 +522,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderWidth: 1,
     borderColor: "rgba(22, 163, 74, 0.25)",
+  },
+  deleteAccountBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(217, 56, 58, 0.3)",
+    backgroundColor: "rgba(217, 56, 58, 0.05)",
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  deleteAccountText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13.5,
+    color: "#D9383A",
   },
 });

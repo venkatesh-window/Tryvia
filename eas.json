@@ -23,7 +23,7 @@
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://tryvia-ta57.onrender.com/api/v1",

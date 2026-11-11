@@ -79,6 +79,13 @@ export const useAuthStore = create((set) => ({
     set({ token: null, user: null, isAuthenticated: false });
   },
 
+  deleteAccount: async () => {
+    await authService.deleteAccount();
+    await deleteItemAsync(TOKEN_KEY);
+    await deleteItemAsync(USER_KEY);
+    set({ token: null, user: null, isAuthenticated: false });
+  },
+
   restoreToken: async () => {
     try {
       set({ isLoading: true });

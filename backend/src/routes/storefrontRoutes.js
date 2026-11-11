@@ -394,6 +394,7 @@ function renderLayout({ title, description, bodyHtml }) {
             <li><a href="/terms">Terms &amp; Conditions</a></li>
             <li><a href="/refund-policy">Refund &amp; Cancellation Policy</a></li>
             <li><a href="/shipping-policy">Shipping &amp; Delivery Policy</a></li>
+            <li><a href="/account-deletion">Account &amp; Data Deletion</a></li>
           </ul>
         </div>
       </div>
@@ -839,6 +840,36 @@ router.get("/shipping-policy", (_req, res) => {
           </ul>
           <h2>3. Order Tracking &amp; Issues</h2>
           <p>Tracking status is visible inside the TRYVIA app under Orders. For delayed or missing shipments, contact <a href="mailto:${escapeHtml(BUSINESS_INFO.email)}" style="color:var(--accent-gold);">${escapeHtml(BUSINESS_INFO.email)}</a> or ${escapeHtml(BUSINESS_INFO.phone)}.</p>
+        </div>
+      `,
+    })
+  );
+});
+
+router.get("/account-deletion", (_req, res) => {
+  res.send(
+    renderLayout({
+      title: "Account & Data Deletion | TRYVIA (RAJKANNAN BALAJI)",
+      description:
+        "How to permanently delete your TRYVIA account and personal data in-app or by request.",
+      bodyHtml: `
+        <div class="wrap policy-doc">
+          <h1>Account &amp; Data Deletion</h1>
+          <p class="policy-meta">Effective Date: November 2026 | Business Entity: ${escapeHtml(BUSINESS_INFO.legalEntity)} (${escapeHtml(BUSINESS_INFO.brandName)})</p>
+          <p>TRYVIA provides immediate in-app account deletion as well as web-supported deletion requests for users who have uninstalled the application.</p>
+          <h2>1. Delete Your Account Directly Inside the TRYVIA App</h2>
+          <ul>
+            <li>Open the <strong>TRYVIA</strong> app and go to the <strong>Profile</strong> tab.</li>
+            <li>Tap <strong>Account Settings</strong>.</li>
+            <li>Scroll to the bottom and tap <strong>Delete Account</strong>, then confirm deletion.</li>
+          </ul>
+          <h2>2. Request Deletion via Support (If Uninstalled)</h2>
+          <p>Email <a href="mailto:${escapeHtml(BUSINESS_INFO.email)}?subject=TRYVIA%20Account%20Deletion%20Request" style="color:var(--accent-gold);">${escapeHtml(BUSINESS_INFO.email)}</a> from your registered email address (or call ${escapeHtml(BUSINESS_INFO.phone)}). Requests are verified and processed within 48 hours.</p>
+          <h2>3. Data Deleted vs. Data Retained</h2>
+          <ul>
+            <li><strong>Immediately deleted/anonymized:</strong> Full name, email address, login credentials, notifications, saved shipping details, and active/unredeemed TryVia Wallet upgrade credits.</li>
+            <li><strong>Retained strictly for legal/accounting compliance:</strong> Completed order invoices and Razorpay transaction references (retained in anonymized form as required under Indian tax and payment laws, without retaining personal login identity).</li>
+          </ul>
         </div>
       `,
     })

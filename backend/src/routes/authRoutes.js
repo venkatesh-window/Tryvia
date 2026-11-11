@@ -229,7 +229,13 @@ router.put("/vendor/password", authenticate, requireVendor, async (req, res) => 
   }
 });
 
+import crypto from "crypto";
 import { Vendor } from "../models/Vendor.js";
+import { Product } from "../models/Product.js";
+import { Notification } from "../models/Notification.js";
+import { WalletCredit } from "../models/WalletCredit.js";
+import { clearProductCache } from "./productRoutes.js";
+import { clearStorefrontCatalogCache } from "./storefrontRoutes.js";
 
 const vendorRegisterSchema = z.object({
   body: z.object({
@@ -318,5 +324,88 @@ router.post("/vendor/register", authLimiter, validate(vendorRegisterSchema), asy
     res.status(500).json({ detail: error.message });
   }
 });
+
+async function handleSelfAccountDeletion(req, res) {
+  try {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ detail: "Not authenticated" });
+      return;
+    }
+
+    if (user.role === "ADMIN" || user.isSuperuser) {
+      res.status(403).json({
+        detail: "Admin accounts cannot be deleted from mobile self-service.",
+      });
+      return;
+    }
+
+    const deletionTag = `deleted_${user.numericId || user._id}_${Date.now()}`;
+    const randomPass = crypto.randomBytes(32).toString("hex");
+    const randomHash = await bcrypt.hash(randomPass, 10);
+
+    // Clear active notifications & unredeemed wallet credits for the deleted user
+    await Promise.all([
+      Notification.deleteMany({ user: user._id }),
+      WalletCredit.updateMany(
+        { user: user._id, status: { $in: ["ACTIVE", "PARTIALLY_USED"] } },
+        { $set: { status: "EXPIRED", redeemableAmount: 0 } },
+      ),
+    ]);
+
+    // Suspend vendor profile and deactivate store products if the user is a vendor
+    const vendorProfiles = await Vendor.find({ user: user._id });
+    if (vendorProfiles.length > 0) {
+      const vendorIds = vendorProfiles.map((v) => v._id);
+      await Product.updateMany(
+        { vendor: { $in: vendorIds } },
+        { $set: { status: "INACTIVE" } },
+      );
+      await Vendor.updateMany(
+        { user: user._id },
+        {
+          $set: {
+            status: "SUSPENDED",
+            email: `${deletionTag}@deleted.tryvia.local`,
+            phone: "",
+            address: "",
+          },
+          $push: {
+            statusHistory: {
+              status: "SUSPENDED",
+              changedBy: user._id,
+              reason: "Account deleted by user",
+              changedAt: new Date(),
+            },
+          },
+        },
+      );
+      clearProductCache();
+      clearStorefrontCatalogCache();
+    }
+
+    // Anonymize personal identifiers & deactivate user while preserving financial order audit trail
+    user.email = `${deletionTag}@deleted.tryvia.local`;
+    user.fullName = "Deleted User";
+    user.passwordHash = randomHash;
+    user.walletBalance = 0;
+    user.isActive = false;
+    await user.save();
+
+    res.json({
+      success: true,
+      detail: "Your account and personal data have been permanently deleted.",
+    });
+  } catch (error) {
+    console.error("Account deletion error:", error);
+    res
+      .status(500)
+      .json({ detail: error.message || "Failed to delete account" });
+  }
+}
+
+// DELETE /api/v1/auth/me (and POST /delete-account alias for Play/App Store account deletion)
+router.delete("/me", authenticate, handleSelfAccountDeletion);
+router.post("/delete-account", authenticate, handleSelfAccountDeletion);
 
 export default router;
