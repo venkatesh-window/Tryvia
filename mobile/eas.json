@@ -12,6 +12,9 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "distribution": "internal"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://tryvia-ta57.onrender.com/api/v1",
         "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_live_TxGs1q8B5XFUBj"

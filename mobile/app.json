@@ -8,7 +8,15 @@
     "scheme": ["mobile", "tryvia"],
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tryvia",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "TryVia needs photo library access so vendors can upload product photos.",
+        "NSCameraUsageDescription": "TryVia needs camera access so vendors can capture product photos.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
